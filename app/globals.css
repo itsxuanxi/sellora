@@ -363,3 +363,16 @@
     animation: none !important;
   }
 }
+
+/* Hero demo carousel: the thin progress line inside the active tab.
+   Driven by a CSS animation rather than a rAF-updated React state so the
+   bar costs nothing to render and can be paused declaratively with
+   animation-play-state (hover, tab blur) without re-rendering the tree. */
+@keyframes demo-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

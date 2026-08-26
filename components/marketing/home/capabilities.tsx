@@ -3,14 +3,14 @@
 import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Reveal, Section, SectionLabel } from "@/components/marketing/section";
+import { ActionRow, Panel, SignalChip } from "@/components/marketing/home/product-ui";
 import {
-  ActionRow,
-  DATA_NOTE,
-  Panel,
-  RiskLabel,
-  SAMPLE_DEALS,
-  SignalChip,
-} from "@/components/marketing/home/product-ui";
+  DEMO_DATA_NOTE,
+  DEMO_DEALS,
+  FOCUS_DEAL,
+  NEXT_ACTION,
+} from "@/components/marketing/home/demo-data";
+import { formatMoney } from "@/lib/revenue/money";
 
 /**
  * §5 — the capability section, framed as one judgement system rather than six
@@ -156,12 +156,12 @@ export function Capabilities() {
 }
 
 function QuestionPanel({ id }: { id: QuestionId }) {
-  const focus = SAMPLE_DEALS[0];
+  const focus = FOCUS_DEAL;
 
   return (
     <Panel
       label={PANEL_LABEL[id]}
-      meta={<span className="text-[11px] text-neutral-400">{DATA_NOTE}</span>}
+      meta={<span className="text-[11px] text-neutral-400">{DEMO_DATA_NOTE}</span>}
       // A short fade so switching questions reads as a state change rather
       // than a hard cut. Collapsed to instant by the global reduced-motion
       // rule in globals.css.
@@ -169,7 +169,7 @@ function QuestionPanel({ id }: { id: QuestionId }) {
     >
       {id === "who" && (
         <ul className="divide-y divide-white/[0.06]">
-          {SAMPLE_DEALS.map((d) => (
+          {DEMO_DEALS.map((d) => (
             <li key={d.company} className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
               <span className="w-5 shrink-0 text-[11px] tabular-nums text-neutral-400">
                 {d.rank}
@@ -178,10 +178,10 @@ function QuestionPanel({ id }: { id: QuestionId }) {
                 {d.company}
               </span>
               <span className="shrink-0 text-[13px] font-medium tabular-nums text-white">
-                {d.expected}
+                {formatMoney(d.expected)}
               </span>
-              <span className="hidden w-20 shrink-0 justify-end sm:flex">
-                <RiskLabel level={d.risk} />
+              <span className="hidden w-24 shrink-0 justify-end text-[11px] text-neutral-300 sm:flex">
+                {d.priority}
               </span>
             </li>
           ))}
@@ -226,7 +226,7 @@ function QuestionPanel({ id }: { id: QuestionId }) {
       {id === "what" && (
         <div className="space-y-3 px-4 py-4 sm:px-5">
           <div className="text-[13px] font-medium text-white">{focus.company}</div>
-          <ActionRow>{focus.action}</ActionRow>
+          <ActionRow>{NEXT_ACTION.action}</ActionRow>
           <div>
             <div className="text-[10px] uppercase tracking-[0.09em] text-neutral-400">
               Why
@@ -252,15 +252,15 @@ function QuestionPanel({ id }: { id: QuestionId }) {
           <div className="text-[13px] font-medium text-white">{focus.company}</div>
 
           <div className="mt-4 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 font-medium tabular-nums">
-            <span className="text-2xl text-white">{focus.dealValue}</span>
+            <span className="text-2xl text-white">{formatMoney(focus.dealValue)}</span>
             <span className="text-neutral-400" aria-hidden>
               ×
             </span>
-            <span className="text-2xl text-white">{focus.probability}</span>
+            <span className="text-2xl text-white">{focus.probability}%</span>
             <span className="text-neutral-400" aria-hidden>
               =
             </span>
-            <span className="text-2xl text-violet-300">{focus.expected}</span>
+            <span className="text-2xl text-violet-300">{formatMoney(focus.expected)}</span>
           </div>
           <div className="mt-1.5 flex flex-wrap gap-x-5 text-[11px] text-neutral-400">
             <span>Deal value</span>
@@ -269,10 +269,11 @@ function QuestionPanel({ id }: { id: QuestionId }) {
           </div>
 
           <p className="mt-5 border-t border-white/[0.08] pt-4 text-[13px] leading-relaxed text-neutral-300">
-            Reporting the full {focus.dealValue} as &ldquo;at risk&rdquo; would
-            overstate it — this deal was never certain. Sellora prices exposure
-            at expected revenue, then discounts it further by how severe the
-            problem is. Conservative numbers survive contact with your CRM.
+            Reporting the full {formatMoney(focus.dealValue)} as &ldquo;at
+            risk&rdquo; would overstate it — this deal was never certain.
+            Sellora prices exposure at expected revenue, then discounts it
+            further by how severe the problem is. Conservative numbers survive
+            contact with your CRM.
           </p>
         </div>
       )}

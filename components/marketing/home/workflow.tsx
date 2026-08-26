@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/motion";
 import { Reveal, Section, SectionLabel } from "@/components/marketing/section";
-import { DATA_NOTE, Panel, SignalChip } from "@/components/marketing/home/product-ui";
+import { Panel, SignalChip } from "@/components/marketing/home/product-ui";
+import { DEMO_DATA_NOTE, FOCUS_DEAL } from "@/components/marketing/home/demo-data";
+import { formatMoney } from "@/lib/revenue/money";
 
 /**
  * §6 — the loop, shown as one product surface advancing through states
@@ -116,7 +118,9 @@ export function Workflow() {
                     <span
                       className={cn(
                         "font-mono text-[11px] transition-colors",
-                        active ? "text-violet-300" : "text-neutral-500"
+                        // neutral-500 measured 4.2:1 here — below AA for
+                        // 11px text. neutral-400 clears it at ~7.5:1.
+                        active ? "text-violet-300" : "text-neutral-400"
                       )}
                     >
                       {s.n}
@@ -184,9 +188,10 @@ export function Workflow() {
                   Signals detected
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <SignalChip>Proposal opened ×2</SignalChip>
-                  <SignalChip>New stakeholder</SignalChip>
-                  <SignalChip>No reply · 4 days</SignalChip>
+                  {FOCUS_DEAL.signals.map((s) => (
+                    <SignalChip key={s}>{s}</SignalChip>
+                  ))}
+                  <SignalChip>{FOCUS_DEAL.status}</SignalChip>
                 </div>
               </div>
 
@@ -200,11 +205,17 @@ export function Workflow() {
                   Expected revenue
                 </div>
                 <div className="mt-1 flex flex-wrap items-baseline gap-2 tabular-nums">
-                  <span className="text-lg font-medium text-white">$61,000</span>
+                  <span className="text-lg font-medium text-white">
+                    {formatMoney(FOCUS_DEAL.dealValue)}
+                  </span>
                   <span className="text-neutral-400" aria-hidden>×</span>
-                  <span className="text-lg font-medium text-white">70%</span>
+                  <span className="text-lg font-medium text-white">
+                    {FOCUS_DEAL.probability}%
+                  </span>
                   <span className="text-neutral-400" aria-hidden>=</span>
-                  <span className="text-lg font-medium text-violet-300">$42,800</span>
+                  <span className="text-lg font-medium text-violet-300">
+                    {formatMoney(FOCUS_DEAL.expected)}
+                  </span>
                   <span className="text-[11px] text-neutral-400">rank 01 of 312</span>
                 </div>
               </div>
@@ -227,7 +238,7 @@ export function Workflow() {
             </div>
 
             <div className="border-t border-white/[0.08] px-4 py-2 sm:px-5">
-              <span className="text-[10px] text-neutral-400">{DATA_NOTE}</span>
+              <span className="text-[10px] text-neutral-400">{DEMO_DATA_NOTE}</span>
             </div>
           </Panel>
         </div>

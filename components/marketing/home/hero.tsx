@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { SignalField } from "@/components/marketing/home/signal-field";
-import { CommandCenterMock } from "@/components/marketing/home/product-ui";
+import { HeroDemo } from "@/components/marketing/home/hero-demo";
 
 /**
  * The hero.
@@ -27,8 +27,12 @@ export function Hero({ startHref }: { startHref: string }) {
       />
 
       <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-14">
-        {/* ── Copy ── */}
-        <div className="max-w-xl">
+        {/* ── Copy ──
+            min-w-0 on both columns is load-bearing: grid items default to
+            min-width:auto, so the demo's nowrap tab row would stretch the
+            whole grid past the viewport on mobile. The section clips overflow,
+            so that failure is silent — the fourth tab simply disappears. */}
+        <div className="min-w-0 max-w-xl">
           <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-violet-300">
             AI revenue intelligence for B2B sales
           </p>
@@ -72,9 +76,9 @@ export function Hero({ startHref }: { startHref: string }) {
           </p>
         </div>
 
-        {/* ── Product surface ── */}
-        <div className="relative lg:-mr-6 xl:-mr-12">
-          <CommandCenterMock />
+        {/* ── Product surface: the auto-advancing walkthrough ── */}
+        <div className="relative min-w-0 lg:-mr-6 xl:-mr-12">
+          <HeroDemo />
         </div>
       </div>
     </section>

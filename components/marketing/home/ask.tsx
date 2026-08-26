@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/motion";
 import { Reveal, Section, SectionLabel } from "@/components/marketing/section";
-import { DATA_NOTE, Panel } from "@/components/marketing/home/product-ui";
+import { Panel } from "@/components/marketing/home/product-ui";
+import { DEMO_DATA_NOTE, DEMO_DEALS } from "@/components/marketing/home/demo-data";
+import { formatMoneyCompact } from "@/lib/revenue/money";
 
 /**
  * §7 — the query surface.
@@ -20,41 +22,25 @@ import { DATA_NOTE, Panel } from "@/components/marketing/home/product-ui";
 
 const QUESTION = "Which accounts should my team call first today?";
 
-interface Answer {
-  rank: string;
-  company: string;
-  expected: string;
-  evidence: string[];
-  risk: string | null;
-  action: string;
-}
+/**
+ * The answer rows are derived from the same three deals the hero walked
+ * through, so a visitor who watched the carousel sees the identical pipeline
+ * here rather than a second, contradictory set of numbers.
+ */
+const RECOMMENDED_ACTIONS: Record<string, string> = {
+  Cloudmint: "Send a stakeholder-specific follow-up",
+  Brightcart: "Schedule technical validation",
+  Ledgerly: "Re-open the conversation with a case study",
+};
 
-const ANSWERS: Answer[] = [
-  {
-    rank: "01",
-    company: "Cloudmint",
-    expected: "$42.8K expected revenue",
-    evidence: ["Proposal viewed twice", "New stakeholder joined"],
-    risk: "4 days without reply",
-    action: "Send a stakeholder-specific follow-up",
-  },
-  {
-    rank: "02",
-    company: "Brightcart",
-    expected: "$31.2K expected revenue",
-    evidence: ["Pricing page revisited", "Security document downloaded"],
-    risk: null,
-    action: "Schedule technical validation",
-  },
-  {
-    rank: "03",
-    company: "Northwind Labs",
-    expected: "$28.4K expected revenue",
-    evidence: ["Demo completed", "No next step scheduled"],
-    risk: "Quiet for 6 days",
-    action: "Get the next meeting on the calendar",
-  },
-];
+const ANSWERS = DEMO_DEALS.map((d) => ({
+  rank: d.rank,
+  company: d.company,
+  expected: `${formatMoneyCompact(d.expected)} expected revenue`,
+  evidence: d.signals,
+  risk: d.readoutTone === "risk" ? d.status : null,
+  action: RECOMMENDED_ACTIONS[d.company] ?? "Follow up today",
+}));
 
 export function AskSellora() {
   const [typed, setTyped] = useState("");
@@ -117,7 +103,7 @@ export function AskSellora() {
         <div className="mx-auto mt-14 max-w-3xl">
           <Panel
             label="Ask Sellora"
-            meta={<span className="text-[11px] text-neutral-400">{DATA_NOTE}</span>}
+            meta={<span className="text-[11px] text-neutral-400">{DEMO_DATA_NOTE}</span>}
           >
             {/* ── Query ── */}
             <div className="flex items-start gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-5">
