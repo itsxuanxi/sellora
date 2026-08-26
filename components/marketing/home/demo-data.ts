@@ -156,15 +156,136 @@ export const COMMAND = {
   },
 };
 
-/** Tab definitions for the hero carousel. */
+/** Tab definitions for the hero carousel. Short tab labels keep the strip on
+ * one line at laptop widths; the fuller panel label carries the detail. */
 export const DEMO_STAGES = [
-  { id: "monitoring", label: "Signal monitoring", panelLabel: "Signal monitor" },
-  { id: "prioritization", label: "Deal prioritization", panelLabel: "Prioritized pipeline" },
-  { id: "action", label: "Next best action", panelLabel: "Recommended action · Cloudmint" },
-  { id: "command", label: "Revenue command", panelLabel: "Revenue command center" },
+  { id: "monitoring", tabLabel: "Signals", panelLabel: "Signal monitor" },
+  { id: "prioritization", tabLabel: "Priority", panelLabel: "Prioritized pipeline" },
+  { id: "action", tabLabel: "Next action", panelLabel: "Recommended action · Cloudmint" },
+  { id: "command", tabLabel: "Revenue command", panelLabel: "Revenue command center" },
 ] as const;
 
 export type StageId = (typeof DEMO_STAGES)[number]["id"];
 
 /** How long each stage holds before advancing. */
 export const STAGE_DURATION_MS = 5600;
+
+// ── Screen 2: workflow scenarios ───────────────────────────────────────────
+
+export interface ScenarioStep {
+  label: string;
+  /** Optional detail shown under the step once it lands. */
+  note?: string;
+}
+
+export interface Scenario {
+  id: string;
+  tabLabel: string;
+  title: string;
+  account: string;
+  steps: ScenarioStep[];
+  outcome: { label: string; value: string; tone: "good" | "accent" }[];
+  /** The headline result line under the outcome grid. */
+  result: string;
+}
+
+export const SCENARIO_DURATION_MS = 7000;
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: "recover",
+    tabLabel: "Recover a cooling deal",
+    title: "A deal goes quiet after the demo — and comes back.",
+    account: "Ledgerly",
+    steps: [
+      { label: "Demo completed", note: "Discovery call held with the champion" },
+      { label: "Four days without a reply", note: "No outbound sent since" },
+      { label: "Risk level increases", note: "Silence at this stage is the top loss cause" },
+      { label: "Sellora identifies the missing stakeholder", note: "No finance contact on the thread" },
+      { label: "A targeted follow-up is prepared", note: "Draft written against the actual gap" },
+      { label: "Sales rep approves", note: "Nothing sends without a human" },
+      { label: "CRM is updated", note: "Stage, next step and activity written back" },
+    ],
+    outcome: [
+      { label: "Deal", value: "Recovered", tone: "good" },
+      { label: "Next meeting", value: "Scheduled", tone: "good" },
+    ],
+    result: "Estimated expected revenue protected: $43.2K",
+  },
+  {
+    id: "prioritize",
+    tabLabel: "Prioritize today's pipeline",
+    title: "Every open deal, ranked by what the next hour is worth.",
+    account: "All open opportunities",
+    steps: [
+      { label: "Sellora scans every open opportunity", note: "248 monitored continuously" },
+      { label: "Deal signals are scored", note: "Buying actions and silence both count" },
+      { label: "Expected revenue is calculated", note: "Deal value × probability of closing" },
+      { label: "Accounts are ranked for today", note: "Highest expected value first" },
+      { label: "One action is attached to each", note: "Not five options — one" },
+    ],
+    outcome: [
+      { label: "Accounts ranked", value: "14", tone: "accent" },
+      { label: "Top 3 expected revenue", value: "$89.6K", tone: "accent" },
+    ],
+    result: "Rep time saved: measured against your baseline once connected",
+  },
+  {
+    id: "convert",
+    tabLabel: "Convert a high-intent buyer",
+    title: "Intent rises, and the right next step is obvious.",
+    account: "Brightcart",
+    steps: [
+      { label: "Pricing page revisited", note: "Second visit this week" },
+      { label: "Security document downloaded", note: "A procurement signal, not a browse" },
+      { label: "Second stakeholder appears", note: "New contact from the same domain" },
+      { label: "Intent changes from Medium to High", note: "Score moves on evidence, not a guess" },
+      { label: "Sellora recommends technical validation", note: "The usual blocker at this stage" },
+      { label: "Meeting link is prepared", note: "Ready for the rep to send" },
+      { label: "Opportunity advances", note: "Stage updated on approval" },
+    ],
+    outcome: [
+      { label: "Buying committee", value: "Identified", tone: "good" },
+      { label: "Momentum", value: "High", tone: "accent" },
+    ],
+    result: "Recommended next step: technical validation with the new stakeholder",
+  },
+];
+
+/**
+ * Integrations, with an honest status per row. Only CSV signal import, Google
+ * sign-in and outbound email exist in the codebase today; the CRM and calendar
+ * connectors do not, so they are marked planned rather than listed as if they
+ * shipped.
+ */
+export const INTEGRATIONS: { name: string; status: "available" | "planned" }[] = [
+  { name: "CSV signal import", status: "available" },
+  { name: "Google sign-in", status: "available" },
+  { name: "Outbound email", status: "available" },
+  { name: "HubSpot", status: "planned" },
+  { name: "Salesforce", status: "planned" },
+  { name: "Pipedrive", status: "planned" },
+  { name: "Gmail", status: "planned" },
+  { name: "Google Calendar", status: "planned" },
+];
+
+/**
+ * Every line checked against the codebase. Role-based access is marked
+ * planned because `User.role` exists as a column but is never enforced
+ * anywhere; auditability is real (AgentAction records actor and timestamp).
+ */
+export const TRUST_POINTS: { text: string; status: "available" | "planned" }[] = [
+  { text: "Human approval for customer-facing actions", status: "available" },
+  { text: "Clear reasoning behind every recommendation", status: "available" },
+  { text: "Works alongside your existing CRM", status: "available" },
+  { text: "Customer data is not used to train shared models", status: "available" },
+  { text: "Auditable action history", status: "available" },
+  { text: "Role-based access and SSO", status: "planned" },
+];
+
+/** Outcome metrics stay unfilled until measured with real customers. */
+export const OUTCOME_METRICS = [
+  "Follow-up speed improvement",
+  "Rep hours saved each week",
+  "Pipeline coverage",
+];

@@ -4,11 +4,11 @@ import { NavShell } from "@/components/marketing/nav-shell";
 import { MobileNavMenu } from "@/components/marketing/home/mobile-nav-menu";
 import { getAuthState, isClerkEnabled } from "@/lib/auth";
 
+// Three screens, so three destinations. Anchors must match section ids that
+// still exist after the consolidation.
 const LINKS = [
-  { href: "#product", label: "Product" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#solutions", label: "Solutions" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#pricing", label: "Pricing" },
 ];
 
 export async function MarketingNavbar() {

@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reveal, Section, SectionLabel } from "@/components/marketing/section";
 
 /**
- * §10 — pricing, deliberately de-emphasised.
+ * Screen 3 — "What does it cost, and how do I start?"
+ *
+ * Deliberately not a carousel: pricing is the one place a visitor wants to
+ * compare things side by side without anything moving. The closing CTA lives
+ * here too rather than in its own block, which keeps the page at three
+ * screens.
  *
  * Two changes from the previous treatment. The framing is capacity ("plans
  * that grow with your pipeline") rather than cheapness — the old
@@ -28,29 +33,31 @@ const TIERS = [
     name: "Pro",
     monthly: { price: "$19.99", period: "/mo", hint: null as string | null },
     yearly: { price: "$199.99", period: "/yr", hint: "2 months free" },
-    scale: "500 prospects · 1,000 emails / mo",
-    description: "For a founder or small team running one focused motion.",
+    scale: "500 prospects · 1,000 AI actions / mo",
+    description: "For founders and small sales teams.",
     cta: "Start free",
     highlighted: false,
     features: [
-      "Revenue leak detection & recovery queue",
+      "Core pipeline intelligence",
       "Opportunity scoring with full reasoning",
-      "2 active campaigns",
-      "CSV signal import",
+      "Recovery queue and next best action",
+      "2 active workflows",
+      "Standard support",
     ],
   },
   {
     name: "Max",
     monthly: { price: "$39.99", period: "/mo", hint: null as string | null },
     yearly: { price: "$399.99", period: "/yr", hint: "2 months free" },
-    scale: "5,000 prospects · 10,000 emails / mo",
-    description: "For a team working inbound and outbound as one pipeline.",
+    scale: "5,000 prospects · 10,000 AI actions / mo",
+    description: "For teams running inbound and outbound as one pipeline.",
     cta: "Start free",
     highlighted: true,
     features: [
       "Everything in Pro",
-      "Unlimited campaigns",
-      "Revenue attribution reporting",
+      "All Sellora workflows, unlimited",
+      "Revenue analytics and attribution",
+      "CRM sync (planned)",
       "Priority support",
     ],
   },
@@ -59,15 +66,16 @@ const TIERS = [
     monthly: { price: "Custom", period: "", hint: null as string | null },
     yearly: { price: "Custom", period: "", hint: null as string | null },
     scale: "Usage sized to your pipeline",
-    description: "For teams with procurement, security review, and scale needs.",
+    description: "For teams with procurement, security review and scale needs.",
     cta: "Contact sales",
     highlighted: false,
     features: [
       "Custom usage limits",
-      "SSO and audit logs",
+      "SSO and audit logs (planned)",
       "Custom integrations",
-      "Dedicated support",
       "Security review support",
+      "Dedicated support",
+      "Custom workflows and SLA",
     ],
   },
 ];
@@ -78,12 +86,13 @@ export function Pricing({ startHref }: { startHref: string }) {
   return (
     <Section id="pricing">
       <Reveal>
-        <SectionLabel number="07" label="Pricing" />
+        <SectionLabel number="03" label="Pricing" />
         <h2 className="mt-8 max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-white sm:text-4xl md:text-[2.75rem]">
           Plans that grow with your pipeline.
         </h2>
-        <p className="mt-6 max-w-xl text-pretty text-[17px] leading-relaxed text-neutral-300">
-          Priced on the size of the pipeline you monitor, not on seats.
+        <p className="mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-neutral-300">
+          Start with the workflows you need today. Expand as Sellora covers
+          more of your revenue operation.
         </p>
       </Reveal>
 
@@ -199,9 +208,38 @@ export function Pricing({ startHref }: { startHref: string }) {
 
       <Reveal delay={80}>
         <p className="mt-6 text-[13px] text-neutral-400">
-          A free tier is available for evaluation — 25 prospects and 50 emails a
-          month, no card required.
+          A free tier is available for evaluation. Items marked{" "}
+          <span className="text-neutral-300">planned</span> are on the roadmap
+          and not yet available.
         </p>
+      </Reveal>
+
+      {/* ── Closing CTA, folded in rather than given a fourth screen ── */}
+      <Reveal delay={100}>
+        <div className="mt-20 border-t border-white/[0.08] pt-16 text-center">
+          <h3 className="mx-auto max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-white sm:text-4xl">
+            Find the revenue already hiding in your pipeline.
+          </h3>
+          <p className="mx-auto mt-5 max-w-xl text-pretty text-[16px] leading-relaxed text-neutral-300">
+            See which deals need attention, why they matter, and what your team
+            should do next.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={startHref}
+              className="group inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 text-[15px] font-medium text-black transition-colors hover:bg-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] active:bg-neutral-300"
+            >
+              Start free
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="mailto:hello@sellora.ai?subject=Sellora%20demo"
+              className="inline-flex h-12 items-center rounded-full border border-white/15 px-7 text-[15px] font-medium text-white transition-colors hover:border-white/30 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] active:bg-white/[0.10]"
+            >
+              Book a demo
+            </Link>
+          </div>
+        </div>
       </Reveal>
     </Section>
   );

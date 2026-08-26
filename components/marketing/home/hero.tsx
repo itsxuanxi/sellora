@@ -4,55 +4,50 @@ import { SignalField } from "@/components/marketing/home/signal-field";
 import { HeroDemo } from "@/components/marketing/home/hero-demo";
 
 /**
- * The hero.
+ * Screen 1 — "What is Sellora, and what does it actually do?"
  *
- * Two rules shape it. First, it must fit a common laptop viewport (~1440×800)
- * with the headline, both CTAs and the product surface all visible — so it is
- * sized off the content, not pinned to 400vh like the scrollytelling hero it
- * replaces. Second, the right-hand side shows the actual product interface
- * rather than an abstract visual, because the fastest way to explain a
- * revenue-intelligence tool is to show the screen it produces.
+ * Sized to fill a laptop viewport without ever clipping the demo: the section
+ * uses min-h with the nav height subtracted rather than a hard 100vh, and
+ * drops that constraint below `lg` so the stacked mobile layout can grow
+ * naturally instead of cramming.
  *
- * Body copy is neutral-300 (≈13:1 on #09090B), not neutral-500 (≈4.1:1) which
- * failed AA for normal text in the previous design.
+ * min-w-0 on both grid columns is load-bearing. Grid items default to
+ * min-width:auto, so the demo's nowrap tab row would otherwise stretch the
+ * grid past the viewport on mobile — and because this section clips overflow,
+ * that failure is silent: the last tab simply disappears.
  */
 export function Hero({ startHref }: { startHref: string }) {
   return (
-    <section className="relative isolate overflow-hidden border-b border-white/[0.06] px-5 pb-16 pt-28 md:px-8 md:pb-24 md:pt-36">
-      {/* Restrained signal texture — no orb, no starfield */}
+    <section className="relative isolate overflow-hidden border-b border-white/[0.06] px-5 pb-16 pt-24 md:px-8 md:pb-20 md:pt-28 lg:flex lg:min-h-[calc(100svh-4rem)] lg:items-center lg:py-20">
       <SignalField className="opacity-[0.55]" />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(ellipse_60%_100%_at_50%_0%,rgba(139,124,246,0.10),transparent_70%)]"
         aria-hidden
       />
 
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-14">
-        {/* ── Copy ──
-            min-w-0 on both columns is load-bearing: grid items default to
-            min-width:auto, so the demo's nowrap tab row would stretch the
-            whole grid past the viewport on mobile. The section clips overflow,
-            so that failure is silent — the fourth tab simply disappears. */}
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-14">
+        {/* ── Fixed copy: never changes with the carousel ── */}
         <div className="min-w-0 max-w-xl">
           <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-violet-300">
             AI revenue intelligence for B2B sales
           </p>
 
-          <h1 className="mt-5 text-balance text-4xl font-medium leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.4rem]">
+          <h1 className="mt-5 text-balance text-4xl font-medium leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.25rem]">
             Know which deals need attention&mdash;before they go cold.
           </h1>
 
-          <p className="mt-6 text-pretty text-[17px] leading-relaxed text-neutral-300">
+          <p className="mt-5 text-pretty text-[17px] leading-relaxed text-neutral-300">
             Sellora monitors every opportunity, detects buying and risk signals,
             and tells your team exactly who to contact, why now, and what to do
             next.
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
-              href="#demo"
+              href="mailto:hello@sellora.ai?subject=Sellora%20demo"
               className="group inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-medium text-black transition-colors hover:bg-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] active:bg-neutral-300"
             >
-              See Sellora in action
+              Book a demo
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
@@ -63,21 +58,24 @@ export function Hero({ startHref }: { startHref: string }) {
             </Link>
           </div>
 
+          {/* Each of these three is true of the product as built: Sellora is a
+              separate layer from the CRM, nothing sends without approval, and
+              no model is trained on customer data. */}
           <p className="mt-6 text-[13px] leading-relaxed text-neutral-400">
             Works alongside your CRM
             <span className="mx-2 text-neutral-600" aria-hidden>
               ·
             </span>
-            No rip-and-replace
+            Human-controlled actions
             <span className="mx-2 text-neutral-600" aria-hidden>
               ·
             </span>
-            Human-controlled actions
+            Your data stays yours
           </p>
         </div>
 
-        {/* ── Product surface: the auto-advancing walkthrough ── */}
-        <div className="relative min-w-0 lg:-mr-6 xl:-mr-12">
+        {/* ── Rotating product surface ── */}
+        <div className="relative min-w-0 lg:-mr-4 xl:-mr-10">
           <HeroDemo />
         </div>
       </div>

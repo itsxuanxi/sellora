@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useId } from "react";
 import { cn } from "@/lib/utils";
-import { prefersReducedMotion } from "@/lib/motion";
 import { formatMoney } from "@/lib/revenue/money";
+import { useAutoRotate } from "@/components/marketing/home/use-auto-rotate";
+import { StackedPanels, TabStrip } from "@/components/marketing/home/tab-strip";
 import {
   COMMAND,
   DEMO_DATA_NOTE,
   DEMO_DEALS,
   DEMO_STAGES,
-  FOCUS_DEAL,
   MONITORING,
   NEXT_ACTION,
   PRIORITIZATION,
@@ -17,25 +17,13 @@ import {
 } from "@/components/marketing/home/demo-data";
 
 /**
- * The hero's auto-advancing product demo.
+ * Screen 1's product surface: four stages of one continuous piece of work on
+ * one deal — Cloudmint is detected, ranked, acted on, then rolled up — so the
+ * hero shows Sellora working rather than four unrelated screenshots.
  *
- * Four stages of one continuous piece of work on a single deal — Cloudmint is
- * detected, ranked, acted on, and rolled up — so the carousel reads as Sellora
- * working rather than as four screenshots.
- *
- * Two implementation notes worth knowing before editing:
- *
- * 1. LAYOUT STABILITY. All four panels are always mounted and stacked in the
- *    same CSS grid cell, so the container is permanently as tall as the
- *    tallest panel and switching can never move the page. Inactive panels are
- *    faded out and made `inert` + `aria-hidden` rather than `hidden`, because
- *    `hidden` would drop them from layout and reintroduce the height jump.
- *
- * 2. THE TIMER. Advancing uses a single timeout whose remaining time is
- *    tracked explicitly, so pausing (hover, tab blur) resumes where it left
- *    off instead of restarting. The progress line is a CSS animation paused
- *    by the same state — deliberately not React state, which would mean ~60
- *    re-renders a second for a decorative bar.
+ * All rotation behaviour (single timer, hover/visibility/viewport pause,
+ * keyboard, reduced motion) lives in useAutoRotate. This file is only the
+ * layout and the four panel bodies.
  */
 
 const TONE_TEXT = {
@@ -56,220 +44,37 @@ const PRIORITY_STYLE = {
   watch: "border-white/[0.12] bg-white/[0.04] text-neutral-300",
 } as const;
 
+const IDS = DEMO_STAGES.map((s) => s.id);
+const LABELS = DEMO_STAGES.map((s) => s.tabLabel);
+
 export function HeroDemo() {
-  const [active, setActive] = useState(0);
-  // Two independent reasons to hold the carousel. Sharing one boolean made
-  // them fight: leaving the demo with the mouse would resume playback even
-  // while the browser tab was in the background.
-  const [hoverPaused, setHoverPaused] = useState(false);
-  const [pagePaused, setPagePaused] = useState(false);
-  const [reduced, setReduced] = useState(false);
-  const paused = hoverPaused || pagePaused;
+  const rotate = useAutoRotate(DEMO_STAGES.length, STAGE_DURATION_MS);
   const baseId = useId();
 
-  // Remaining time on the current stage, so a pause resumes rather than restarts.
-  const remainingRef = useRef(STAGE_DURATION_MS);
-  const startedAtRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  useEffect(() => {
-    setReduced(prefersReducedMotion());
-  }, []);
-
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
-  /** Jump to a stage and restart its clock — used by clicks and keyboard. */
-  const goTo = useCallback(
-    (index: number) => {
-      clearTimer();
-      remainingRef.current = STAGE_DURATION_MS;
-      setActive(((index % DEMO_STAGES.length) + DEMO_STAGES.length) % DEMO_STAGES.length);
-    },
-    [clearTimer]
-  );
-
-  // The advance timer. Re-armed whenever the stage changes or play resumes.
-  useEffect(() => {
-    if (reduced || paused) return;
-
-    startedAtRef.current = Date.now();
-    timerRef.current = setTimeout(() => {
-      // Null the ref BEFORE advancing. The cleanup below runs when `active`
-      // changes and banks unspent time for pause/resume; without this it
-      // cannot tell "paused mid-stage" from "stage completed" and would bank
-      // ~0ms, so the next stage would flash past in the 240ms floor.
-      timerRef.current = null;
-      remainingRef.current = STAGE_DURATION_MS;
-      setActive((a) => (a + 1) % DEMO_STAGES.length);
-    }, remainingRef.current);
-
-    return () => {
-      // A still-pending timer means we were interrupted (pause or manual
-      // jump), so bank what is left — that is what makes resume seamless.
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-        const spent = Date.now() - startedAtRef.current;
-        remainingRef.current = Math.max(240, remainingRef.current - spent);
-      }
-    };
-  }, [active, paused, reduced]);
-
-  // Hold while the tab is hidden or unfocused — a carousel advancing in a
-  // background tab means a returning visitor lands mid-story.
-  //
-  // Focus is tracked from blur/focus *events* rather than polling
-  // document.hasFocus(). Some embedded and automated contexts report no focus
-  // even while the page is plainly visible, and reading that on mount would
-  // leave the demo frozen for those visitors. Reacting to a real blur avoids
-  // that failure mode while still meeting the requirement.
-  useEffect(() => {
-    const syncVisibility = () => setPagePaused(document.hidden);
-    const onBlur = () => setPagePaused(true);
-    const onFocus = () => setPagePaused(document.hidden);
-
-    document.addEventListener("visibilitychange", syncVisibility);
-    window.addEventListener("blur", onBlur);
-    window.addEventListener("focus", onFocus);
-    syncVisibility();
-
-    return () => {
-      document.removeEventListener("visibilitychange", syncVisibility);
-      window.removeEventListener("blur", onBlur);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, []);
-
-  // Belt-and-braces cleanup: the effect above already clears on unmount, but
-  // an explicit teardown guarantees no timer outlives the component.
-  useEffect(() => clearTimer, [clearTimer]);
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    let next: number | null = null;
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") next = active + 1;
-    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = active - 1;
-    else if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = DEMO_STAGES.length - 1;
-    if (next === null) return;
-    e.preventDefault();
-    const idx = ((next % DEMO_STAGES.length) + DEMO_STAGES.length) % DEMO_STAGES.length;
-    goTo(idx);
-    tabRefs.current[idx]?.focus();
-  };
-
   return (
-    <div
-      onMouseEnter={() => setHoverPaused(true)}
-      onMouseLeave={() => setHoverPaused(false)}
-      // Deliberately no focus-based pause: clicking a tab focuses it, so
-      // pausing on focus would freeze the carousel the first time anyone
-      // interacted with it. Keyboard users instead get a full fresh interval
-      // on every arrow press, because goTo() restarts the clock.
-      className="w-full"
-    >
-      {/* ── Tabs ── */}
-      <div
-        role="tablist"
-        aria-label="Sellora product walkthrough"
-        onKeyDown={onKeyDown}
-        // Horizontally scrollable on narrow screens rather than wrapping,
-        // which would change the demo's height on mobile.
-        className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {DEMO_STAGES.map((stage, i) => {
-          const selected = i === active;
-          return (
-            <button
-              key={stage.id}
-              ref={(el) => {
-                tabRefs.current[i] = el;
-              }}
-              role="tab"
-              id={`${baseId}-tab-${stage.id}`}
-              aria-selected={selected}
-              aria-controls={`${baseId}-panel-${stage.id}`}
-              tabIndex={selected ? 0 : -1}
-              onClick={() => goTo(i)}
-              className={cn(
-                "group relative shrink-0 rounded-md px-2.5 py-2 text-left transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B]",
-                selected ? "bg-white/[0.05]" : "hover:bg-white/[0.03]"
-              )}
-            >
-              <span
-                className={cn(
-                  "block whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.11em] transition-colors",
-                  selected ? "text-violet-200" : "text-neutral-400 group-hover:text-neutral-200"
-                )}
-              >
-                {stage.label}
-              </span>
+    <div ref={rotate.containerRef} {...rotate.hoverProps} className="w-full">
+      <TabStrip
+        rotate={rotate}
+        labels={LABELS}
+        ids={IDS}
+        baseId={baseId}
+        ariaLabel="Sellora product walkthrough"
+      />
 
-              {/* Progress rail — fills over the stage duration, pauses with it. */}
-              <span
-                className="mt-1.5 block h-px w-full overflow-hidden rounded-full bg-white/[0.10]"
-                aria-hidden
-              >
-                {selected && (
-                  <span
-                    // Remounting on each stage restarts the animation cleanly.
-                    key={`${active}-${paused}-${reduced}`}
-                    className={cn(
-                      "block h-px origin-left bg-violet-400",
-                      reduced ? "scale-x-100" : "[animation:demo-progress_var(--dur)_linear_forwards]"
-                    )}
-                    style={
-                      reduced
-                        ? undefined
-                        : ({
-                            // Resume from where the pause left off.
-                            ["--dur" as string]: `${remainingRef.current}ms`,
-                            animationPlayState: paused ? "paused" : "running",
-                          } as React.CSSProperties)
-                    }
-                  />
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Stacked panels: container height = tallest panel, always ── */}
-      <div className="grid overflow-hidden rounded-xl border border-white/[0.10] bg-[#101014] shadow-[0_24px_70px_-24px_rgba(0,0,0,0.9)]">
-        {DEMO_STAGES.map((stage, i) => {
-          const selected = i === active;
-          return (
-            <div
-              key={stage.id}
-              role="tabpanel"
-              id={`${baseId}-panel-${stage.id}`}
-              aria-labelledby={`${baseId}-tab-${stage.id}`}
-              aria-hidden={!selected}
-              inert={!selected}
-              className={cn(
-                "col-start-1 row-start-1 transition-[opacity,transform,filter] duration-300 ease-out",
-                selected
-                  ? "opacity-100 blur-0 [transform:translateY(0)]"
-                  : "pointer-events-none opacity-0 blur-[3px] [transform:translateY(4px)]"
-              )}
-            >
-              <PanelChrome label={stage.panelLabel} live={stage.id === "monitoring"}>
-                {stage.id === "monitoring" && <MonitoringPanel active={selected} />}
-                {stage.id === "prioritization" && <PrioritizationPanel />}
-                {stage.id === "action" && <ActionPanel />}
-                {stage.id === "command" && <CommandPanel />}
-              </PanelChrome>
-            </div>
-          );
-        })}
-      </div>
+      <StackedPanels
+        ids={IDS}
+        baseId={baseId}
+        active={rotate.active}
+        className="overflow-hidden rounded-xl border border-white/[0.10] bg-[#101014] shadow-[0_24px_70px_-24px_rgba(0,0,0,0.9)]"
+        render={(id, i, selected) => (
+          <PanelChrome label={DEMO_STAGES[i].panelLabel} live={id === "monitoring"}>
+            {id === "monitoring" && <MonitoringPanel active={selected} />}
+            {id === "prioritization" && <PrioritizationPanel />}
+            {id === "action" && <ActionPanel />}
+            {id === "command" && <CommandPanel />}
+          </PanelChrome>
+        )}
+      />
     </div>
   );
 }
@@ -581,6 +386,3 @@ function CommandPanel() {
     </div>
   );
 }
-
-/** Re-exported so other marketing surfaces can stay on the same story. */
-export { FOCUS_DEAL };
