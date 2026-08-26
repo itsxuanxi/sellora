@@ -18,14 +18,14 @@ export async function MarketingNavbar() {
 
   return (
     <NavShell>
-      <Logo onDark />
+      <Logo />
 
       <div className="hidden items-center gap-8 md:flex">
         {LINKS.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="rounded text-sm text-neutral-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-4 focus-visible:ring-offset-[#09090B]"
+            className="rounded text-sm text-[var(--mkt-ink)] transition-colors hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--mkt-page)]"
           >
             {link.label}
           </Link>
@@ -35,13 +35,13 @@ export async function MarketingNavbar() {
       <div className="flex items-center gap-2 sm:gap-3">
         <Link
           href={appHref}
-          className="hidden rounded px-2 py-1 text-sm text-neutral-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] sm:block"
+          className="hidden rounded px-2 py-1 text-sm text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] sm:block"
         >
           {signedIn ? "Dashboard" : "Sign in"}
         </Link>
         <Link
           href="mailto:hello@sellora.ai?subject=Sellora%20demo"
-          className="inline-flex h-9 items-center rounded-full bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] active:bg-neutral-300"
+          className="inline-flex h-9 items-center rounded-full bg-[var(--mkt-ink)] px-4 text-sm font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-black"
         >
           Book a demo
         </Link>

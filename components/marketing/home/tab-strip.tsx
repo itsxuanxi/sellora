@@ -22,6 +22,7 @@ export function TabStrip({
   baseId,
   ariaLabel,
   size = "sm",
+  orientation = "horizontal",
 }: {
   rotate: AutoRotate;
   labels: string[];
@@ -29,6 +30,9 @@ export function TabStrip({
   baseId: string;
   ariaLabel: string;
   size?: "sm" | "lg";
+  /** Vertical suits a left rail, where long scenario labels would otherwise
+   * overflow a horizontal strip and get clipped. */
+  orientation?: "horizontal" | "vertical";
 }) {
   const { active, goTo, onKeyDown, registerTab, paused, reduced, remaining } = rotate;
 
@@ -36,8 +40,16 @@ export function TabStrip({
     <div
       role="tablist"
       aria-label={ariaLabel}
+      aria-orientation={orientation}
       onKeyDown={onKeyDown}
-      className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className={cn(
+        "flex gap-1",
+        orientation === "vertical"
+          ? "flex-col"
+          : // Horizontal strips scroll rather than wrap: wrapping would change
+            // the strip's height and move the panel beneath it.
+            "-mx-1 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      )}
     >
       {labels.map((label, i) => {
         const selected = i === active;
@@ -52,31 +64,37 @@ export function TabStrip({
             tabIndex={selected ? 0 : -1}
             onClick={() => goTo(i)}
             className={cn(
-              "group relative shrink-0 rounded-md text-left transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B]",
-              size === "lg" ? "px-3 py-2.5" : "px-2.5 py-2",
-              selected ? "bg-white/[0.05]" : "hover:bg-white/[0.03]"
+              "group relative rounded-lg border text-left transition-colors",
+              orientation === "vertical" ? "w-full" : "shrink-0",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]",
+              size === "lg" ? "px-3.5 py-2.5" : "px-3 py-2",
+              selected
+                ? "border-[var(--mkt-brand)] bg-[var(--mkt-surface)]"
+                : "border-transparent bg-[var(--mkt-surface-2)] hover:bg-[color-mix(in_srgb,var(--mkt-surface)_70%,var(--mkt-surface-2))]"
             )}
           >
             <span
               className={cn(
-                "block whitespace-nowrap font-medium uppercase tracking-[0.11em] transition-colors",
+                "block font-medium uppercase tracking-[0.11em] transition-colors",
+                orientation === "vertical" ? "" : "whitespace-nowrap",
                 size === "lg" ? "text-[11px]" : "text-[10px]",
-                selected ? "text-violet-200" : "text-neutral-400 group-hover:text-neutral-200"
+                selected
+                  ? "text-[var(--mkt-brand-deep)]"
+                  : "text-[var(--mkt-muted)] group-hover:text-[var(--mkt-ink)]"
               )}
             >
               {label}
             </span>
 
             <span
-              className="mt-1.5 block h-px w-full overflow-hidden rounded-full bg-white/[0.10]"
+              className="mt-1.5 block h-px w-full overflow-hidden rounded-full bg-[var(--mkt-line)]"
               aria-hidden
             >
               {selected && (
                 <span
                   key={`${active}-${paused}-${reduced}`}
                   className={cn(
-                    "block h-px origin-left bg-violet-400",
+                    "block h-px origin-left bg-[var(--mkt-brand)]",
                     reduced
                       ? "scale-x-100"
                       : "[animation:demo-progress_var(--dur)_linear_forwards]"
@@ -119,7 +137,7 @@ export function StackedPanels({
   className?: string;
 }) {
   return (
-    <div className={cn("grid", className)}>
+    <div className={cn("grid grid-cols-[minmax(0,1fr)]", className)}>
       {ids.map((id, i) => {
         const selected = i === active;
         return (

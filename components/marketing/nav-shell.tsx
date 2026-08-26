@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Condenses the marketing nav once the page scrolls — a tighter bar with a
- * stronger blur/shadow, echoing the minimal floating nav on cinematic
- * one-pagers. Purely presentational; auth-aware content is passed as
- * children from the server component.
+ * Condenses the marketing nav once the page scrolls: a slightly tighter bar
+ * that picks up a light blur and a very soft shadow. Warm white rather than
+ * black — a solid dark bar would fight the light page beneath it.
+ * Purely presentational; auth-aware content comes from the server component.
  */
 export function NavShell({ children }: { children: React.ReactNode }) {
   const [scrolled, setScrolled] = useState(false);
@@ -24,8 +24,8 @@ export function NavShell({ children }: { children: React.ReactNode }) {
       className={cn(
         "fixed inset-x-0 top-0 z-50 border-b transition-all duration-300",
         scrolled
-          ? "border-white/[0.08] bg-[#09090B]/85 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl"
-          : "border-white/[0.04] bg-[#09090B]/40 backdrop-blur-md"
+          ? "border-[var(--mkt-line)] bg-[color-mix(in_srgb,var(--mkt-page)_88%,transparent)] shadow-[0_1px_16px_rgba(28,31,29,0.06)] backdrop-blur-xl"
+          : "border-transparent bg-[color-mix(in_srgb,var(--mkt-page)_70%,transparent)] backdrop-blur-md"
       )}
     >
       <nav

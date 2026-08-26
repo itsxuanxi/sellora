@@ -11,9 +11,9 @@ export function SectionLabel({
 }) {
   return (
     <div className="flex items-center gap-4">
-      <span className="font-mono text-sm text-violet-400/80">{number}</span>
-      <span className="h-px w-8 bg-white/20" />
-      <span className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-400">
+      <span className="font-mono text-sm text-[var(--mkt-brand-deep)]">{number}</span>
+      <span className="h-px w-8 bg-[var(--mkt-line)]" />
+      <span className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--mkt-muted)]">
         {label}
       </span>
     </div>
@@ -37,7 +37,7 @@ export function Section({
     <section
       id={id}
       className={cn(
-        "relative scroll-mt-24 border-t border-white/[0.06] px-5 py-24 md:px-8 md:py-32",
+        "relative scroll-mt-24 border-t border-[var(--mkt-line)] px-5 py-20 md:px-8 md:py-24",
         className
       )}
     >

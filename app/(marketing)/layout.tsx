@@ -2,17 +2,20 @@ import { MarketingNavbar } from "@/components/marketing/navbar";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { SmoothScroll } from "@/components/marketing/smooth-scroll";
 
+/**
+ * Marketing shell — light enterprise surface.
+ *
+ * `.mkt` carries the palette (see app/globals.css). The `dark` class and the
+ * full-bleed near-black background that used to live here are gone: the page
+ * is now warm white throughout, with exactly one dark band at the closing CTA.
+ */
 export default function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="dark isolate min-h-svh bg-[#09090B] font-sans text-white antialiased selection:bg-violet-500/30 selection:text-white">
-      <div
-        className="pointer-events-none fixed inset-0 -z-50 bg-[#09090B]"
-        aria-hidden
-      />
+    <div className="mkt min-h-svh bg-[var(--mkt-page)] font-sans text-[var(--mkt-ink)] antialiased selection:bg-[var(--mkt-brand-wash)] selection:text-[var(--mkt-brand-deep)]">
       <SmoothScroll />
       <MarketingNavbar />
       <main className="flex-1">{children}</main>

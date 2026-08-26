@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Reveal, Section, SectionLabel } from "@/components/marketing/section";
+import { Reveal, Section } from "@/components/marketing/section";
 
 /**
  * Screen 3 — "What does it cost, and how do I start?"
@@ -84,13 +84,13 @@ export function Pricing({ startHref }: { startHref: string }) {
   const [billing, setBilling] = useState<Billing>("monthly");
 
   return (
-    <Section id="pricing">
+    <Section id="pricing" className="border-t-0 bg-[var(--mkt-page)]">
       <Reveal>
-        <SectionLabel number="03" label="Pricing" />
-        <h2 className="mt-8 max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-white sm:text-4xl md:text-[2.75rem]">
+        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--mkt-brand-deep)]">Pricing</p>
+        <h2 className="mt-4 max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-[var(--mkt-ink)] sm:text-4xl md:text-[2.7rem]">
           Plans that grow with your pipeline.
         </h2>
-        <p className="mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-neutral-300">
+        <p className="mt-5 max-w-2xl text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
           Start with the workflows you need today. Expand as Sellora covers
           more of your revenue operation.
         </p>
@@ -100,7 +100,7 @@ export function Pricing({ startHref }: { startHref: string }) {
         <div
           role="group"
           aria-label="Billing period"
-          className="mt-10 flex w-fit items-center gap-1 rounded-full border border-white/[0.10] bg-white/[0.03] p-1"
+          className="mt-10 flex w-fit items-center gap-1 rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] p-1"
         >
           {(
             [
@@ -115,10 +115,10 @@ export function Pricing({ startHref }: { startHref: string }) {
               aria-pressed={billing === option.value}
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]",
                 billing === option.value
-                  ? "bg-white font-medium text-black"
-                  : "text-neutral-300 hover:text-white"
+                  ? "bg-[var(--mkt-surface)] font-medium text-[var(--mkt-ink)] shadow-[var(--mkt-shadow-card)]"
+                  : "text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)]"
               )}
             >
               {option.label}
@@ -128,57 +128,54 @@ export function Pricing({ startHref }: { startHref: string }) {
       </Reveal>
 
       {/* One divided panel, not three floating cards */}
-      <div className="mt-12 grid divide-y divide-white/[0.08] border-y border-white/[0.08] md:grid-cols-3 md:divide-x md:divide-y-0">
+      <div className="mt-12 grid gap-5 md:grid-cols-3">
         {TIERS.map((tier) => {
           const info = tier[billing];
           return (
             <div
               key={tier.name}
               className={cn(
-                "relative flex flex-col p-7 lg:p-8",
-                tier.highlighted && "bg-white/[0.02]"
+                "relative flex flex-col rounded-2xl border p-7 lg:p-8",
+                tier.highlighted
+                  ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand-wash)]"
+                  : "border-[var(--mkt-line)] bg-[var(--mkt-surface)]"
               )}
             >
               {tier.highlighted && (
-                <span
-                  className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-300/60 to-transparent"
-                  aria-hidden
-                />
+                <span className="absolute -top-3 left-7 rounded-full bg-[var(--mkt-brand)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em] text-white">
+                  Most popular
+                </span>
               )}
 
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-[13px] font-medium uppercase tracking-[0.14em] text-neutral-300">
+                <h3 className="text-[13px] font-medium uppercase tracking-[0.14em] text-[var(--mkt-muted)]">
                   {tier.name}
                 </h3>
-                {tier.highlighted && (
-                  <span className="text-[10px] uppercase tracking-[0.12em] text-violet-300">
-                    Most popular
-                  </span>
-                )}
+
               </div>
 
               <div className="mt-5 flex items-baseline gap-2">
-                <span className="text-4xl font-medium tracking-tight text-white">
+                <span className="text-4xl font-medium tracking-tight text-[var(--mkt-ink)]">
                   {info.price}
                 </span>
-                <span className="text-sm text-neutral-400">{info.period}</span>
+                <span className="text-sm text-[var(--mkt-muted)]">{info.period}</span>
               </div>
               {info.hint && (
-                <p className="mt-1.5 text-xs font-medium text-violet-300">{info.hint}</p>
+                <p className="mt-1.5 text-xs font-medium text-[var(--mkt-brand-deep)]">{info.hint}</p>
               )}
 
-              <p className="mt-4 text-[13px] font-medium text-neutral-200">
+              <p className="mt-4 text-[13px] font-medium text-[var(--mkt-ink)]">
                 {tier.scale}
               </p>
-              <p className="mt-2 text-[14px] leading-relaxed text-neutral-400">
+              <p className="mt-2 text-[14px] leading-relaxed text-[var(--mkt-muted)]">
                 {tier.description}
               </p>
 
               <ul className="mt-7 flex-1 space-y-3">
                 {tier.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 size-4 shrink-0 text-violet-400" aria-hidden />
-                    <span className="text-[14px] leading-snug text-neutral-300">
+                    <Check className="mt-0.5 size-4 shrink-0 text-[var(--mkt-brand)]" aria-hidden />
+                    <span className="text-[14px] leading-snug text-[var(--mkt-muted)]">
                       {feature}
                     </span>
                   </li>
@@ -193,10 +190,12 @@ export function Pricing({ startHref }: { startHref: string }) {
                 }
                 className={cn(
                   "mt-8 inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]",
                   tier.highlighted
-                    ? "bg-white text-black hover:bg-neutral-200 active:bg-neutral-300"
-                    : "border border-white/15 text-white hover:border-white/30 hover:bg-white/[0.06] active:bg-white/[0.10]"
+                    ? "bg-[var(--mkt-brand)] text-white hover:bg-[var(--mkt-brand-deep)]"
+                    : tier.name === "Enterprise"
+                      ? "bg-[var(--mkt-ink)] text-[var(--mkt-page)] hover:bg-[var(--mkt-brand-deep)]"
+                      : "border border-[var(--mkt-line)] bg-[var(--mkt-surface)] text-[var(--mkt-ink)] hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-brand-deep)]"
                 )}
               >
                 {tier.cta}
@@ -207,37 +206,51 @@ export function Pricing({ startHref }: { startHref: string }) {
       </div>
 
       <Reveal delay={80}>
-        <p className="mt-6 text-[13px] text-neutral-400">
+        <p className="mt-6 text-[13px] text-[var(--mkt-muted)]">
           A free tier is available for evaluation. Items marked{" "}
-          <span className="text-neutral-300">planned</span> are on the roadmap
+          <span className="text-[var(--mkt-ink)]">planned</span> are on the roadmap
           and not yet available.
         </p>
       </Reveal>
 
-      {/* ── Closing CTA, folded in rather than given a fourth screen ── */}
+      {/* ── Closing CTA: the page's only large dark surface. One deep band
+             at the very end reads as a deliberate close rather than a theme,
+             and keeps the light, credible tone dominant everywhere else. ── */}
       <Reveal delay={100}>
-        <div className="mt-20 border-t border-white/[0.08] pt-16 text-center">
-          <h3 className="mx-auto max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-white sm:text-4xl">
-            Find the revenue already hiding in your pipeline.
-          </h3>
-          <p className="mx-auto mt-5 max-w-xl text-pretty text-[16px] leading-relaxed text-neutral-300">
-            See which deals need attention, why they matter, and what your team
-            should do next.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={startHref}
-              className="group inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 text-[15px] font-medium text-black transition-colors hover:bg-neutral-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] active:bg-neutral-300"
-            >
-              Start free
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-            <Link
-              href="mailto:hello@sellora.ai?subject=Sellora%20demo"
-              className="inline-flex h-12 items-center rounded-full border border-white/15 px-7 text-[15px] font-medium text-white transition-colors hover:border-white/30 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] active:bg-white/[0.10]"
-            >
-              Book a demo
-            </Link>
+        <div className="relative mt-20 overflow-hidden rounded-3xl bg-[var(--mkt-dark)] px-6 py-16 text-center sm:px-12 sm:py-20">
+          {/* A very restrained signal grid — no starfield, no glow. */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:linear-gradient(to_right,rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_60%_70%_at_50%_50%,black,transparent)]"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_45%_60%_at_50%_0%,rgba(103,87,229,0.22),transparent_70%)]"
+            aria-hidden
+          />
+
+          <div className="relative">
+            <h3 className="mx-auto max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-[#F7F8F5] sm:text-4xl">
+              Find the revenue already hiding in your pipeline.
+            </h3>
+            <p className="mx-auto mt-5 max-w-xl text-pretty text-[16px] leading-relaxed text-[#C9CCC7]">
+              See which deals need attention, why they matter, and what your
+              team should do next.
+            </p>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href={startHref}
+                className="group inline-flex h-12 items-center gap-2 rounded-full bg-[#F7F8F5] px-7 text-[15px] font-medium text-[var(--mkt-dark)] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
+              >
+                Start free
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                href="mailto:hello@sellora.ai?subject=Sellora%20demo"
+                className="inline-flex h-12 items-center rounded-full border border-white/20 px-7 text-[15px] font-medium text-[#F7F8F5] transition-colors hover:border-[#A99BFF] hover:text-[#CFC6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
+              >
+                Book a demo
+              </Link>
+            </div>
           </div>
         </div>
       </Reveal>

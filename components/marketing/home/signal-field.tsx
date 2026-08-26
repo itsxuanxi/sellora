@@ -10,8 +10,10 @@ import { prefersReducedMotion } from "@/lib/motion";
  * Deliberately restrained. It replaces a 259-line three.js scene (a large
  * glowing orb over a starfield) that dominated the viewport and had nothing to
  * do with B2B sales. This is a 2D canvas, no WebGL, no external libraries —
- * roughly 4KB of logic, drawn at low opacity behind content so it reads as
- * texture rather than as an illustration competing for attention.
+ * roughly 4KB of logic, drawn very faintly behind content so it reads as
+ * texture rather than as an illustration competing for attention. On the
+ * light surface it is ink-on-warm-white, not glow — the product window must
+ * stay the brightest, most contrasted thing on the screen.
  *
  * The metaphor is literal rather than decorative: nodes are accounts, and a
  * pulse travelling an edge is a signal propagating through the pipeline.
@@ -34,7 +36,8 @@ interface Pulse {
   speed: number;
 }
 
-const ACCENT = "167, 139, 250"; // violet-400, the page's single accent
+const ACCENT = "103, 87, 229"; // --mkt-brand
+const INK = "18, 20, 19"; // --mkt-ink, for nodes and links on the light page
 
 export function SignalField({
   className = "",
@@ -94,7 +97,8 @@ export function SignalField({
           const dist = Math.hypot(dx, dy);
           if (dist > LINK_DIST) continue;
           const strength = 1 - dist / LINK_DIST;
-          ctx.strokeStyle = `rgba(255,255,255,${strength * 0.045})`;
+          // Very faint ink on warm white — texture, never an illustration.
+          ctx.strokeStyle = `rgba(${INK},${strength * 0.07})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(nodes[i].x, nodes[i].y);
@@ -105,7 +109,7 @@ export function SignalField({
 
       // ── nodes ──
       for (const n of nodes) {
-        ctx.fillStyle = `rgba(255,255,255,0.16)`;
+        ctx.fillStyle = `rgba(${INK},0.18)`;
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fill();
@@ -122,7 +126,7 @@ export function SignalField({
         const alpha = Math.sin(p.t * Math.PI) * 0.9;
 
         const glow = ctx.createRadialGradient(x, y, 0, x, y, 9);
-        glow.addColorStop(0, `rgba(${ACCENT},${alpha * 0.5})`);
+        glow.addColorStop(0, `rgba(${ACCENT},${alpha * 0.28})`);
         glow.addColorStop(1, `rgba(${ACCENT},0)`);
         ctx.fillStyle = glow;
         ctx.beginPath();

@@ -62,7 +62,7 @@ export function MobileNavMenu({
         aria-controls="mobile-nav-panel"
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex size-9 items-center justify-center rounded-full border border-white/[0.12] text-neutral-200 transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B] active:bg-white/[0.10]"
+        className="inline-flex size-9 items-center justify-center rounded-full border border-[var(--mkt-line)] text-[var(--mkt-ink)] transition-colors hover:bg-[var(--mkt-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-[var(--mkt-line)]"
       >
         {open ? <X className="size-4" /> : <Menu className="size-4" />}
       </button>
@@ -71,7 +71,7 @@ export function MobileNavMenu({
         <div
           ref={panelRef}
           id="mobile-nav-panel"
-          className="absolute inset-x-0 top-full border-b border-white/[0.08] bg-[#09090B]/98 px-5 pb-6 pt-2 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+          className="absolute inset-x-0 top-full border-b border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-5 pb-6 pt-2 shadow-[0_16px_40px_rgba(28,31,29,0.10)]"
         >
           <nav aria-label="Main">
             <ul className="flex flex-col">
@@ -80,7 +80,7 @@ export function MobileNavMenu({
                   <Link
                     href={link.href}
                     onClick={() => setOpen(false)}
-                    className="block rounded border-b border-white/[0.06] py-3.5 text-[15px] text-neutral-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                    className="block rounded border-b border-[var(--mkt-line)] py-3.5 text-[15px] text-[var(--mkt-ink)] transition-colors hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)]"
                   >
                     {link.label}
                   </Link>
@@ -90,7 +90,7 @@ export function MobileNavMenu({
                 <Link
                   href={appHref}
                   onClick={() => setOpen(false)}
-                  className="block rounded py-3.5 text-[15px] text-neutral-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                  className="block rounded py-3.5 text-[15px] text-[var(--mkt-ink)] transition-colors hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)]"
                 >
                   {signedIn ? "Dashboard" : "Sign in"}
                 </Link>

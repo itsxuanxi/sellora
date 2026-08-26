@@ -26,22 +26,24 @@ import {
  * layout and the four panel bodies.
  */
 
+// Status colour carries meaning, and only on small marks and short labels —
+// never as a fill across a whole row.
 const TONE_TEXT = {
-  high: "text-violet-300",
-  rising: "text-sky-300",
-  risk: "text-rose-300",
+  high: "text-[var(--mkt-success)]",
+  rising: "text-[var(--mkt-brand-deep)]",
+  risk: "text-[var(--mkt-warn-ink)]",
 } as const;
 
 const TONE_DOT = {
-  high: "bg-violet-400",
-  rising: "bg-sky-400",
-  risk: "bg-rose-400",
+  high: "bg-[var(--mkt-success)]",
+  rising: "bg-[var(--mkt-brand)]",
+  risk: "bg-[var(--mkt-warn)]",
 } as const;
 
 const PRIORITY_STYLE = {
-  urgent: "border-rose-400/25 bg-rose-400/10 text-rose-200",
-  warn: "border-amber-400/25 bg-amber-400/10 text-amber-200",
-  watch: "border-white/[0.12] bg-white/[0.04] text-neutral-300",
+  urgent: "border-[var(--mkt-danger)]/25 bg-[var(--mkt-danger)]/[0.07] text-[var(--mkt-danger)]",
+  warn: "border-[var(--mkt-warn)]/30 bg-[var(--mkt-warn)]/[0.08] text-[var(--mkt-warn-ink)]",
+  watch: "border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] text-[var(--mkt-muted)]",
 } as const;
 
 const IDS = DEMO_STAGES.map((s) => s.id);
@@ -65,7 +67,7 @@ export function HeroDemo() {
         ids={IDS}
         baseId={baseId}
         active={rotate.active}
-        className="overflow-hidden rounded-xl border border-white/[0.10] bg-[#101014] shadow-[0_24px_70px_-24px_rgba(0,0,0,0.9)]"
+        className="overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] shadow-[var(--mkt-shadow-panel)]"
         render={(id, i, selected) => (
           <PanelChrome label={DEMO_STAGES[i].panelLabel} live={id === "monitoring"}>
             {id === "monitoring" && <MonitoringPanel active={selected} />}
@@ -92,20 +94,20 @@ function PanelChrome({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-white/[0.08] bg-white/[0.02] px-4 py-2.5">
+      <div className="flex items-center gap-3 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-4 py-2.5">
         <span className="flex gap-1.5" aria-hidden>
-          <span className="size-2 rounded-full bg-white/15" />
-          <span className="size-2 rounded-full bg-white/15" />
-          <span className="size-2 rounded-full bg-white/15" />
+          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
+          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
+          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
         </span>
-        <span className="truncate text-[11px] font-medium tracking-[0.05em] text-neutral-300">
+        <span className="truncate text-[11px] font-medium tracking-[0.05em] text-[var(--mkt-ink)]">
           {label}
         </span>
         {live && (
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] text-neutral-300">
+          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] text-[var(--mkt-success)]">
             <span className="relative flex size-1.5" aria-hidden>
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-violet-400/70 motion-reduce:hidden" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-violet-400" />
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--mkt-success)]/60 motion-reduce:hidden" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-[var(--mkt-success)]" />
             </span>
             Live
           </span>
@@ -114,8 +116,8 @@ function PanelChrome({
 
       <div className="flex-1 px-4 py-3.5 sm:px-5">{children}</div>
 
-      <div className="border-t border-white/[0.08] px-4 py-2 sm:px-5">
-        <span className="text-[10px] text-neutral-400">{DEMO_DATA_NOTE}</span>
+      <div className="border-t border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-4 py-2 sm:px-5">
+        <span className="text-[10px] text-[var(--mkt-muted)]">{DEMO_DATA_NOTE}</span>
       </div>
     </div>
   );
@@ -123,7 +125,7 @@ function PanelChrome({
 
 function StatusLine({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.11em] text-neutral-400">
+    <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.11em] text-[var(--mkt-muted)]">
       {children}
     </p>
   );
@@ -144,13 +146,13 @@ function MonitoringPanel({ active }: { active: boolean }) {
           <li
             key={d.company}
             className={cn(
-              "rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2.5",
+              "rounded-lg border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-3 py-2.5",
               active && "animate-fade-up"
             )}
             style={active ? { animationDelay: `${i * 110}ms` } : undefined}
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[13px] font-medium text-white">{d.company}</span>
+              <span className="text-[13px] font-medium text-[var(--mkt-ink)]">{d.company}</span>
               <span className={cn("flex items-center gap-1.5 text-[11px]", TONE_TEXT[d.readoutTone])}>
                 <span className={cn("size-1.5 rounded-full", TONE_DOT[d.readoutTone])} aria-hidden />
                 {d.readoutLabel}: {d.readoutValue}
@@ -160,13 +162,13 @@ function MonitoringPanel({ active }: { active: boolean }) {
               {d.signals.map((s) => (
                 <span
                   key={s}
-                  className="rounded border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[11px] text-neutral-300"
+                  className="rounded border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-1.5 py-0.5 text-[11px] text-[var(--mkt-muted)]"
                 >
                   {s}
                 </span>
               ))}
             </div>
-            <p className="mt-1.5 text-[11px] text-neutral-400">{d.status}</p>
+            <p className="mt-1.5 text-[11px] text-[var(--mkt-muted)]">{d.status}</p>
           </li>
         ))}
       </ul>
@@ -181,16 +183,56 @@ function PrioritizationPanel() {
     <div>
       <StatusLine>{PRIORITIZATION.status}</StatusLine>
 
-      <div className="overflow-x-auto">
+      {/* ── Compact cards on phones ──
+          A six-column table cannot be read at 375px. Squeezing it also broke
+          layout: `min-w-[420px]` grew the scroll container instead of
+          scrolling it, stretching the whole panel to 452px, which the parent
+          then silently clipped. Cards below `sm`, real table from `sm` up. */}
+      <ul className="space-y-2 sm:hidden">
+        {DEMO_DEALS.map((d) => (
+          <li
+            key={d.company}
+            className="rounded-lg border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-3 py-2.5"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[13px] font-medium text-[var(--mkt-ink)]">
+                <span className="mr-1.5 tabular-nums text-[var(--mkt-muted)]">
+                  {d.rank}
+                </span>
+                {d.company}
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em]",
+                  PRIORITY_STYLE[d.priorityTone]
+                )}
+              >
+                {d.priority}
+              </span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[11px] tabular-nums text-[var(--mkt-muted)]">
+              <span>{formatMoney(d.dealValue)}</span>
+              <span aria-hidden>×</span>
+              <span>{d.probability}%</span>
+              <span aria-hidden>=</span>
+              <span className="text-[13px] font-medium text-[var(--mkt-brand-deep)]">
+                {formatMoney(d.expected)}
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden min-w-0 overflow-x-auto sm:block">
         <table className="w-full min-w-[420px] border-collapse">
           <thead>
-            <tr className="border-b border-white/[0.08] text-left">
+            <tr className="border-b border-[var(--mkt-line)] text-left">
               {["", "Account", "Deal value", "Close", "Expected", "Priority"].map((h, i) => (
                 <th
                   key={i}
                   scope="col"
                   className={cn(
-                    "pb-2 text-[10px] font-medium uppercase tracking-[0.09em] text-neutral-400",
+                    "pb-2 text-[10px] font-medium uppercase tracking-[0.09em] text-[var(--mkt-muted)]",
                     i >= 2 && i <= 4 && "text-right"
                   )}
                 >
@@ -199,22 +241,22 @@ function PrioritizationPanel() {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.06]">
+          <tbody className="divide-y divide-[var(--mkt-line)]">
             {DEMO_DEALS.map((d) => (
               <tr key={d.company}>
-                <td className="py-2.5 pr-2 text-[11px] tabular-nums text-neutral-400">
+                <td className="py-2.5 pr-2 text-[11px] tabular-nums text-[var(--mkt-muted)]">
                   {d.rank}
                 </td>
-                <td className="py-2.5 pr-2 text-[13px] font-medium text-white">
+                <td className="py-2.5 pr-2 text-[13px] font-medium text-[var(--mkt-ink)]">
                   {d.company}
                 </td>
-                <td className="py-2.5 pr-2 text-right text-[12px] tabular-nums text-neutral-200">
+                <td className="py-2.5 pr-2 text-right text-[12px] tabular-nums text-[var(--mkt-ink)]">
                   {formatMoney(d.dealValue)}
                 </td>
-                <td className="py-2.5 pr-2 text-right text-[12px] tabular-nums text-neutral-300">
+                <td className="py-2.5 pr-2 text-right text-[12px] tabular-nums text-[var(--mkt-muted)]">
                   {d.probability}%
                 </td>
-                <td className="py-2.5 pr-2 text-right text-[13px] font-medium tabular-nums text-violet-200">
+                <td className="py-2.5 pr-2 text-right text-[13px] font-medium tabular-nums text-[var(--mkt-brand-deep)]">
                   {formatMoney(d.expected)}
                 </td>
                 <td className="py-2.5 text-right">
@@ -233,7 +275,7 @@ function PrioritizationPanel() {
         </table>
       </div>
 
-      <p className="mt-3 border-t border-white/[0.08] pt-2.5 text-[11px] text-neutral-400">
+      <p className="mt-3 border-t border-[var(--mkt-line)] pt-2.5 text-[11px] text-[var(--mkt-muted)]">
         {PRIORITIZATION.formula}
       </p>
     </div>
@@ -246,10 +288,10 @@ function ActionPanel() {
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-[13px] font-medium text-white">{NEXT_ACTION.company}</span>
-        <span className="text-[12px] text-neutral-400">
+        <span className="text-[13px] font-medium text-[var(--mkt-ink)]">{NEXT_ACTION.company}</span>
+        <span className="text-[12px] text-[var(--mkt-muted)]">
           Expected revenue{" "}
-          <span className="font-medium tabular-nums text-violet-200">
+          <span className="font-medium tabular-nums text-[var(--mkt-brand-deep)]">
             {formatMoney(NEXT_ACTION.expected)}
           </span>
         </span>
@@ -259,29 +301,29 @@ function ActionPanel() {
         <StatusLine>Why now</StatusLine>
         <ul className="space-y-1">
           {NEXT_ACTION.whyNow.map((r) => (
-            <li key={r} className="flex gap-2 text-[12px] leading-snug text-neutral-200">
-              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-violet-400" aria-hidden />
+            <li key={r} className="flex gap-2 text-[12px] leading-snug text-[var(--mkt-ink)]">
+              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[var(--mkt-brand)]" aria-hidden />
               {r}
             </li>
           ))}
         </ul>
       </div>
 
-      <div className="mt-3 rounded-md border border-violet-400/20 bg-violet-400/[0.06] px-2.5 py-2">
-        <span className="text-[12px] font-medium leading-snug text-violet-100">
+      <div className="mt-3 rounded-md border border-[var(--mkt-brand)]/25 bg-[var(--mkt-brand-wash)] px-2.5 py-2">
+        <span className="text-[12px] font-medium leading-snug text-[var(--mkt-brand-deep)]">
           {NEXT_ACTION.action}
         </span>
       </div>
 
       {/* Draft awaiting approval — never shown as sent. */}
-      <div className="mt-3 rounded-md border border-white/[0.08] bg-white/[0.02] p-2.5">
-        <div className="text-[10px] uppercase tracking-[0.09em] text-neutral-400">
+      <div className="mt-3 rounded-md border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] p-2.5">
+        <div className="text-[10px] uppercase tracking-[0.09em] text-[var(--mkt-muted)]">
           Draft · awaiting your approval
         </div>
-        <p className="mt-1 truncate text-[12px] font-medium text-neutral-100">
+        <p className="mt-1 truncate text-[12px] font-medium text-[var(--mkt-ink)]">
           {NEXT_ACTION.draft.subject}
         </p>
-        <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-neutral-300">
+        <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[var(--mkt-muted)]">
           {NEXT_ACTION.draft.body}
         </p>
       </div>
@@ -289,14 +331,14 @@ function ActionPanel() {
       {/* Rendered as non-focusable spans: this is a picture of the product,
           not a live control, so it must not enter the tab order. */}
       <div className="mt-3 flex flex-wrap items-center gap-2" aria-hidden>
-        <span className="rounded-full border border-white/15 px-3 py-1.5 text-[11px] font-medium text-neutral-200">
+        <span className="rounded-full border border-[var(--mkt-line)] px-3 py-1.5 text-[11px] font-medium text-[var(--mkt-ink)]">
           Review message
         </span>
-        <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-medium text-black">
+        <span className="rounded-full bg-[var(--mkt-ink)] px-3 py-1.5 text-[11px] font-medium text-[var(--mkt-page)]">
           Approve and send
         </span>
       </div>
-      <p className="mt-2 text-[11px] text-neutral-400">{NEXT_ACTION.approvalNote}</p>
+      <p className="mt-2 text-[11px] text-[var(--mkt-muted)]">{NEXT_ACTION.approvalNote}</p>
     </div>
   );
 }
@@ -318,17 +360,17 @@ function CommandPanel() {
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         {COMMAND.metrics.map((m) => (
           <div key={m.label}>
-            <div className="text-[10px] font-medium uppercase tracking-[0.09em] text-neutral-400">
+            <div className="text-[10px] font-medium uppercase tracking-[0.09em] text-[var(--mkt-muted)]">
               {m.label}
             </div>
             <div
               className={cn(
                 "mt-0.5 text-lg font-medium tabular-nums tracking-tight",
                 m.tone === "risk"
-                  ? "text-rose-300"
+                  ? "text-[var(--mkt-warn-ink)]"
                   : m.tone === "accent"
-                    ? "text-violet-200"
-                    : "text-white"
+                    ? "text-[var(--mkt-brand-deep)]"
+                    : "text-[var(--mkt-ink)]"
               )}
             >
               {m.value}
@@ -337,8 +379,8 @@ function CommandPanel() {
         ))}
       </div>
 
-      <div className="mt-3.5 border-t border-white/[0.08] pt-3">
-        <div className="text-[10px] font-medium uppercase tracking-[0.09em] text-neutral-400">
+      <div className="mt-3.5 border-t border-[var(--mkt-line)] pt-3">
+        <div className="text-[10px] font-medium uppercase tracking-[0.09em] text-[var(--mkt-muted)]">
           Expected revenue trend
         </div>
         <svg
@@ -351,7 +393,7 @@ function CommandPanel() {
           <polyline
             points={pts}
             fill="none"
-            stroke="rgb(167 139 250)"
+            stroke="var(--mkt-brand)"
             strokeWidth="1.2"
             vectorEffect="non-scaling-stroke"
             strokeLinecap="round"
@@ -360,18 +402,18 @@ function CommandPanel() {
         </svg>
       </div>
 
-      <dl className="mt-2 grid grid-cols-3 gap-3 border-t border-white/[0.08] pt-2.5">
+      <dl className="mt-2 grid grid-cols-3 gap-3 border-t border-[var(--mkt-line)] pt-2.5">
         {COMMAND.breakdown.map((b) => (
           <div key={b.label}>
-            <dt className="text-[10px] leading-tight text-neutral-400">{b.label}</dt>
+            <dt className="text-[10px] leading-tight text-[var(--mkt-muted)]">{b.label}</dt>
             <dd
               className={cn(
                 "mt-0.5 text-[15px] font-medium tabular-nums",
                 b.tone === "up"
-                  ? "text-emerald-300"
+                  ? "text-[var(--mkt-success)]"
                   : b.tone === "down"
-                    ? "text-rose-300"
-                    : "text-neutral-100"
+                    ? "text-[var(--mkt-warn-ink)]"
+                    : "text-[var(--mkt-ink)]"
               )}
             >
               {b.value}
@@ -380,7 +422,7 @@ function CommandPanel() {
         ))}
       </dl>
 
-      <p className="mt-3 rounded-md border border-violet-400/20 bg-violet-400/[0.06] px-2.5 py-2 text-[12px] leading-snug text-violet-100">
+      <p className="mt-3 rounded-md border border-[var(--mkt-brand)]/25 bg-[var(--mkt-brand-wash)] px-2.5 py-2 text-[12px] leading-snug text-[var(--mkt-brand-deep)]">
         {COMMAND.insight}
       </p>
     </div>
