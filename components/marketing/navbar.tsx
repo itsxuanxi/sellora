@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { NavShell } from "@/components/marketing/nav-shell";
 import { MobileNavMenu } from "@/components/marketing/home/mobile-nav-menu";
+import { NavDemoCta } from "@/components/marketing/demo-cta";
 import { getAuthState, isClerkEnabled } from "@/lib/auth";
 
 // Three screens, so three destinations. Anchors must match section ids that
@@ -11,6 +12,12 @@ const LINKS = [
   { href: "/#pricing", label: "Pricing" },
   { href: "/demo", label: "Try Sellora" },
 ];
+
+/**
+ * The mobile sheet has no CTA button of its own, so it gets Book a demo as a
+ * list entry. Desktop must not: it already renders NavDemoCta beside these.
+ */
+const MOBILE_LINKS = [...LINKS, { href: "/request-demo", label: "Book a demo" }];
 
 export async function MarketingNavbar() {
   const { signedIn } = await getAuthState();
@@ -46,13 +53,8 @@ export async function MarketingNavbar() {
         >
           Try Sellora
         </Link>
-        <Link
-          href="mailto:hello@sellora.ai?subject=Sellora%20demo"
-          className="inline-flex h-9 items-center rounded-full bg-[var(--mkt-ink)] px-4 text-sm font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-black"
-        >
-          Book a demo
-        </Link>
-        <MobileNavMenu links={LINKS} appHref={appHref} signedIn={signedIn} />
+        <NavDemoCta />
+        <MobileNavMenu links={MOBILE_LINKS} appHref={appHref} signedIn={signedIn} />
       </div>
     </NavShell>
   );

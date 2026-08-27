@@ -1229,6 +1229,51 @@ model AuditLog {
   @@index([orgId, targetType, targetId])
 }
 
+// A demo request from the marketing site.
+//
+// Stored first, emailed second. Email is best-effort: a Resend outage or a
+// missing API key must not lose a lead that someone took two minutes to type,
+// and it must not show them a success screen for a request that evaporated.
+// The row is the record; the email is a notification about it.
+//
+// Deliberately outside the tenant model - the person filling this in does not
+// have a workspace yet. That is also why it carries no orgId: there is nothing
+// truthful to put there.
+model DemoRequest {
+  id String @id @default(cuid())
+
+  fullName  String
+  workEmail String
+  company   String
+  role      String
+
+  // All optional-with-defaults on the read side: the form validates these, but
+  // a stored row from an older form version must still be readable.
+  teamSize          String
+  crm               String?
+  opportunityVolume String?
+  goal              String  @db.Text
+  heardFrom         String?
+
+  // Delivery state, so a failed notification is visible rather than silent.
+  // PENDING | SENT | SIMULATED | FAILED
+  //   SIMULATED - no Resend key configured; the row exists, no mail was sent
+  notifyStatus String    @default("PENDING")
+  notifyError  String?
+  notifiedAt   DateTime?
+
+  // Coarse abuse signals. IP is kept only for rate limiting and is not used to
+  // identify or profile anyone.
+  ip        String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([workEmail, createdAt])
+  @@index([ip, createdAt])
+}
+
 // Which data providers a workspace has enabled, and their last run status.
 // Non-secret config only — nothing here is an API key.
 model Integration {

@@ -116,7 +116,7 @@ export default function DemoIntroPage() {
       <p className="mt-12 text-[13px] text-[var(--mkt-muted)]">
         Prefer to talk to someone?{" "}
         <Link
-          href="mailto:hello@sellora.ai?subject=Sellora%20demo"
+          href="/request-demo"
           className="font-medium text-[var(--mkt-ink)] underline decoration-[var(--mkt-line)] underline-offset-4 hover:text-[var(--mkt-brand-deep)]"
         >
           Book a demo

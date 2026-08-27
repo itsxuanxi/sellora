@@ -37,7 +37,7 @@ export function DemoChrome() {
             <span className="hidden sm:inline">Restart</span>
           </button>
           <Link
-            href="mailto:hello@sellora.ai?subject=Sellora%20demo"
+            href="/request-demo"
             className="hidden rounded-full border border-[var(--mkt-line)] px-3 py-1.5 text-[12px] font-medium text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] md:inline-block"
           >
             Book a demo

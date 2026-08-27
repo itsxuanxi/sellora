@@ -203,7 +203,7 @@ function CompletionPanel({ onReplay }: { onReplay: () => void }) {
           <ArrowRight className="size-4" aria-hidden />
         </Link>
         <Link
-          href="mailto:hello@sellora.ai?subject=Sellora%20demo"
+          href="/request-demo"
           className="inline-flex h-11 items-center rounded-full border border-white/20 px-6 text-[14px] font-medium text-[#F7F8F5] transition-colors hover:border-[#A99BFF] hover:text-[#CFC6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF]"
         >
           Book a demo

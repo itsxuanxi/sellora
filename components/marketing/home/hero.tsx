@@ -76,7 +76,7 @@ export function Hero({ startHref }: { startHref: string }) {
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link
-              href="mailto:hello@sellora.ai?subject=Sellora%20demo"
+              href="/request-demo"
               className="group inline-flex h-12 items-center gap-2 rounded-full bg-[var(--mkt-ink)] px-6 text-[15px] font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-black"
             >
               Book a demo

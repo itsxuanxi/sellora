@@ -33,8 +33,11 @@ import {
  * the toggle fades the numbers without moving a single row beneath them.
  */
 
-const SALES_HREF = "mailto:sales@sellora.ai?subject=Sellora%20Enterprise";
-const DEMO_HREF = "mailto:hello@sellora.ai?subject=Sellora%20demo";
+// Enterprise buyers land on the same form: it asks the questions a
+// sales conversation would open with anyway, and the page still offers
+// email as the fallback.
+const SALES_HREF = "/request-demo";
+const DEMO_HREF = "/request-demo";
 
 export function Pricing({ startHref }: { startHref: string }) {
   // Yearly by default: it is the cheaper option, so leading with it is the
