@@ -10,6 +10,7 @@ import {
   verifyState,
 } from "@/lib/integrations/hubspot/oauth";
 import { enqueueSync } from "@/lib/integrations/sync-runner";
+import { rethrowControlFlow } from "@/lib/security/route-errors";
 
 /** Sends the user back to Integrations with a readable outcome. */
 function back(origin: string, params: Record<string, string>) {
@@ -137,6 +138,10 @@ export async function GET(req: Request) {
       })
     );
   } catch (err) {
+    // Let an unauthenticated callback redirect to sign-in rather than
+    // reporting a generic failure the user cannot act on.
+    rethrowControlFlow(err);
+
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[hubspot] callback failed:", message);
     return clear(

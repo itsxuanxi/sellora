@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { requirePermission, ForbiddenError } from "@/lib/security/rbac";
+import { rethrowControlFlow } from "@/lib/security/route-errors";
 import { recordAudit } from "@/lib/security/audit";
 import { isEncryptionConfigured } from "@/lib/security/crypto";
 import {
@@ -83,9 +84,15 @@ export async function GET(req: Request) {
     });
     return res;
   } catch (err) {
+    // requireSession() signals "not signed in" by throwing a redirect. Eating
+    // it here would both swallow the redirect and report an ordinary
+    // unauthenticated request as a server error.
+    rethrowControlFlow(err);
+
     if (err instanceof ForbiddenError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
+    console.error("[hubspot] connect failed:", err);
     return NextResponse.json(
       { error: "Could not start the HubSpot connection." },
       { status: 500 }
