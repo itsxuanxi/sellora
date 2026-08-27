@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import type { AutoRotate } from "@/components/marketing/home/use-auto-rotate";
 
@@ -35,9 +36,32 @@ export function TabStrip({
   orientation?: "horizontal" | "vertical";
 }) {
   const { active, goTo, onKeyDown, registerTab, paused, reduced, remaining } = rotate;
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep the selected tab in view on narrow screens. Without this the
+  // carousel advances to a tab that has scrolled off the right edge, and on a
+  // phone the strip silently stops agreeing with the panel below it.
+  //
+  // Scrolls the strip's own scrollLeft rather than calling scrollIntoView:
+  // that would also scroll the *page* to bring the strip into view, yanking
+  // the reader somewhere they did not ask to go every time a tab advances.
+  useEffect(() => {
+    if (orientation !== "horizontal") return;
+    const list = listRef.current;
+    const tab = list?.children[active] as HTMLElement | undefined;
+    if (!list || !tab) return;
+    if (list.scrollWidth <= list.clientWidth) return;
+
+    const target = tab.offsetLeft - (list.clientWidth - tab.offsetWidth) / 2;
+    list.scrollTo({
+      left: Math.max(0, target),
+      behavior: reduced ? "auto" : "smooth",
+    });
+  }, [active, orientation, reduced]);
 
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-label={ariaLabel}
       aria-orientation={orientation}

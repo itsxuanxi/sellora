@@ -1,16 +1,20 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAutoRotate } from "@/components/marketing/home/use-auto-rotate";
+import {
+  sequenceDuration,
+  useDemoSequence,
+} from "@/components/marketing/home/use-demo-sequence";
 import { TabStrip } from "@/components/marketing/home/tab-strip";
 import {
   DEMO_DATA_NOTE,
   INTEGRATIONS,
   OUTCOME_METRICS,
   SCENARIOS,
-  SCENARIO_DURATION_MS,
+  stepDelays,
   TRUST_POINTS,
 } from "@/components/marketing/home/demo-data";
 
@@ -35,9 +39,6 @@ import {
 const IDS = SCENARIOS.map((s) => s.id);
 const LABELS = SCENARIOS.map((s) => s.tabLabel);
 
-/** Which step index reads as "in focus" for each scenario — the moment the
- * story turns. Earlier steps show as done, later ones as pending. */
-const FOCUS_STEP = [3, 2, 3];
 /** Steps that describe a risk, marked with a small amber dot. */
 const RISK_STEPS: Record<string, number[]> = {
   recover: [1, 2],
@@ -46,7 +47,25 @@ const RISK_STEPS: Record<string, number[]> = {
 };
 
 export function Scenarios() {
-  const rotate = useAutoRotate(SCENARIOS.length, SCENARIO_DURATION_MS);
+  // Each scenario's dwell time is summed from its own steps: these run 7, 5
+  // and 7 steps, and one shared constant either rushed the long ones or left
+  // the short one sitting finished for seconds.
+  const durations = useMemo(
+    () => SCENARIOS.map((sc) => sequenceDuration(stepDelays(sc), 1600)),
+    []
+  );
+  const rotate = useAutoRotate(SCENARIOS.length, durations);
+
+  const activeScenario = SCENARIOS[rotate.active];
+  const delays = useMemo(() => stepDelays(activeScenario), [activeScenario]);
+
+  const sequence = useDemoSequence({
+    stepCount: activeScenario.steps.length,
+    delays,
+    paused: rotate.contentPaused,
+    reduced: rotate.reduced,
+    resetKey: activeScenario.id,
+  });
   const baseId = useId();
 
   return (
@@ -109,19 +128,29 @@ export function Scenarios() {
                       {sc.title}
                     </p>
 
-                    {/* Keyed on visibility so steps re-land each time the
-                        scenario returns; fade-up moves opacity and translate
-                        only, never height. */}
-                    <ol key={shown ? "on" : "off"} className="mt-5 space-y-3">
+                    {/* Every step stays mounted and is revealed by opacity
+                        and translate, never by mounting — that is what keeps
+                        the rail exactly as tall as its finished state while
+                        the steps land one at a time. */}
+                    <ol className="mt-5 space-y-3">
                       {sc.steps.map((step, i) => {
-                        const focus = i === FOCUS_STEP[sIdx];
-                        const done = i < FOCUS_STEP[sIdx];
+                        // Live position from the sequence clock. Inactive
+                        // scenarios read as un-started so they replay from
+                        // the first step when they come back round.
+                        const reached = shown ? sequence.revealed : 0;
+                        const focus = shown && i === reached - 1 && !sequence.complete;
+                        const done = i < reached && !focus;
                         const risk = RISK_STEPS[sc.id]?.includes(i);
                         return (
                           <li
                             key={step.label}
-                            className={cn("relative pl-7", shown && "animate-fade-up")}
-                            style={shown ? { animationDelay: `${i * 70}ms` } : undefined}
+                            className={cn(
+                              "relative pl-7 transition-[opacity,transform] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+                              shown && i < reached
+                                ? "opacity-100 [transform:translateY(0)]"
+                                : "opacity-0 [transform:translateY(8px)]"
+                            )}
+                            aria-hidden={!(shown && i < reached)}
                           >
                     <span
                       className={cn(

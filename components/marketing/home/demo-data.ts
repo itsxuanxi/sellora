@@ -10,9 +10,9 @@
  *
  * Because every surface reads from here, the arithmetic can only be wrong in
  * one place. Expected revenue is asserted below rather than hard-coded twice:
- *   Cloudmint  $80,000 × 54% = $43,200
- *   Brightcart $62,000 × 48% = $29,760
- *   Ledgerly   $45,000 × 37% = $16,650
+ *   Cloudmint  $42,000 × 68% = $28,560
+ *   Brightcart $65,000 × 37% = $24,050
+ *   Ledgerly   $30,000 × 52% = $15,600
  *
  * All figures are illustrative sample data for a fictional pipeline.
  */
@@ -51,8 +51,8 @@ export const DEMO_DEALS: DemoDeal[] = [
   deal({
     rank: "01",
     company: "Cloudmint",
-    dealValue: 80_000,
-    probability: 54,
+    dealValue: 42_000,
+    probability: 68,
     priority: "Call today",
     priorityTone: "urgent",
     signals: ["Proposal opened twice", "New stakeholder joined"],
@@ -65,8 +65,8 @@ export const DEMO_DEALS: DemoDeal[] = [
   deal({
     rank: "02",
     company: "Brightcart",
-    dealValue: 62_000,
-    probability: 48,
+    dealValue: 65_000,
+    probability: 37,
     priority: "Follow up",
     priorityTone: "warn",
     signals: ["Pricing page revisited", "Security document downloaded"],
@@ -79,8 +79,8 @@ export const DEMO_DEALS: DemoDeal[] = [
   deal({
     rank: "03",
     company: "Ledgerly",
-    dealValue: 45_000,
-    probability: 37,
+    dealValue: 30_000,
+    probability: 52,
     priority: "Recover",
     priorityTone: "watch",
     signals: ["Demo completed", "No reply for 5 days"],
@@ -176,6 +176,13 @@ export interface ScenarioStep {
   label: string;
   /** Optional detail shown under the step once it lands. */
   note?: string;
+  /**
+   * ms to wait before this step lands. Optional so a step list reads as
+   * content first; STEP_DEFAULT_DELAY_MS fills the gaps. Longer beats go on
+   * the steps that carry a turn in the story — the risk landing, the human
+   * approving — because those are the ones a visitor needs a moment to read.
+   */
+  delay?: number;
 }
 
 export interface Scenario {
@@ -189,7 +196,13 @@ export interface Scenario {
   result: string;
 }
 
-export const SCENARIO_DURATION_MS = 7000;
+/** Fallback beat between scenario steps. */
+export const STEP_DEFAULT_DELAY_MS = 850;
+
+/** Per-scenario step delays, index-aligned, for the sequence clock. */
+export function stepDelays(scenario: Scenario): number[] {
+  return scenario.steps.map((s) => s.delay ?? STEP_DEFAULT_DELAY_MS);
+}
 
 export const SCENARIOS: Scenario[] = [
   {
@@ -198,13 +211,13 @@ export const SCENARIOS: Scenario[] = [
     title: "A deal goes quiet after the demo — and comes back.",
     account: "Ledgerly",
     steps: [
-      { label: "Demo completed", note: "Discovery call held with the champion" },
-      { label: "Four days without a reply", note: "No outbound sent since" },
-      { label: "Risk level increases", note: "Silence at this stage is the top loss cause" },
-      { label: "Sellora identifies the missing stakeholder", note: "No finance contact on the thread" },
-      { label: "A targeted follow-up is prepared", note: "Draft written against the actual gap" },
-      { label: "Sales rep approves", note: "Nothing sends without a human" },
-      { label: "CRM is updated", note: "Stage, next step and activity written back" },
+      { label: "Demo completed", note: "Discovery call held with the champion", delay: 650 },
+      { label: "Four days without a reply", note: "No outbound sent since", delay: 1000 },
+      { label: "Risk level increases", note: "Silence at this stage is the top loss cause", delay: 1100 },
+      { label: "Sellora identifies the missing stakeholder", note: "No finance contact on the thread", delay: 1000 },
+      { label: "A targeted follow-up is prepared", note: "Draft written against the actual gap", delay: 950 },
+      { label: "Sales rep approves", note: "Nothing sends without a human", delay: 1150 },
+      { label: "CRM is updated", note: "Stage, next step and activity written back", delay: 900 },
     ],
     outcome: [
       { label: "Deal", value: "Recovered", tone: "good" },
@@ -218,11 +231,11 @@ export const SCENARIOS: Scenario[] = [
     title: "Every open deal, ranked by what the next hour is worth.",
     account: "All open opportunities",
     steps: [
-      { label: "Sellora scans every open opportunity", note: "248 monitored continuously" },
-      { label: "Deal signals are scored", note: "Buying actions and silence both count" },
-      { label: "Expected revenue is calculated", note: "Deal value × probability of closing" },
-      { label: "Accounts are ranked for today", note: "Highest expected value first" },
-      { label: "One action is attached to each", note: "Not five options — one" },
+      { label: "Sellora scans every open opportunity", note: "248 monitored continuously", delay: 700 },
+      { label: "Deal signals are scored", note: "Buying actions and silence both count", delay: 900 },
+      { label: "Expected revenue is calculated", note: "Deal value × probability of closing", delay: 1000 },
+      { label: "Accounts are ranked for today", note: "Highest expected value first", delay: 1100 },
+      { label: "One action is attached to each", note: "Not five options — one", delay: 950 },
     ],
     outcome: [
       { label: "Accounts ranked", value: "14", tone: "accent" },
@@ -289,3 +302,372 @@ export const OUTCOME_METRICS = [
   "Rep hours saved each week",
   "Pipeline coverage",
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Hero: four auto-executing scenarios
+//
+// Each tab is a script, not a screenshot. A step's `action` says what kind of
+// work Sellora is doing at that moment and its `payload` carries the data the
+// stage renders — so adding a step is a data edit, not another branch of
+// animation code.
+//
+// Timing follows one rule: a step's `delay` is the beat BEFORE it lands, so
+// delays[0] is the pause between the tab opening and its first line. Values
+// sit in the 500–1200ms band that reads as work happening rather than a
+// slideshow, and each scenario's dwell time is summed from its own steps by
+// sequenceDuration() rather than being a single number applied to all four —
+// a nine-step scenario given seven seconds gets cut off mid-sentence.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** The kinds of work a step can represent, in loop order. */
+export type DemoActionKind =
+  | "signal"
+  | "analyze"
+  | "score"
+  | "recommend"
+  | "execute"
+  | "response"
+  | "outcome";
+
+export interface DemoStepBase {
+  id: string;
+  /** ms to wait before this step lands. */
+  delay: number;
+  action: DemoActionKind;
+  /** The processing line shown in the stage footer once this step lands. */
+  status?: string;
+}
+
+/** A buying signal arriving in the feed. */
+export interface SignalStep extends DemoStepBase {
+  action: "signal";
+  payload: {
+    label: string;
+    detail?: string;
+    at: string;
+    tone?: "good" | "risk";
+  };
+}
+
+/** Sellora thinking. Renders as a working line, never a spinner for its own sake. */
+export interface AnalyzeStep extends DemoStepBase {
+  action: "analyze";
+  payload: { label: string };
+}
+
+/** A tracked number moving. `from`/`to` drive the count-up. */
+export interface ScoreStep extends DemoStepBase {
+  action: "score";
+  payload: {
+    metric: string;
+    from: number;
+    to: number;
+    suffix?: string;
+    /** Short verdict shown beside the number once it settles. */
+    verdict?: string;
+    tone?: "good" | "risk";
+  };
+}
+
+/** The single next best action, with the evidence behind it. */
+export interface RecommendStep extends DemoStepBase {
+  action: "recommend";
+  payload: {
+    headline: string;
+    why: string;
+    evidence: string[];
+    atStake?: number;
+  };
+}
+
+/** A human approving, and the action going out. */
+export interface ExecuteStep extends DemoStepBase {
+  action: "execute";
+  payload: { label: string; state: "awaiting" | "approved" | "sent" };
+}
+
+/** What the customer did back. */
+export interface ResponseStep extends DemoStepBase {
+  action: "response";
+  payload: { quote?: string; label: string; who?: string };
+}
+
+/** A commercial result: a stage move, a probability change, or both. */
+export interface OutcomeStep extends DemoStepBase {
+  action: "outcome";
+  payload: {
+    label: string;
+    stageFrom?: string;
+    stageTo?: string;
+    metric?: string;
+    from?: number;
+    to?: number;
+    prefix?: string;
+  };
+}
+
+export type DemoStep =
+  | SignalStep
+  | AnalyzeStep
+  | ScoreStep
+  | RecommendStep
+  | ExecuteStep
+  | ResponseStep
+  | OutcomeStep;
+
+export interface HeroScenario {
+  id: string;
+  tabLabel: string;
+  panelLabel: string;
+  /** The deal this scenario is about, shown in the stage header. */
+  subject: { company: string; dealValue: number; stage: string };
+  steps: DemoStep[];
+  /** The closing line, shown once every step has landed. */
+  closing: string;
+}
+
+/** Ranked list used by the priority scenario. Derived, never hand-typed. */
+export const RANKED_DEALS = [...DEMO_DEALS].sort((a, b) => b.expected - a.expected);
+
+export const HERO_SCENARIOS: HeroScenario[] = [
+  {
+    id: "detection",
+    tabLabel: "Signal detection",
+    panelLabel: "Signal monitor",
+    subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
+    steps: [
+      {
+        id: "s1",
+        delay: 700,
+        action: "signal",
+        status: "Detecting signals…",
+        payload: { label: "Proposal opened", at: "12 min ago", tone: "good" },
+      },
+      {
+        id: "s2",
+        delay: 900,
+        action: "signal",
+        status: "Detecting signals…",
+        payload: { label: "Viewed twice in 18 minutes", at: "9 min ago", tone: "good" },
+      },
+      {
+        id: "s3",
+        delay: 950,
+        action: "signal",
+        status: "New stakeholder identified",
+        payload: {
+          label: "VP Finance joined",
+          detail: "Second stakeholder from the same domain",
+          at: "4 min ago",
+          tone: "good",
+        },
+      },
+      {
+        id: "s4",
+        delay: 800,
+        action: "analyze",
+        status: "Analyzing opportunity…",
+        payload: { label: "Weighing three signals against this deal's stage" },
+      },
+      {
+        id: "s5",
+        delay: 900,
+        action: "score",
+        status: "Intent score updated",
+        payload: {
+          metric: "Intent score",
+          from: 64,
+          to: 87,
+          verdict: "High buying intent",
+          tone: "good",
+        },
+      },
+    ],
+    closing: "3 signals detected",
+  },
+  {
+    id: "priority",
+    tabLabel: "Opportunity priority",
+    panelLabel: "Prioritized pipeline",
+    subject: { company: "All open opportunities", dealValue: 0, stage: "Ranking" },
+    steps: [
+      {
+        id: "p1",
+        delay: 650,
+        action: "analyze",
+        status: "Ranking 14 opportunities…",
+        payload: { label: "Reading the latest signal on every open deal" },
+      },
+      {
+        id: "p2",
+        delay: 900,
+        action: "score",
+        status: "Calculating win probability…",
+        payload: { metric: "Deals scored", from: 0, to: 14, tone: "good" },
+      },
+      {
+        id: "p3",
+        delay: 1000,
+        action: "analyze",
+        status: "Calculating expected revenue…",
+        payload: { label: "Expected revenue = deal value × win probability" },
+      },
+      {
+        id: "p4",
+        delay: 1100,
+        action: "outcome",
+        status: "Re-ranked by expected revenue",
+        payload: { label: "Cloudmint moves from 6th to 1st" },
+      },
+      {
+        id: "p5",
+        delay: 900,
+        action: "outcome",
+        status: "Highest expected revenue",
+        payload: {
+          label: "Cloudmint leads on expected revenue, not deal size",
+          metric: "Top expected revenue",
+          from: 0,
+          to: 28_560,
+          prefix: "$",
+        },
+      },
+    ],
+    closing: "Ranked by expected revenue — Brightcart is the bigger deal, Cloudmint the better hour",
+  },
+  {
+    id: "action",
+    tabLabel: "Next best action",
+    panelLabel: "Recommended action · Cloudmint",
+    subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
+    steps: [
+      {
+        id: "a1",
+        delay: 700,
+        action: "signal",
+        status: "Risk detected",
+        payload: {
+          label: "4 days of silence after the demo",
+          detail: "No outbound sent since",
+          at: "now",
+          tone: "risk",
+        },
+      },
+      {
+        id: "a2",
+        delay: 850,
+        action: "analyze",
+        status: "Analyzing opportunity…",
+        payload: { label: "Reading this deal's signal history" },
+      },
+      {
+        id: "a3",
+        delay: 1000,
+        action: "recommend",
+        status: "Generating next best action…",
+        payload: {
+          headline: "Send a security follow-up to the VP Finance",
+          why: "The new stakeholder is the one who has not been addressed, and security is what stalls deals at this stage.",
+          evidence: [
+            "VP Finance joined 4 minutes ago",
+            "Proposal opened twice, no reply",
+            "4 days of silence after the demo",
+          ],
+          atStake: 28_560,
+        },
+      },
+      {
+        id: "a4",
+        delay: 1100,
+        action: "execute",
+        status: "Waiting for approval…",
+        payload: { label: "Awaiting human approval", state: "awaiting" },
+      },
+      {
+        id: "a5",
+        delay: 1000,
+        action: "execute",
+        status: "Approved by a human",
+        payload: { label: "Action scheduled", state: "approved" },
+      },
+    ],
+    closing: "One action, with the evidence behind it — never a list of five options",
+  },
+  {
+    id: "outcome",
+    tabLabel: "Revenue outcome",
+    panelLabel: "Revenue outcome · Cloudmint",
+    subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
+    steps: [
+      {
+        id: "o1",
+        delay: 650,
+        action: "execute",
+        status: "Sending…",
+        payload: { label: "Follow-up sent", state: "sent" },
+      },
+      {
+        id: "o2",
+        delay: 1100,
+        action: "response",
+        status: "Customer replied",
+        payload: {
+          label: "Reply received",
+          quote: "Can we review security requirements tomorrow?",
+          who: "VP Finance",
+        },
+      },
+      {
+        id: "o3",
+        delay: 900,
+        action: "outcome",
+        status: "Meeting logged",
+        payload: { label: "Meeting booked for tomorrow" },
+      },
+      {
+        id: "o4",
+        delay: 900,
+        action: "outcome",
+        status: "CRM updated",
+        payload: {
+          label: "Deal stage moved",
+          stageFrom: "Evaluation",
+          stageTo: "Security review",
+        },
+      },
+      {
+        id: "o5",
+        delay: 950,
+        action: "score",
+        status: "Win probability updated",
+        payload: {
+          metric: "Win probability",
+          from: 68,
+          to: 71,
+          suffix: "%",
+          verdict: "Advanced a stage",
+          tone: "good",
+        },
+      },
+      {
+        id: "o6",
+        delay: 850,
+        action: "outcome",
+        status: "Expected revenue recalculated",
+        payload: {
+          label: "Expected revenue",
+          metric: "Expected revenue",
+          from: 28_560,
+          to: 29_820,
+          prefix: "$",
+        },
+      },
+    ],
+    closing: "Signal → Recommendation → Action → Response → Revenue outcome",
+  },
+];
+
+/** Per-scenario step delays, for the sequence clock. */
+export function scenarioDelays(scenario: HeroScenario): number[] {
+  return scenario.steps.map((s) => s.delay);
+}
