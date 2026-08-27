@@ -120,8 +120,8 @@ export function Scenarios() {
                     className={cn(
                       "col-start-1 row-start-1 transition-[opacity,transform] duration-300 ease-out",
                       shown
-                        ? "opacity-100 [transform:translateY(0)]"
-                        : "pointer-events-none opacity-0 [transform:translateY(6px)]"
+                        ? "opacity-100 translate-y-0"
+                        : "pointer-events-none opacity-0 translate-y-1.5"
                     )}
                   >
                     <p className="text-[15px] font-medium leading-snug text-[var(--mkt-ink)]">
@@ -147,8 +147,8 @@ export function Scenarios() {
                             className={cn(
                               "relative pl-7 transition-[opacity,transform] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
                               shown && i < reached
-                                ? "opacity-100 [transform:translateY(0)]"
-                                : "opacity-0 [transform:translateY(8px)]"
+                                ? "opacity-100 translate-y-0"
+                                : "opacity-0 translate-y-2"
                             )}
                             aria-hidden={!(shown && i < reached)}
                           >
@@ -226,8 +226,8 @@ export function Scenarios() {
                   className={cn(
                     "col-start-1 row-start-1 transition-[opacity,transform] duration-300 ease-out",
                     selected
-                      ? "opacity-100 [transform:translateY(0)]"
-                      : "pointer-events-none opacity-0 [transform:translateY(6px)]"
+                      ? "opacity-100 translate-y-0"
+                      : "pointer-events-none opacity-0 translate-y-1.5"
                   )}
                 >
                   <ScenarioSurface index={i} />

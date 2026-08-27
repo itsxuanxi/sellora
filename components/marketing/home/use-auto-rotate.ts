@@ -36,10 +36,18 @@ export interface AutoRotate {
   goTo: (index: number) => void;
   /** Arrow/Home/End handling for an ARIA tablist. */
   onKeyDown: (e: React.KeyboardEvent) => void;
-  /** Spread onto the element that should pause on hover. */
+  /**
+   * Spread onto the element that should pause on hover, and on keyboard
+   * focus. Focus is qualified by :focus-visible so a mouse click - which
+   * already triggers the manual hold - does not additionally freeze the
+   * carousel, while a keyboard user tabbing in never has content move under
+   * them mid-read.
+   */
   hoverProps: {
     onMouseEnter: () => void;
     onMouseLeave: () => void;
+    onFocus: (e: React.FocusEvent) => void;
+    onBlur: (e: React.FocusEvent) => void;
   };
   /** Attach to the section so it pauses when scrolled out of view. */
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -89,6 +97,7 @@ export function useAutoRotate(
   // Held after a manual pick, so the carousel does not yank the visitor off
   // the tab they just chose. Released on its own — a permanent stop would
   // leave the page frozen for anyone who clicked once out of curiosity.
+  const [focusPaused, setFocusPaused] = useState(false);
   const [manualHold, setManualHold] = useState(false);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -100,7 +109,7 @@ export function useAutoRotate(
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const contentPaused = hoverPaused || pagePaused || offScreen;
+  const contentPaused = hoverPaused || focusPaused || pagePaused || offScreen;
   const paused = contentPaused || manualHold;
 
   useEffect(() => {
@@ -266,6 +275,21 @@ export function useAutoRotate(
     hoverProps: {
       onMouseEnter: () => setHoverPaused(true),
       onMouseLeave: () => setHoverPaused(false),
+      onFocus: (e: React.FocusEvent) => {
+        // :focus-visible is the browser's own judgement about whether focus
+        // arrived from the keyboard. Matching on it avoids the failure the
+        // previous version was avoiding - a click freezing the carousel -
+        // without giving up the keyboard pause.
+        if ((e.target as HTMLElement).matches?.(":focus-visible")) {
+          setFocusPaused(true);
+        }
+      },
+      onBlur: (e: React.FocusEvent) => {
+        // Ignore focus moving between tabs inside the same strip.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setFocusPaused(false);
+        }
+      },
     },
     containerRef,
     registerTab,

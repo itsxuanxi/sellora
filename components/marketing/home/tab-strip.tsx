@@ -24,16 +24,24 @@ export function TabStrip({
   ariaLabel,
   size = "sm",
   orientation = "horizontal",
+  fill = false,
 }: {
   rotate: AutoRotate;
   labels: string[];
   ids: readonly string[];
   baseId: string;
   ariaLabel: string;
-  size?: "sm" | "lg";
+  size?: "sm" | "lg" | "xl";
   /** Vertical suits a left rail, where long scenario labels would otherwise
    * overflow a horizontal strip and get clipped. */
   orientation?: "horizontal" | "vertical";
+  /**
+   * Tabs share the available width equally rather than sizing to their labels.
+   * Below the breakpoint where four equal tabs would crush the text, the strip
+   * falls back to scrolling - a squeezed unreadable tab is worse than one the
+   * reader has to scroll to.
+   */
+  fill?: boolean;
 }) {
   const { active, goTo, onKeyDown, registerTab, paused, reduced, remaining } = rotate;
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -67,12 +75,12 @@ export function TabStrip({
       aria-orientation={orientation}
       onKeyDown={onKeyDown}
       className={cn(
-        "flex gap-1",
+        "flex gap-1.5",
         orientation === "vertical"
           ? "flex-col"
           : // Horizontal strips scroll rather than wrap: wrapping would change
             // the strip's height and move the panel beneath it.
-            "-mx-1 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            "-mx-1 overflow-x-auto px-1 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       )}
     >
       {labels.map((label, i) => {
@@ -89,11 +97,16 @@ export function TabStrip({
             onClick={() => goTo(i)}
             className={cn(
               "group relative rounded-lg border text-left transition-colors",
-              orientation === "vertical" ? "w-full" : "shrink-0",
+              orientation === "vertical"
+                ? "w-full"
+                : fill
+                  ? // Equal tracks once there is room; scrolling chips below it.
+                    "shrink-0 sm:min-w-0 sm:flex-1"
+                  : "shrink-0",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]",
-              size === "lg" ? "px-3.5 py-2.5" : "px-3 py-2",
+              size === "lg" ? "px-3.5 py-2.5" : size === "xl" ? "px-4 py-2" : "px-3 py-2",
               selected
-                ? "border-[var(--mkt-brand)] bg-[var(--mkt-surface)]"
+                ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand-wash)]"
                 : "border-transparent bg-[var(--mkt-surface-2)] hover:bg-[color-mix(in_srgb,var(--mkt-surface)_70%,var(--mkt-surface-2))]"
             )}
           >
@@ -101,7 +114,7 @@ export function TabStrip({
               className={cn(
                 "block font-medium uppercase tracking-[0.11em] transition-colors",
                 orientation === "vertical" ? "" : "whitespace-nowrap",
-                size === "lg" ? "text-[11px]" : "text-[10px]",
+                size === "lg" ? "text-[11px]" : size === "xl" ? "text-[11.5px]" : "text-[10px]",
                 selected
                   ? "text-[var(--mkt-brand-deep)]"
                   : "text-[var(--mkt-muted)] group-hover:text-[var(--mkt-ink)]"
@@ -111,14 +124,17 @@ export function TabStrip({
             </span>
 
             <span
-              className="mt-1.5 block h-px w-full overflow-hidden rounded-full bg-[var(--mkt-line)]"
+              className={cn(
+                "mt-1.5 block w-full overflow-hidden rounded-full bg-[var(--mkt-line)]",
+                size === "xl" ? "h-[2px]" : "h-px"
+              )}
               aria-hidden
             >
               {selected && (
                 <span
                   key={`${active}-${paused}-${reduced}`}
                   className={cn(
-                    "block h-px origin-left bg-[var(--mkt-brand)]",
+                    "block h-full origin-left bg-[var(--mkt-brand)]",
                     reduced
                       ? "scale-x-100"
                       : "[animation:demo-progress_var(--dur)_linear_forwards]"
@@ -161,7 +177,17 @@ export function StackedPanels({
   className?: string;
 }) {
   return (
-    <div className={cn("grid grid-cols-[minmax(0,1fr)]", className)}>
+    // grid-rows-[minmax(0,1fr)] is load-bearing wherever the caller sets a
+    // fixed height: without it the single implicit row sizes to content, the
+    // height merely clips, and a flex-1 child inside stretches into the
+    // overflow rather than fitting. With no fixed height it resolves to
+    // max-content, so this is safe for the auto-height callers too.
+    <div
+      className={cn(
+        "grid grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)]",
+        className
+      )}
+    >
       {ids.map((id, i) => {
         const selected = i === active;
         return (
@@ -173,10 +199,16 @@ export function StackedPanels({
             aria-hidden={!selected}
             inert={!selected}
             className={cn(
-              "col-start-1 row-start-1 transition-[opacity,transform] duration-300 ease-out",
+              // translate-y-* utilities rather than [transform:translateY(..)]:
+              // the two arbitrary properties have equal specificity and the
+              // 6px rule won the cascade for the selected panel too, leaving
+              // it sitting 6px low and its footer clipped by the fixed-height
+              // shell. First-class utilities compose through Tailwind's
+              // transform pipeline and do not collide.
+              "col-start-1 row-start-1 min-h-0 transition-[opacity,transform] duration-200 ease-out",
               selected
-                ? "opacity-100 [transform:translateY(0)]"
-                : "pointer-events-none opacity-0 [transform:translateY(6px)]"
+                ? "opacity-100 translate-y-0"
+                : "pointer-events-none opacity-0 translate-y-1.5"
             )}
           >
             {render(id, i, selected)}

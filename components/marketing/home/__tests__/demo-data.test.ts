@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   DEMO_DEALS,
   HERO_SCENARIOS,
+  HERO_STAGE_DURATION_MS,
+  HERO_STAGE_TAIL_MS,
   RANKED_DEALS,
   SCENARIOS,
   scenarioDelays,
@@ -47,8 +49,10 @@ test("the outcome scenario's numbers follow from the deal it is about", () => {
 
   const winProb = outcome.steps.find((s) => s.action === "score");
   assert.ok(winProb && winProb.action === "score");
+  // Matched on shape, not on the label: the panel's wording is copy and may
+  // change ("Expected" to "Protected"), but the arithmetic must not.
   const revenue = outcome.steps.find(
-    (s) => s.action === "outcome" && s.payload.metric === "Expected revenue"
+    (s) => s.action === "outcome" && s.payload.prefix === "$" && s.payload.from != null
   );
   assert.ok(revenue && revenue.action === "outcome");
 
@@ -68,32 +72,88 @@ test("every hero step has a readable beat", () => {
   }
 });
 
-test("every hero scenario runs between 5 and 11 seconds", () => {
+test("every hero scenario finishes inside the shared dwell", () => {
+  // All four tabs hold for the same period, so the progress line means the
+  // same thing on each. That only stays honest if no scenario's steps overrun
+  // it: otherwise a tab advances mid-sentence and the reader never sees the
+  // result. This is the assertion a fixed dwell would otherwise let slip.
   for (const scenario of HERO_SCENARIOS) {
-    const total = sequenceDuration(scenarioDelays(scenario));
+    const stepTime = scenarioDelays(scenario).reduce((a, b) => a + b, 0);
     assert.ok(
-      total >= 5000 && total <= 11_000,
-      `${scenario.id} runs ${total}ms — too far from the 7–10s target`
+      stepTime + HERO_STAGE_TAIL_MS <= HERO_STAGE_DURATION_MS,
+      `${scenario.id} needs ${stepTime}ms of steps, leaving under ${HERO_STAGE_TAIL_MS}ms to read the result inside the ${HERO_STAGE_DURATION_MS}ms dwell`
     );
   }
 });
 
-test("a scenario always outlasts its own steps", () => {
-  // If the tab advanced before the last step landed, the visitor would never
-  // see the outcome — which is the only part that makes the loop legible.
-  for (const scenario of HERO_SCENARIOS) {
-    const delays = scenarioDelays(scenario);
-    assert.ok(sequenceDuration(delays) > delays.reduce((a, b) => a + b, 0));
-  }
+test("the shared dwell is long enough to read but short enough to cycle", () => {
+  assert.ok(HERO_STAGE_DURATION_MS >= 5000 && HERO_STAGE_DURATION_MS <= 10_000);
+});
+
+test("a scrollytelling scenario always outlasts its own steps", () => {
+  // Screen 2 still derives its dwell per scenario: those run 5 to 7 steps of
+  // very different lengths.
   for (const scenario of SCENARIOS) {
     const delays = stepDelays(scenario);
     assert.ok(sequenceDuration(delays, 1600) > delays.reduce((a, b) => a + b, 0));
   }
 });
 
+test("signal detection shows four distinct signals, not one", () => {
+  // A monitor with a single row reads as an illustration. The panel's job is
+  // to look like a product with real evidence in it.
+  const detection = HERO_SCENARIOS.find((s) => s.id === "detection")!;
+  const signals = detection.steps.filter((s) => s.action === "signal");
+  assert.ok(signals.length >= 4, `only ${signals.length} signals on the detection panel`);
+
+  const labels = new Set(signals.map((s) => (s.action === "signal" ? s.payload.label : "")));
+  assert.equal(labels.size, signals.length, "duplicate signal labels");
+});
+
+test("the priority panel ranks at least three real opportunities", () => {
+  const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
+  const ranks = priority.steps.filter((s) => s.action === "rank");
+  assert.ok(ranks.length > 0, "no ranked table on the priority panel");
+
+  const known = new Set(DEMO_DEALS.map((d) => d.company));
+  for (const step of ranks) {
+    if (step.action !== "rank") continue;
+    assert.ok(step.payload.order.length >= 3, "fewer than three ranked rows");
+    for (const company of step.payload.order) {
+      assert.ok(known.has(company), `ranked row "${company}" is not a real demo deal`);
+    }
+  }
+});
+
+test("the ranking really does reorder away from deal size", () => {
+  // The panel's whole argument. If both orders matched, it would be showing
+  // a sort that changes nothing.
+  const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
+  const ranks = priority.steps.filter((s) => s.action === "rank");
+  const first = ranks[0];
+  const last = ranks[ranks.length - 1];
+  assert.ok(first.action === "rank" && last.action === "rank");
+  assert.notDeepEqual(first.payload.order, last.payload.order);
+
+  // And the final order is genuinely by expected revenue.
+  const expected = last.payload.order.map(
+    (c) => DEMO_DEALS.find((d) => d.company === c)!.expected
+  );
+  assert.deepEqual(expected, [...expected].sort((a, b) => b - a));
+});
+
+test("the next-best-action panel keeps a human in the loop", () => {
+  const action = HERO_SCENARIOS.find((s) => s.id === "action")!;
+  const approvals = action.steps.filter((s) => s.action === "approve");
+  assert.ok(approvals.length >= 2, "no awaiting-then-approved beat");
+
+  const states = approvals.map((s) => (s.action === "approve" ? s.payload.state : ""));
+  assert.deepEqual(states, ["awaiting", "approved"]);
+});
+
 test("hero scenarios cover the full loop across the set", () => {
   const kinds = new Set(HERO_SCENARIOS.flatMap((s) => s.steps.map((x) => x.action)));
-  for (const required of ["signal", "analyze", "score", "recommend", "execute", "response", "outcome"]) {
+  for (const required of ["signal", "analyze", "score", "rank", "recommend", "approve", "execute", "response", "outcome"]) {
     assert.ok(kinds.has(required as never), `no step anywhere demonstrates "${required}"`);
   }
 });

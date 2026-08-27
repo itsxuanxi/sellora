@@ -324,7 +324,9 @@ export type DemoActionKind =
   | "signal"
   | "analyze"
   | "score"
+  | "rank"
   | "recommend"
+  | "approve"
   | "execute"
   | "response"
   | "outcome";
@@ -369,6 +371,29 @@ export interface ScoreStep extends DemoStepBase {
   };
 }
 
+/**
+ * The ranked pipeline. Renders as a real table rather than a sentence about
+ * ranking, because the claim being made - that expected revenue reorders the
+ * list away from deal size - is only checkable if the numbers are on screen.
+ */
+export interface RankStep extends DemoStepBase {
+  action: "rank";
+  payload: {
+    /** Company ids from DEMO_DEALS, in the order to display. */
+    order: string[];
+    /** Highlighted row, for the "moved to first" beat. */
+    highlight?: string;
+    caption?: string;
+  };
+}
+
+/** The human-approval control. Present in the demo because it is the product's
+ *  central promise: nothing customer-facing leaves without a person. */
+export interface ApproveStep extends DemoStepBase {
+  action: "approve";
+  payload: { label: string; state: "awaiting" | "approved"; note?: string };
+}
+
 /** The single next best action, with the evidence behind it. */
 export interface RecommendStep extends DemoStepBase {
   action: "recommend";
@@ -410,7 +435,9 @@ export type DemoStep =
   | SignalStep
   | AnalyzeStep
   | ScoreStep
+  | RankStep
   | RecommendStep
+  | ApproveStep
   | ExecuteStep
   | ResponseStep
   | OutcomeStep;
@@ -429,6 +456,19 @@ export interface HeroScenario {
 /** Ranked list used by the priority scenario. Derived, never hand-typed. */
 export const RANKED_DEALS = [...DEMO_DEALS].sort((a, b) => b.expected - a.expected);
 
+/**
+ * Every scenario holds the panel for the same fixed period.
+ *
+ * A shared dwell is what makes the tab progress line honest - four bars that
+ * each mean six seconds. Scenario steps are tuned to finish inside it with
+ * room to read the result, and a test fails the build if any scenario's steps
+ * would overrun, which is the failure a fixed dwell would otherwise hide.
+ */
+export const HERO_STAGE_DURATION_MS = 6000;
+
+/** Minimum quiet time after the last step lands, before the tab advances. */
+export const HERO_STAGE_TAIL_MS = 900;
+
 export const HERO_SCENARIOS: HeroScenario[] = [
   {
     id: "detection",
@@ -438,40 +478,62 @@ export const HERO_SCENARIOS: HeroScenario[] = [
     steps: [
       {
         id: "s1",
-        delay: 700,
+        delay: 550,
         action: "signal",
-        status: "Detecting signals…",
-        payload: { label: "Proposal opened", at: "12 min ago", tone: "good" },
+        status: "Detecting signals",
+        payload: {
+          label: "Proposal opened twice",
+          detail: "Second open lasted 6 minutes on pricing",
+          at: "12 min ago",
+          tone: "good",
+        },
       },
       {
         id: "s2",
-        delay: 900,
+        delay: 680,
         action: "signal",
-        status: "Detecting signals…",
-        payload: { label: "Viewed twice in 18 minutes", at: "9 min ago", tone: "good" },
+        status: "Detecting signals",
+        payload: {
+          label: "New stakeholder joined",
+          detail: "VP Finance added to the thread",
+          at: "9 min ago",
+          tone: "good",
+        },
       },
       {
         id: "s3",
-        delay: 950,
+        delay: 680,
         action: "signal",
-        status: "New stakeholder identified",
+        status: "Detecting signals",
         payload: {
-          label: "VP Finance joined",
-          detail: "Second stakeholder from the same domain",
+          label: "Pricing page revisited",
+          detail: "Third visit from the same domain this week",
           at: "4 min ago",
           tone: "good",
         },
       },
       {
         id: "s4",
-        delay: 800,
-        action: "analyze",
-        status: "Analyzing opportunity…",
-        payload: { label: "Weighing three signals against this deal's stage" },
+        delay: 700,
+        action: "signal",
+        status: "Risk detected",
+        payload: {
+          label: "Four days since last reply",
+          detail: "No outbound sent since the proposal",
+          at: "now",
+          tone: "risk",
+        },
       },
       {
         id: "s5",
-        delay: 900,
+        delay: 700,
+        action: "analyze",
+        status: "Analyzing opportunity",
+        payload: { label: "Weighing four signals against this deal's stage" },
+      },
+      {
+        id: "s6",
+        delay: 700,
         action: "score",
         status: "Intent score updated",
         payload: {
@@ -483,7 +545,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         },
       },
     ],
-    closing: "3 signals detected",
+    closing: "4 signals detected on this deal today",
   },
   {
     id: "priority",
@@ -493,35 +555,43 @@ export const HERO_SCENARIOS: HeroScenario[] = [
     steps: [
       {
         id: "p1",
-        delay: 650,
+        delay: 550,
         action: "analyze",
-        status: "Ranking 14 opportunities…",
+        status: "Ranking 14 opportunities",
         payload: { label: "Reading the latest signal on every open deal" },
       },
       {
         id: "p2",
-        delay: 900,
-        action: "score",
-        status: "Calculating win probability…",
-        payload: { metric: "Deals scored", from: 0, to: 14, tone: "good" },
+        delay: 700,
+        action: "rank",
+        status: "Calculating win probability",
+        payload: {
+          // Deal-size order, before expected revenue reorders it.
+          order: ["Brightcart", "Cloudmint", "Ledgerly"],
+          caption: "Sorted by deal value",
+        },
       },
       {
         id: "p3",
-        delay: 1000,
+        delay: 850,
         action: "analyze",
-        status: "Calculating expected revenue…",
-        payload: { label: "Expected revenue = deal value × win probability" },
+        status: "Calculating expected revenue",
+        payload: { label: "Expected revenue = deal value x win probability" },
       },
       {
         id: "p4",
-        delay: 1100,
-        action: "outcome",
+        delay: 900,
+        action: "rank",
         status: "Re-ranked by expected revenue",
-        payload: { label: "Cloudmint moves from 6th to 1st" },
+        payload: {
+          order: ["Cloudmint", "Brightcart", "Ledgerly"],
+          highlight: "Cloudmint",
+          caption: "Sorted by expected revenue",
+        },
       },
       {
         id: "p5",
-        delay: 900,
+        delay: 750,
         action: "outcome",
         status: "Highest expected revenue",
         payload: {
@@ -533,17 +603,17 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         },
       },
     ],
-    closing: "Ranked by expected revenue — Brightcart is the bigger deal, Cloudmint the better hour",
+    closing: "Brightcart is the bigger deal. Cloudmint is the better hour.",
   },
   {
     id: "action",
     tabLabel: "Next best action",
-    panelLabel: "Recommended action · Cloudmint",
+    panelLabel: "Recommended action - Cloudmint",
     subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
     steps: [
       {
         id: "a1",
-        delay: 700,
+        delay: 550,
         action: "signal",
         status: "Risk detected",
         payload: {
@@ -555,21 +625,21 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       },
       {
         id: "a2",
-        delay: 850,
+        delay: 700,
         action: "analyze",
-        status: "Analyzing opportunity…",
+        status: "Analyzing opportunity",
         payload: { label: "Reading this deal's signal history" },
       },
       {
         id: "a3",
-        delay: 1000,
+        delay: 900,
         action: "recommend",
-        status: "Generating next best action…",
+        status: "Generating next best action",
         payload: {
           headline: "Send a security follow-up to the VP Finance",
           why: "The new stakeholder is the one who has not been addressed, and security is what stalls deals at this stage.",
           evidence: [
-            "VP Finance joined 4 minutes ago",
+            "VP Finance joined 9 minutes ago",
             "Proposal opened twice, no reply",
             "4 days of silence after the demo",
           ],
@@ -578,37 +648,41 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       },
       {
         id: "a4",
-        delay: 1100,
-        action: "execute",
-        status: "Waiting for approval…",
-        payload: { label: "Awaiting human approval", state: "awaiting" },
+        delay: 900,
+        action: "approve",
+        status: "Waiting for approval",
+        payload: {
+          label: "Awaiting human approval",
+          state: "awaiting",
+          note: "Nothing customer-facing sends without a person",
+        },
       },
       {
         id: "a5",
-        delay: 1000,
-        action: "execute",
+        delay: 800,
+        action: "approve",
         status: "Approved by a human",
-        payload: { label: "Action scheduled", state: "approved" },
+        payload: { label: "Approved and scheduled", state: "approved" },
       },
     ],
-    closing: "One action, with the evidence behind it — never a list of five options",
+    closing: "One action, with the evidence behind it - never a list of five",
   },
   {
     id: "outcome",
     tabLabel: "Revenue outcome",
-    panelLabel: "Revenue outcome · Cloudmint",
+    panelLabel: "Revenue outcome - Cloudmint",
     subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
     steps: [
       {
         id: "o1",
-        delay: 650,
+        delay: 550,
         action: "execute",
-        status: "Sending…",
+        status: "Sending",
         payload: { label: "Follow-up sent", state: "sent" },
       },
       {
         id: "o2",
-        delay: 1100,
+        delay: 800,
         action: "response",
         status: "Customer replied",
         payload: {
@@ -619,14 +693,14 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       },
       {
         id: "o3",
-        delay: 900,
+        delay: 700,
         action: "outcome",
         status: "Meeting logged",
         payload: { label: "Meeting booked for tomorrow" },
       },
       {
         id: "o4",
-        delay: 900,
+        delay: 700,
         action: "outcome",
         status: "CRM updated",
         payload: {
@@ -637,7 +711,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       },
       {
         id: "o5",
-        delay: 950,
+        delay: 750,
         action: "score",
         status: "Win probability updated",
         payload: {
@@ -651,19 +725,19 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       },
       {
         id: "o6",
-        delay: 850,
+        delay: 700,
         action: "outcome",
         status: "Expected revenue recalculated",
         payload: {
-          label: "Expected revenue",
-          metric: "Expected revenue",
+          label: "Protected revenue",
+          metric: "Protected revenue",
           from: 28_560,
           to: 29_820,
           prefix: "$",
         },
       },
     ],
-    closing: "Signal → Recommendation → Action → Response → Revenue outcome",
+    closing: "Signal to Recommendation to Action to Response to Revenue outcome",
   },
 ];
 

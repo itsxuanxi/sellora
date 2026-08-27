@@ -32,14 +32,18 @@ export function Hero({ startHref }: { startHref: string }) {
         aria-hidden
       />
 
-      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-14">
+      {/* 1280px with a 48px gutter puts the copy column at ~468px and the
+          demo at ~764px. The demo is the hero's evidence, so it carries the
+          larger share rather than sitting beside the headline as an
+          illustration. */}
+      <div className="relative mx-auto grid w-full max-w-[1280px] items-center gap-12 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] lg:gap-12">
         {/* ── Fixed copy: never changes with the carousel ── */}
-        <div className="min-w-0 max-w-xl">
+        <div className="min-w-0 max-w-[470px]">
           <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--mkt-brand-deep)]">
             AI revenue intelligence for B2B sales
           </p>
 
-          <h1 className="mt-5 text-balance text-[2.6rem] font-medium leading-[1.06] tracking-tight text-[var(--mkt-ink)] sm:text-5xl lg:text-[4rem] xl:text-[4.4rem]">
+          <h1 className="mt-5 text-balance text-[2.6rem] font-medium leading-[1.06] tracking-tight text-[var(--mkt-ink)] sm:text-5xl lg:text-[3.5rem] xl:text-[3.75rem]">
             Turn every sales signal into
             <span className="text-[var(--mkt-brand-deep)]">
               {" "}
@@ -109,7 +113,7 @@ export function Hero({ startHref }: { startHref: string }) {
         </div>
 
         {/* ── Rotating product surface ── */}
-        <div className="relative min-w-0 lg:-mr-4 xl:-mr-10">
+        <div className="relative min-w-0">
           <HeroDemo />
         </div>
       </div>
