@@ -10,7 +10,11 @@
 // v2 — added the behavioural/engagement signal family (pricing-page visits,
 // proposal opens, multi-stakeholder activity) alongside the original
 // firmographic hiring signals. Old snapshots keep version 1 and stay readable.
-export const SCORING_CONFIG_VERSION = 2;
+// v3 — added the sales-process signal family: the events that happen inside a
+// live deal (demo requested, proposal opened, procurement/legal/security
+// review started, meeting no-show, CRM stage movement, competitor named,
+// prolonged silence). v1/v2 snapshots keep their version and stay readable.
+export const SCORING_CONFIG_VERSION = 3;
 
 export type SignalType =
   // ── Behavioural: things the buyer did (strongest, freshest intent) ──
@@ -24,6 +28,17 @@ export type SignalType =
   | "competitor_research" // comparison/alternatives activity
   | "trial_usage_up" // product usage accelerating
   | "reactivated_account" // dormant account became active again
+  | "demo_requested" // asked for a demo
+  | "email_opened" // opened outreach
+  | "email_clicked" // clicked a link in outreach
+  | "meeting_no_show" // booked, then did not attend
+  | "competitor_mentioned" // named a competitor in conversation
+  | "no_activity" // prolonged silence — the absence IS the signal
+  // ── Process: the buyer's internal machinery starting to move ──
+  | "crm_stage_change" // the deal moved stage in the CRM
+  | "procurement_started" // procurement engaged
+  | "legal_review_started" // legal/contract review engaged
+  | "security_review_started" // security/vendor review engaged
   // ── Firmographic: things that happened to the company ──
   | "job_surge" // 5+ new postings in a short window
   | "stale_role" // same role open 30+ days
@@ -50,6 +65,25 @@ export const BEHAVIOURAL_SIGNALS: SignalType[] = [
   "competitor_research",
   "trial_usage_up",
   "reactivated_account",
+  "demo_requested",
+  "email_opened",
+  "email_clicked",
+  "meeting_no_show",
+  "competitor_mentioned",
+  "no_activity",
+];
+
+/**
+ * Process signals: not "the buyer is interested" but "the buyer's company has
+ * started spending its own money on evaluating you". They are the strongest
+ * late-stage predictors there are — nobody runs a security review for fun —
+ * so they are kept separate from behavioural intent rather than averaged in.
+ */
+export const PROCESS_SIGNALS: SignalType[] = [
+  "crm_stage_change",
+  "procurement_started",
+  "legal_review_started",
+  "security_review_started",
 ];
 
 export const FIRMOGRAPHIC_SIGNALS: SignalType[] = [
@@ -68,10 +102,14 @@ export const FIRMOGRAPHIC_SIGNALS: SignalType[] = [
 
 export const SIGNAL_TYPES: SignalType[] = [
   ...BEHAVIOURAL_SIGNALS,
+  ...PROCESS_SIGNALS,
   ...FIRMOGRAPHIC_SIGNALS,
 ];
 
+/** Process signals read as behavioural to the timeline UI — both are things
+ *  that happened because a human on the buyer's side decided something. */
 export function signalFamily(t: SignalType | string): "behavioural" | "firmographic" {
+  if ((PROCESS_SIGNALS as string[]).includes(t)) return "behavioural";
   return (BEHAVIOURAL_SIGNALS as string[]).includes(t) ? "behavioural" : "firmographic";
 }
 
@@ -86,6 +124,16 @@ export const SIGNAL_LABELS: Record<SignalType, string> = {
   competitor_research: "Comparing alternatives",
   trial_usage_up: "Trial usage increasing",
   reactivated_account: "Dormant account active again",
+  demo_requested: "Requested a demo",
+  email_opened: "Opened your email",
+  email_clicked: "Clicked a link",
+  meeting_no_show: "Missed a booked meeting",
+  competitor_mentioned: "Mentioned a competitor",
+  no_activity: "No activity for a long time",
+  crm_stage_change: "Deal stage moved in CRM",
+  procurement_started: "Procurement engaged",
+  legal_review_started: "Legal review started",
+  security_review_started: "Security review started",
   job_surge: "Sudden hiring surge",
   stale_role: "Role open a long time",
   repeated_role_posting: "Same role posted repeatedly",
@@ -114,6 +162,19 @@ export const SIGNAL_WEIGHTS: Record<SignalType, number> = {
   reactivated_account: 16,
   repeat_site_visit: 14,
   competitor_research: 12,
+  demo_requested: 24,
+  email_clicked: 10,
+  email_opened: 5,
+  competitor_mentioned: 6,
+  // Negative: these describe a deal going backwards. Scoring is signed, so a
+  // no-show genuinely subtracts rather than merely failing to add.
+  meeting_no_show: -12,
+  no_activity: -10,
+  // process — the buyer spending their own money on evaluating you
+  security_review_started: 26,
+  procurement_started: 26,
+  legal_review_started: 24,
+  crm_stage_change: 12,
   // firmographic
   job_surge: 20,
   funding_round: 20,
@@ -155,6 +216,17 @@ export const SIGNAL_TTL_DAYS: Record<SignalType, number> = {
   competitor_research: 21,
   trial_usage_up: 21,
   reactivated_account: 30,
+  demo_requested: 30,
+  email_opened: 10,
+  email_clicked: 14,
+  meeting_no_show: 45,
+  competitor_mentioned: 45,
+  no_activity: 30,
+  // process — a live procurement track stays relevant for a whole cycle
+  crm_stage_change: 60,
+  procurement_started: 120,
+  legal_review_started: 120,
+  security_review_started: 120,
   // firmographic — longer-lived
   job_surge: 45,
   stale_role: 60,

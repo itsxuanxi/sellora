@@ -1,6 +1,19 @@
 import Link from "next/link";
 import { BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
+import {
+  ActionEffectivenessPanel,
+  InsightsList,
+  LoopFunnelPanel,
+  SignalWinRatePanel,
+} from "@/components/revenue/learning-panel";
+import {
+  getActionEffectiveness,
+  getInfluencedTotals,
+  getLearningInsights,
+  getLoopFunnel,
+  getSignalWinRates,
+} from "@/lib/revenue/learning";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth";
@@ -22,7 +35,8 @@ export const metadata = { title: "Impact" };
 export default async function AnalyticsPage() {
   const session = await requireSession();
 
-  const [impact, overview, recent] = await Promise.all([
+  const [impact, overview, recent, funnel, insights, signalWins, effectiveness, influenced] =
+    await Promise.all([
     getImpactSummary(session.orgId),
     getRevenueOverview(session.orgId),
     db.revenueAttribution.findMany({
@@ -33,6 +47,11 @@ export default async function AnalyticsPage() {
         opportunity: { select: { id: true, account: { select: { name: true } } } },
       },
     }),
+    getLoopFunnel(session.orgId),
+    getLearningInsights(session.orgId),
+    getSignalWinRates(session.orgId),
+    getActionEffectiveness(session.orgId),
+    getInfluencedTotals(session.orgId),
   ]);
 
   const currency = overview.currency;
@@ -86,7 +105,82 @@ export default async function AnalyticsPage() {
         />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      {/* ── Influenced pipeline and revenue ──
+             "Influenced" is a factual claim about contact: a Sellora-prompted
+             action was executed on these deals while they were open. It is
+             not a claim that they closed because of it, and the note says so. ── */}
+      <section className="mt-8 rounded-2xl border border-border/70 bg-card p-5">
+        <h2 className="text-sm font-semibold">Influenced pipeline and revenue</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Deals where a recommendation led to an action that actually went out.
+          Contact is what is being measured here, not credit.
+        </p>
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MiniStat
+            label="Influenced pipeline"
+            value={formatMoney(influenced.influencedPipeline, currency)}
+          />
+          <MiniStat
+            label="Influenced revenue"
+            value={formatMoney(influenced.influencedRevenue, currency)}
+          />
+          <MiniStat label="Deals touched" value={String(influenced.influencedDeals)} />
+          <MiniStat
+            label="Avg. sales cycle"
+            value={
+              influenced.averageSalesCycleDays == null
+                ? "Not enough data"
+                : `${influenced.averageSalesCycleDays} days`
+            }
+          />
+        </dl>
+      </section>
+
+      {/* ── Learning Insights (§7) ── */}
+      <section className="mt-6 rounded-2xl border border-border/70 bg-card p-5">
+        <h2 className="text-sm font-semibold">Learning insights</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Patterns in your own pipeline. Nothing here is shared with, or
+          learned from, any other workspace.
+        </p>
+        <div className="mt-4">
+          <InsightsList insights={insights} />
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-border/70 bg-card p-5">
+        <h2 className="text-sm font-semibold">Loop performance</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Signal → recommendation → action → response, end to end.
+        </p>
+        <div className="mt-4">
+          <LoopFunnelPanel funnel={funnel} />
+        </div>
+      </section>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-border/70 bg-card p-5">
+          <h2 className="text-sm font-semibold">Signals and win rate</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            How often closed deals carrying each signal were won.
+          </p>
+          <div className="mt-4">
+            <SignalWinRatePanel data={signalWins} />
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border/70 bg-card p-5">
+          <h2 className="text-sm font-semibold">Which actions draw a reaction</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Positive-response rate per action type, across executed actions.
+          </p>
+          <div className="mt-4">
+            <ActionEffectivenessPanel rows={effectiveness} />
+          </div>
+        </section>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-border/70 bg-card p-5">
           <h2 className="text-sm font-semibold">Recommendation performance</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -258,6 +352,18 @@ function StatRow({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Compact stat for the influenced-revenue row. */
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border/70 bg-background p-4">
+      <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-1 text-lg font-semibold tabular-nums tracking-tight">{value}</dd>
     </div>
   );
 }

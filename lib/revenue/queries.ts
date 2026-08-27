@@ -12,6 +12,7 @@ import {
 import { detectLeaks, revenueAtRisk, type DetectedLeak } from "@/lib/revenue/leaks";
 import { expectedRevenue } from "@/lib/revenue/money";
 import { decideNextAction, type NextAction } from "@/lib/revenue/next-action";
+import { signalImportance } from "@/lib/intent/signals";
 
 /**
  * Read models for the Revenue Intelligence screens.
@@ -46,7 +47,15 @@ export interface EnrichedOpportunity {
   daysSinceContact: number | null;
   account: { id: string; name: string; industry: string | null; domain: string | null };
   contact: { id: string; name: string; position: string | null; email: string } | null;
-  signals: { id: string; signalType: string; title: string; occurredAt: Date; label: string }[];
+  signals: {
+    id: string;
+    signalType: string;
+    title: string;
+    occurredAt: Date;
+    label: string;
+    /** 0-100, how much this signal type should move a deal. */
+    importanceScore: number;
+  }[];
   leaks: DetectedLeak[];
   primaryLeak: DetectedLeak | null;
   nextAction: NextAction;
@@ -86,7 +95,14 @@ export async function loadEnrichedOpportunities(
     db.buyingSignal.findMany({
       where: { orgId, accountId: { in: accountIds }, expired: false },
       orderBy: { occurredAt: "desc" },
-      select: { id: true, accountId: true, signalType: true, title: true, occurredAt: true },
+      select: {
+        id: true,
+        accountId: true,
+        signalType: true,
+        title: true,
+        occurredAt: true,
+        importanceScore: true,
+      },
     }),
     db.email.findMany({
       where: { orgId, prospect: { accountId: { in: accountIds } } },
@@ -204,6 +220,7 @@ export async function loadEnrichedOpportunities(
         title: s.title,
         occurredAt: s.occurredAt,
         label: SIGNAL_LABELS[s.signalType as SignalType] ?? s.signalType,
+        importanceScore: s.importanceScore ?? signalImportance(s.signalType),
       })),
       leaks,
       primaryLeak,

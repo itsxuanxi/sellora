@@ -40,17 +40,35 @@ export function Hero({ startHref }: { startHref: string }) {
           </p>
 
           <h1 className="mt-5 text-balance text-[2.6rem] font-medium leading-[1.06] tracking-tight text-[var(--mkt-ink)] sm:text-5xl lg:text-[4rem] xl:text-[4.4rem]">
-            Know which deals need attention
+            Turn every sales signal into
             <span className="text-[var(--mkt-brand-deep)]">
-              &mdash;before they go cold.
+              {" "}
+              the next best revenue action.
             </span>
           </h1>
 
           <p className="mt-6 max-w-lg text-pretty text-[17px] leading-relaxed text-[var(--mkt-muted)]">
-            Sellora monitors every opportunity, detects buying and risk signals,
-            and tells your team exactly who to contact, why now, and what to do
-            next.
+            Sellora learns which signals matter, recommends the action most
+            likely to move each deal forward, and connects every decision to
+            pipeline and revenue outcomes.
           </p>
+
+          {/* Detect → Decide → Act → Learn. The loop is the product, so it is
+              named on the hero rather than buried in a features grid. */}
+          <ol className="mt-7 flex flex-wrap items-center gap-x-1.5 gap-y-2">
+            {["Detect", "Decide", "Act", "Learn"].map((step, i) => (
+              <li key={step} className="flex items-center gap-1.5">
+                <span className="rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-3 py-1 text-[13px] font-medium text-[var(--mkt-ink)]">
+                  {step}
+                </span>
+                {i < 3 && (
+                  <span className="text-[var(--mkt-line)]" aria-hidden>
+                    &rarr;
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link
@@ -64,7 +82,7 @@ export function Hero({ startHref }: { startHref: string }) {
               href={startHref}
               className="inline-flex h-12 items-center rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-6 text-[15px] font-medium text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-[var(--mkt-surface-2)]"
             >
-              Start free
+              Start free trial
             </Link>
           </div>
 
@@ -72,7 +90,7 @@ export function Hero({ startHref }: { startHref: string }) {
               from the CRM, nothing sends without approval, and no model is
               trained on customer data. */}
           <p className="mt-7 text-[13px] leading-relaxed text-[var(--mkt-muted)]">
-            Works alongside your CRM
+            Evidence behind every recommendation
             <span className="mx-2 text-[var(--mkt-line)]" aria-hidden>
               ·
             </span>

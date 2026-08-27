@@ -8,6 +8,16 @@ import { actionError, type ActionResult } from "@/lib/types";
 import { OPPORTUNITY_STAGES, isOpenStage } from "@/lib/revenue/config";
 import { rescoreAllOpportunities, rescoreOpportunity, syncOpportunitiesFromAccounts } from "@/lib/revenue/opportunities";
 import {
+  approveAction,
+  expireStaleRecommendations,
+  recordCompletedAction,
+  recordOutcome,
+  recordResponse,
+  rejectAction,
+  sweepNonResponses,
+  undoAction,
+} from "@/lib/revenue/loop";
+import {
   completeRecommendation,
   dismissRecommendation,
   ensureRecommendation,
@@ -273,5 +283,240 @@ export async function refreshRevenueIntelligence(): Promise<
     return { ok: true, data: { created, scored } };
   } catch (e) {
     return actionError(e, "Could not refresh revenue intelligence.");
+  }
+}
+
+// ── The closed loop: action → response → outcome ──────────────────────────
+//
+// These are the write endpoints for lib/revenue/loop.ts. Every one of them
+// requires an explicit human click: §6's rule is that nothing customer-facing
+// leaves Sellora unreviewed, and the way that is guaranteed is that no code
+// path executes an action except this one, called from a button.
+
+const actionInput = z.object({
+  opportunityId: z.string().min(1),
+  recommendationId: z.string().min(1).nullable().optional(),
+  contactId: z.string().min(1).nullable().optional(),
+  actionType: z.string().min(1).max(64),
+  channel: z.enum(["email", "call", "linkedin", "meeting", "crm", "manual"]),
+  summary: z.string().min(1).max(300),
+  content: z.string().max(20_000).nullable().optional(),
+});
+
+/**
+ * Logs work the rep already did — the "Mark as done" path.
+ *
+ * Approval and execution are stamped together because they genuinely happened
+ * together, off-platform. Recording a separate approval step would put a
+ * fiction in the audit log.
+ */
+export async function logAction(
+  input: z.input<typeof actionInput>
+): Promise<ActionResult<{ actionId: string }>> {
+  try {
+    const session = await requireSession();
+    const parsed = actionInput.parse(input);
+
+    const opp = await db.opportunity.findFirst({
+      where: { id: parsed.opportunityId, orgId: session.orgId },
+      select: { id: true },
+    });
+    if (!opp) return { ok: false, error: "Opportunity not found." };
+
+    const action = await recordCompletedAction({
+      orgId: session.orgId,
+      opportunityId: parsed.opportunityId,
+      recommendationId: parsed.recommendationId ?? null,
+      contactId: parsed.contactId ?? null,
+      actionType: parsed.actionType,
+      channel: parsed.channel,
+      summary: parsed.summary,
+      content: parsed.content ?? null,
+      approvedBy: session.id,
+    });
+
+    revalidateRevenue(parsed.opportunityId);
+    return { ok: true, data: { actionId: action.id } };
+  } catch (err) {
+    return actionError(err, "Could not log that action.");
+  }
+}
+
+/**
+ * Approves a proposed action, optionally with edits.
+ *
+ * `editedContent` is compared against the original inside approveAction, so
+ * `humanEdited` reflects a real change rather than the mere presence of a
+ * textarea in the form.
+ */
+export async function approveProposedAction(input: {
+  actionId: string;
+  editedContent?: string | null;
+}): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    const action = await approveAction(session.orgId, input.actionId, {
+      approvedBy: session.id,
+      editedContent: input.editedContent ?? null,
+    });
+    revalidateRevenue(action.opportunityId);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return actionError(err, "Could not approve that action.");
+  }
+}
+
+export async function rejectProposedAction(input: {
+  actionId: string;
+  reason?: string | null;
+}): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    const action = await rejectAction(session.orgId, input.actionId, input.reason ?? null);
+    revalidateRevenue(action.opportunityId);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return actionError(err, "Could not reject that action.");
+  }
+}
+
+/**
+ * Reverses an action. Fails loudly for a sent email rather than pretending —
+ * §6 forbids claiming a send was retrieved when SMTP has no such concept.
+ */
+export async function undoLoggedAction(input: {
+  actionId: string;
+}): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    const action = await undoAction(session.orgId, input.actionId);
+    revalidateRevenue(action.opportunityId);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return actionError(err, "Could not undo that action.");
+  }
+}
+
+const responseInput = z.object({
+  opportunityId: z.string().min(1),
+  actionId: z.string().min(1).nullable().optional(),
+  contactId: z.string().min(1).nullable().optional(),
+  responseType: z.enum([
+    "replied",
+    "meeting_booked",
+    "proposal_viewed",
+    "stakeholder_added",
+    "no_response",
+    "unsubscribed",
+    "opportunity_advanced",
+    "opportunity_regressed",
+  ]),
+  detail: z.string().max(2000).nullable().optional(),
+});
+
+/** Records how the customer reacted. */
+export async function logResponse(
+  input: z.input<typeof responseInput>
+): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    const parsed = responseInput.parse(input);
+
+    const opp = await db.opportunity.findFirst({
+      where: { id: parsed.opportunityId, orgId: session.orgId },
+      select: { id: true },
+    });
+    if (!opp) return { ok: false, error: "Opportunity not found." };
+
+    await recordResponse({
+      orgId: session.orgId,
+      opportunityId: parsed.opportunityId,
+      actionId: parsed.actionId ?? null,
+      contactId: parsed.contactId ?? null,
+      responseType: parsed.responseType,
+      detail: parsed.detail ?? null,
+    });
+
+    revalidateRevenue(parsed.opportunityId);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return actionError(err, "Could not record that response.");
+  }
+}
+
+const outcomeInput = z.object({
+  opportunityId: z.string().min(1),
+  stage: z.enum(["reply", "meeting_booked", "qualified", "won", "lost", "stalled"]),
+  detail: z.string().max(2000).nullable().optional(),
+  revenueAmount: z.number().int().min(0).nullable().optional(),
+  lossReason: z
+    .enum(["price", "timing", "competitor", "no_decision", "no_budget", "churn_risk", "other"])
+    .nullable()
+    .optional(),
+});
+
+/** Records the commercial result and closes the deal where the stage is terminal. */
+export async function logOutcome(
+  input: z.input<typeof outcomeInput>
+): Promise<ActionResult> {
+  try {
+    const session = await requireSession();
+    const parsed = outcomeInput.parse(input);
+
+    const opp = await db.opportunity.findFirst({
+      where: { id: parsed.opportunityId, orgId: session.orgId },
+      select: { id: true, accountId: true },
+    });
+    if (!opp) return { ok: false, error: "Opportunity not found." };
+
+    await recordOutcome({
+      orgId: session.orgId,
+      opportunityId: parsed.opportunityId,
+      accountId: opp.accountId,
+      stage: parsed.stage,
+      detail: parsed.detail ?? null,
+      revenueAmount: parsed.revenueAmount ?? null,
+      lossReason: parsed.lossReason ?? null,
+    });
+
+    // Terminal outcomes move the deal itself, so the pipeline and the ledger
+    // never disagree about whether something is closed.
+    if (parsed.stage === "won" || parsed.stage === "lost") {
+      await db.opportunity.update({
+        where: { id: parsed.opportunityId },
+        data: {
+          stage: parsed.stage === "won" ? "WON" : "LOST",
+          closedAt: new Date(),
+          winProbability: parsed.stage === "won" ? 100 : 0,
+          lostReason: parsed.lossReason ?? null,
+        },
+      });
+    }
+
+    revalidateRevenue(parsed.opportunityId);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return actionError(err, "Could not record that outcome.");
+  }
+}
+
+/**
+ * Housekeeping the loop needs to stay honest: expire advice that has gone
+ * stale, and write no_response rows for actions whose reply window closed
+ * with nothing recorded. Called from the refresh button alongside rescoring.
+ */
+export async function runLoopMaintenance(): Promise<
+  ActionResult<{ expired: number; nonResponses: number }>
+> {
+  try {
+    const session = await requireSession();
+    const [expired, nonResponses] = await Promise.all([
+      expireStaleRecommendations(session.orgId),
+      sweepNonResponses(session.orgId),
+    ]);
+    revalidateRevenue();
+    return { ok: true, data: { expired, nonResponses } };
+  } catch (err) {
+    return actionError(err, "Could not run loop maintenance.");
   }
 }

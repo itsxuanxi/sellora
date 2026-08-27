@@ -1,7 +1,98 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { isOpenStage } from "@/lib/revenue/config";
-import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
+import { isOpenStage, type Urgency } from "@/lib/revenue/config";
+import { loadEnrichedOpportunities, type EnrichedOpportunity } from "@/lib/revenue/queries";
+import { getActionHitRates } from "@/lib/revenue/learning";
+import {
+  computeActionPriority,
+  recommendationConfidence,
+  PRIORITY_CONFIG_VERSION,
+} from "@/lib/revenue/priority";
+import { REVENUE_CONFIG_VERSION } from "@/lib/revenue/config";
+
+/** How long each urgency band stays actionable before the advice is simply
+ *  wrong rather than late. "Follow up within 24h of the demo" does not become
+ *  a next-week task; it becomes obsolete. */
+const URGENCY_TTL_HOURS: Record<Urgency, number> = {
+  now: 24,
+  today: 48,
+  this_week: 168,
+  monitor: 336,
+};
+
+/**
+ * Builds the evidence-bearing fields for one recommendation: which signals it
+ * rests on, how urgent, how confident, and where it ranks.
+ *
+ * Separated out because both syncRecommendations (bulk) and
+ * ensureRecommendation (single) must produce identical rows — a
+ * recommendation materialized on demand should not differ from the same one
+ * created by a workspace refresh.
+ */
+function buildRecommendationFields(
+  opp: EnrichedOpportunity,
+  maxExpectedValue: number,
+  hitRates: Map<string, number>
+) {
+  const action = opp.nextAction;
+
+  // Evidence: the signals actually behind this advice. Leak-driven advice
+  // cites the signals that are conspicuously absent or stale, which is why
+  // the account's live signals are the right set either way.
+  const supporting = opp.signals.slice(0, 4);
+  const signalStrength = supporting.length
+    ? Math.max(...supporting.map((sig) => sig.importanceScore))
+    : 0;
+
+  const actionHitRate = hitRates.get(action.actionType) ?? null;
+
+  const priority = computeActionPriority({
+    expectedValue: action.expectedValue,
+    maxExpectedValue,
+    urgency: action.urgency as Urgency,
+    score: opp.score ?? 0,
+    signalStrength,
+    actionHitRate,
+  });
+
+  const ttlHours = URGENCY_TTL_HOURS[action.urgency as Urgency] ?? 168;
+
+  return {
+    actionType: action.actionType,
+    headline: action.headline,
+    rationale: action.rationale,
+    urgency: action.urgency,
+    leakType: action.leakType,
+    expectedValue: action.expectedValue,
+    dealValue: opp.dealValue,
+    supportingSignals: JSON.stringify(supporting.map((sig) => sig.id)),
+    expectedImpact: describeImpact(opp, actionHitRate),
+    // Only modelled where this workspace has a hit rate to model it from.
+    expectedImpactValue:
+      actionHitRate == null
+        ? null
+        : Math.round(action.expectedValue * actionHitRate),
+    confidence: recommendationConfidence({
+      supportingSignalCount: supporting.length,
+      actionHitRate,
+    }),
+    priorityScore: priority.score,
+    expiresAt: new Date(Date.now() + ttlHours * 3_600_000),
+    modelVersion: PRIORITY_CONFIG_VERSION,
+    scoringVersion: REVENUE_CONFIG_VERSION,
+  };
+}
+
+/**
+ * The expected-impact sentence. Says "we have no basis for a number yet" when
+ * that is the truth, rather than dressing the deal value up as a forecast.
+ */
+function describeImpact(opp: EnrichedOpportunity, hitRate: number | null): string {
+  if (hitRate == null) {
+    return `${opp.nextAction.headline} on a deal with ${opp.expectedValue.toLocaleString()} ${opp.currency} of expected revenue. Not enough history here yet to model the lift.`;
+  }
+  return `Similar actions in this workspace drew a customer reaction ${Math.round(hitRate * 100)}% of the time.`;
+}
 
 /**
  * The recommendation ledger — the part of §15's data moat that this MVP
@@ -32,7 +123,11 @@ export async function syncRecommendations(orgId: string): Promise<{
   updated: number;
   resolved: number;
 }> {
-  const opps = await loadEnrichedOpportunities(orgId);
+  const [opps, hitRates] = await Promise.all([
+    loadEnrichedOpportunities(orgId),
+    getActionHitRates(orgId),
+  ]);
+  const maxExpectedValue = Math.max(0, ...opps.map((o) => o.nextAction.expectedValue));
   const existing = await db.recommendation.findMany({
     where: { orgId, status: "OPEN" },
     select: { id: true, opportunityId: true, dedupeKey: true },
@@ -54,15 +149,7 @@ export async function syncRecommendations(orgId: string): Promise<{
     const key = `${opp.id}:${action.dedupeKey}`;
     stillLive.add(key);
 
-    const data = {
-      actionType: action.actionType,
-      headline: action.headline,
-      rationale: action.rationale,
-      urgency: action.urgency,
-      leakType: action.leakType,
-      expectedValue: action.expectedValue,
-      dealValue: opp.dealValue,
-    };
+    const data = buildRecommendationFields(opp, maxExpectedValue, hitRates);
 
     if (existingByKey.has(key)) {
       await db.recommendation.update({
@@ -130,27 +217,27 @@ export async function ensureRecommendation(
   });
   if (existing) return existing.id;
 
-  const opps = await loadEnrichedOpportunities(orgId);
+  const [opps, hitRates] = await Promise.all([
+    loadEnrichedOpportunities(orgId),
+    getActionHitRates(orgId),
+  ]);
   const opp = opps.find((o) => o.id === opportunityId);
   if (!opp || opp.nextAction.actionType === "wait" || !isOpenStage(opp.stage)) return null;
 
-  const action = opp.nextAction;
+  const maxExpectedValue = Math.max(0, ...opps.map((o) => o.nextAction.expectedValue));
   const rec = await db.recommendation.upsert({
     where: {
-      opportunityId_dedupeKey: { opportunityId, dedupeKey: action.dedupeKey },
+      opportunityId_dedupeKey: {
+        opportunityId,
+        dedupeKey: opp.nextAction.dedupeKey,
+      },
     },
     update: { status: "OPEN", dismissedAt: null, completedAt: null },
     create: {
       orgId,
       opportunityId,
-      dedupeKey: action.dedupeKey,
-      actionType: action.actionType,
-      headline: action.headline,
-      rationale: action.rationale,
-      urgency: action.urgency,
-      leakType: action.leakType,
-      expectedValue: action.expectedValue,
-      dealValue: opp.dealValue,
+      dedupeKey: opp.nextAction.dedupeKey,
+      ...buildRecommendationFields(opp, maxExpectedValue, hitRates),
     },
     select: { id: true },
   });

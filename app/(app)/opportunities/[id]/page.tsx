@@ -18,7 +18,11 @@ import { formatMoney } from "@/lib/revenue/money";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
 import { OpportunityScore, ConfidenceNote, ScoreBreakdown, WhyNow } from "@/components/revenue/score";
 import { UrgencyPill } from "@/components/revenue/leak-card";
-import { SignalTimeline, interpretSignals } from "@/components/revenue/signal-timeline";
+import { interpretSignals } from "@/components/revenue/signal-timeline";
+import { LoopStrip, LoopTimeline } from "@/components/revenue/loop-timeline";
+import { LoopControls } from "@/components/revenue/loop-controls";
+import { loadOpportunityTimeline, summarizeLoop } from "@/lib/revenue/timeline";
+import { parseSupportingSignals } from "@/lib/revenue/loop";
 import { RecommendationActions } from "@/components/revenue/recommendation-actions";
 import type { OpportunityStage } from "@/lib/revenue/config";
 import { StagePill } from "@/app/(app)/opportunities/page";
@@ -104,6 +108,18 @@ export default async function OpportunityDetailPage({
   }));
 
   const summary = buildSummary(enriched, timelineSignals.length);
+
+  // The unified chain. Loaded after `enriched` so a missing opportunity has
+  // already short-circuited above.
+  const timeline = await loadOpportunityTimeline(session.orgId, enriched.id);
+  const loopStages = summarizeLoop(timeline);
+
+  // Resolve the recommendation's stored signal ids to the real rows, so the
+  // "Evidence" list links to verifiable events rather than restating prose.
+  const evidenceIds = openRec ? parseSupportingSignals(openRec) : [];
+  const evidenceSignals = evidenceIds.length
+    ? signals.filter((sig) => evidenceIds.includes(sig.id))
+    : [];
 
   return (
     <>
@@ -202,10 +218,70 @@ export default async function OpportunityDetailPage({
               <p className="mt-1 text-sm leading-relaxed">{action.rationale}</p>
             </div>
 
+            {/* The evidence this advice rests on, resolved from the stored
+                signal ids rather than restated as prose. If the list is empty
+                the recommendation says so instead of implying evidence. */}
+            {openRec && (
+              <div className="mt-3">
+                <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  Evidence
+                </div>
+                {evidenceSignals.length === 0 ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    No specific signals recorded — this comes from the deal&apos;s
+                    stage and how long it has been quiet.
+                  </p>
+                ) : (
+                  <ul className="mt-1 space-y-1">
+                    {evidenceSignals.map((sig) => (
+                      <li key={sig.id} className="text-sm">
+                        <span className="text-foreground/90">
+                          {SIGNAL_LABELS[sig.signalType as SignalType] ?? sig.signalType}
+                        </span>
+                        {sig.evidence && (
+                          <span className="text-muted-foreground"> — {sig.evidence}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <div className="flex gap-1">
+                    <dt>Priority</dt>
+                    <dd className="font-medium tabular-nums text-foreground">
+                      {openRec.priorityScore}/100
+                    </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt>Confidence in this advice</dt>
+                    <dd className="font-medium text-foreground">{openRec.confidence}</dd>
+                  </div>
+                  {openRec.expiresAt && (
+                    <div className="flex gap-1">
+                      <dt>Relevant until</dt>
+                      <dd className="font-medium text-foreground">
+                        {format(openRec.expiresAt, "MMM d, HH:mm")}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                {openRec.expectedImpact && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {openRec.expectedImpact}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <RecommendationActions
                 recommendationId={openRec?.id ?? null}
                 opportunityId={enriched.id}
+              />
+              <LoopControls
+                opportunityId={enriched.id}
+                recommendationId={openRec?.id ?? null}
+                contactId={enriched.contact?.id ?? null}
               />
               {enriched.contact && (
                 <Button asChild variant="outline" size="sm">
@@ -271,12 +347,20 @@ export default async function OpportunityDetailPage({
             </Section>
           )}
 
-          {/* ── Buying signals (§9) ── */}
-          <Section title="Buying signals">
-            <SignalTimeline
-              signals={timelineSignals}
-              interpretation={interpretSignals(timelineSignals, enriched.score)}
-            />
+          {/* ── The closed loop, in one stream ──
+                 Signals used to sit in their own panel and recommendations in
+                 another, which left the reader to join them by eye. Merged,
+                 the sequence that actually matters — advice, what the rep did,
+                 how the customer reacted — reads as adjacent rows. ── */}
+          <Section title="Deal timeline">
+            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 p-3">
+              <LoopStrip stages={loopStages} />
+            </div>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Sellora&apos;s read on the signals:{" "}
+              {interpretSignals(timelineSignals, enriched.score)}
+            </p>
+            <LoopTimeline events={timeline} />
           </Section>
 
           {/* ── Conversation history ── */}

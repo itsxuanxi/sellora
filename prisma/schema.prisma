@@ -17,7 +17,7 @@ datasource db {
 }
 
 model Organization {
-  id          String     @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   website     String?
   industry    String?
@@ -30,24 +30,24 @@ model Organization {
   // planStatus "trialing" meters against TRIAL_LIMITS. Without Stripe keys the
   // upgrade flow still works in dev mode (subscription ids get a "sim_"
   // prefix and no money moves).
-  plan                 String    @default("free")
+  plan                 String        @default("free")
   planInterval         String? // month | year
   planStatus           String? // active | past_due | canceled
   planRenewsAt         DateTime?
-  stripeCustomerId     String?   @unique
-  stripeSubscriptionId String?   @unique
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  users       User[]
-  prospects   Prospect[]
-  campaigns   Campaign[]
-  emails      Email[]
-  activities  Activity[]
-  insights    Insight[]
-  settings    Settings?
-  icpProfile  IcpProfile?
-  accounts    Account[]
-  agentActions AgentAction[]
+  stripeCustomerId     String?       @unique
+  stripeSubscriptionId String?       @unique
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  users                User[]
+  prospects            Prospect[]
+  campaigns            Campaign[]
+  emails               Email[]
+  activities           Activity[]
+  insights             Insight[]
+  settings             Settings?
+  icpProfile           IcpProfile?
+  accounts             Account[]
+  agentActions         AgentAction[]
 
   // Vertical Buying Intent → Qualified Meeting Engine
   intentCampaigns      IntentCampaign[]
@@ -56,13 +56,15 @@ model Organization {
   outreachDrafts       OutreachDraft[]
   userFeedback         UserFeedback[]
   outcomes             Outcome[]
+  revenueActions       Action[]
+  responses            Response[]
   integrations         Integration[]
 
   // Revenue Intelligence layer
-  opportunities        Opportunity[]
-  opportunityScores    OpportunityScoreSnapshot[]
-  recommendations      Recommendation[]
-  revenueAttributions  RevenueAttribution[]
+  opportunities       Opportunity[]
+  opportunityScores   OpportunityScoreSnapshot[]
+  recommendations     Recommendation[]
+  revenueAttributions RevenueAttribution[]
 }
 
 // Ideal Customer Profile — produced by onboarding, refined in the ICP Builder.
@@ -89,31 +91,31 @@ model IcpProfile {
 
 // Company-level target. Contacts (Prospect) can be linked to an account.
 model Account {
-  id              String       @id @default(cuid())
-  orgId           String
-  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  name            String
-  domain          String?
-  industry        String?
-  companySize     String?
-  region          String?
-  source          String       @default("manual") // manual | imported | ai_suggested
-  verified        Boolean      @default(true) // false for ai_suggested until confirmed
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  domain      String?
+  industry    String?
+  companySize String?
+  region      String?
+  source      String       @default("manual") // manual | imported | ai_suggested
+  verified    Boolean      @default(true) // false for ai_suggested until confirmed
 
   // Research brief (AI-generated; confidence + sources always shown)
-  summary         String?
-  painHypotheses  String? // newline-separated hypotheses
+  summary          String?
+  painHypotheses   String? // newline-separated hypotheses
   recommendedAngle String?
-  signals         String? // JSON: [{label, detail}]
-  sources         String? // where the info came from
-  confidence      String? // low | medium | high
-  researchedAt    DateTime?
+  signals          String? // JSON: [{label, detail}]
+  sources          String? // where the info came from
+  confidence       String? // low | medium | high
+  researchedAt     DateTime?
 
   // Explainable scoring
-  fitScore        Int? // 0-100 vs ICP
-  intentScore     Int? // 0-100 from engagement (opens/replies/meetings)
-  scoreRationale  String? // newline-separated reasons
-  scoredAt        DateTime?
+  fitScore       Int? // 0-100 vs ICP
+  intentScore    Int? // 0-100 from engagement (opens/replies/meetings)
+  scoreRationale String? // newline-separated reasons
+  scoredAt       DateTime?
 
   // Buying-intent scoring (external signals — hiring, funding, etc.), kept
   // distinct from `intentScore` above which measures reply/open engagement.
@@ -124,10 +126,10 @@ model Account {
   buyingIntentWhyNow     String? // newline-separated, cached from latest snapshot
   buyingIntentScoredAt   DateTime?
 
-  prospects       Prospect[]
-  actions         AgentAction[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  prospects Prospect[]
+  actions   AgentAction[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   // Vertical Buying Intent → Qualified Meeting Engine
   campaignMemberships  IntentCampaignAccount[]
@@ -146,26 +148,26 @@ model Account {
 
 // Every agent operation: the approval queue and the audit log are one table.
 model AgentAction {
-  id         String       @id @default(cuid())
-  orgId      String
-  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  type       String // research_account | score_account | draft_outreach | send_email | generate_icp | import_accounts | suggest_accounts
-  status     String       @default("PENDING_APPROVAL") // SUGGESTED | PENDING_APPROVAL | RUNNING | DONE | FAILED | CANCELED | UNDONE
-  title      String
-  detail     String?
-  payload    String? // JSON input (also stores prev-state for undo)
-  result     String? // JSON output summary
-  error      String?
-  accountId  String?
-  account    Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  prospectId String?
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  type        String // research_account | score_account | draft_outreach | send_email | generate_icp | import_accounts | suggest_accounts
+  status      String       @default("PENDING_APPROVAL") // SUGGESTED | PENDING_APPROVAL | RUNNING | DONE | FAILED | CANCELED | UNDONE
+  title       String
+  detail      String?
+  payload     String? // JSON input (also stores prev-state for undo)
+  result      String? // JSON output summary
+  error       String?
+  accountId   String?
+  account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  prospectId  String?
   requestedBy String? // "agent" or user id
-  decidedBy  String?
-  decidedAt  DateTime?
-  executedAt DateTime?
-  undoneAt   DateTime?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  decidedBy   String?
+  decidedAt   DateTime?
+  executedAt  DateTime?
+  undoneAt    DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([orgId, status])
   @@index([orgId, createdAt])
@@ -246,13 +248,25 @@ model Prospect {
   account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   // AI personalization (editable before sending)
-  companySummary  String?
-  icebreaker      String?
-  outreachAngle   String?
+  companySummary   String?
+  icebreaker       String?
+  outreachAngle    String?
   coldEmailSubject String?
-  coldEmailBody   String?
-  linkedinMessage String?
-  aiGeneratedAt   DateTime?
+  coldEmailBody    String?
+  linkedinMessage  String?
+  aiGeneratedAt    DateTime?
+
+  // ── Buying-committee role (§Contact) ──
+  // Who this person is in the deal, not just what their title says. Both are
+  // nullable: an imported contact has a title long before anyone has worked
+  // out whether they can sign.
+  // champion | decision_maker | economic_buyer | influencer | blocker | unknown
+  buyingRole         String    @default("unknown")
+  // none | influencer | recommender | approver | signer
+  decisionAuthority  String    @default("none")
+  // 0-100, derived from opens/clicks/replies/meetings — see lib/revenue/engagement.ts
+  engagementScore    Int?
+  engagementScoredAt DateTime?
 
   emails     Email[]
   activities Activity[]
@@ -261,6 +275,9 @@ model Prospect {
 
   outreachDrafts OutreachDraft[]
   opportunities  Opportunity[] // where this contact is the primary contact
+  signals        BuyingSignal[]
+  responses      Response[]
+  actions        Action[]
 
   @@index([orgId, stage])
   @@index([orgId, createdAt])
@@ -339,14 +356,14 @@ model Activity {
 }
 
 model Insight {
-  id         String       @id @default(cuid())
-  orgId      String
-  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  kind       String // opportunity | action | warning
-  title      String
-  body       String
-  dismissed  Boolean      @default(false)
-  createdAt  DateTime     @default(now())
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind      String // opportunity | action | warning
+  title     String
+  body      String
+  dismissed Boolean      @default(false)
+  createdAt DateTime     @default(now())
 
   @@index([orgId, createdAt])
 }
@@ -444,13 +461,38 @@ model BuyingSignal {
   dedupeKey   String // stable hash of (signalType + normalized title + occurredAt day) — see lib/intent/signals.ts
   expiresAt   DateTime?
   expired     Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+
+  // ── Revenue-loop wiring ──
+  // A signal is evidence about a person and a deal, not just a company.
+  // Both nullable: firmographic signals (funding, hiring) genuinely belong to
+  // the account alone, and a signal can arrive before an Opportunity exists.
+  contactId     String?
+  contact       Prospect?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+
+  // Machine-readable extraction of the payload — the fields scoring reads,
+  // parsed once at ingest so rules never re-parse rawData. JSON object.
+  normalizedProperties String?
+
+  // 0-100. `confidence` (low/medium/high) stays as the human-facing label;
+  // this is the number the scoring engine arithmetic actually uses, so a
+  // provider's own certainty survives rather than being bucketed away.
+  confidenceScore Int @default(50)
+  // 0-100. How much this signal type should move a deal, independent of how
+  // sure we are that it happened. Set from SIGNAL_IMPORTANCE at ingest.
+  importanceScore Int @default(50)
+
+  responses Response[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([accountId, dedupeKey])
   @@index([orgId, accountId])
   @@index([orgId, occurredAt])
   @@index([accountId, expired])
+  @@index([opportunityId, occurredAt])
 }
 
 // One row per scoring run — never overwritten, so a company's score history
@@ -507,9 +549,9 @@ model OutreachDraft {
   body                 String
   accountSummary       String? // AI research summary shown on Company Intent Detail
   recommendedAngle     String?
-  status               String   @default("DRAFT") // DRAFT | APPROVED | REJECTED | SENT | EDITED
+  status               String  @default("DRAFT") // DRAFT | APPROVED | REJECTED | SENT | EDITED
   evidenceUsed         String? // JSON array of BuyingSignal ids the copy actually cites
-  insufficientEvidence Boolean  @default(false) // true ⇒ body is a placeholder, never sent
+  insufficientEvidence Boolean @default(false) // true ⇒ body is a placeholder, never sent
   aiSource             String? // openai | local
 
   approvedBy String?
@@ -549,10 +591,20 @@ model Outcome {
   accountId  String
   account    Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   draftId    String?
-  stage      String // reply | meeting_booked | qualified | won | lost
+  // reply | meeting_booked | qualified | won | lost | stalled
+  stage      String
   detail     String?
   occurredAt DateTime     @default(now())
-  createdAt  DateTime     @default(now())
+
+  // ── Commercial result (§Outcome) ──
+  // Set only on terminal stages. revenueAmount is the money that actually
+  // closed — deliberately separate from Opportunity.dealValue, which is an
+  // estimate, so won-revenue reporting never quotes a forecast as a fact.
+  revenueAmount  Int?
+  salesCycleDays Int?
+  lossReason     String? // price | timing | competitor | no_decision | no_budget | churn_risk | other
+
+  createdAt DateTime @default(now())
 
   // Which deal this outcome belongs to. Optional: outcomes recorded before
   // the Revenue Intelligence layer existed are account-level only.
@@ -599,28 +651,28 @@ model Opportunity {
   primaryContactId String?
   primaryContact   Prospect? @relation(fields: [primaryContactId], references: [id], onDelete: SetNull)
 
-  name     String
+  name   String
   // NEW | QUALIFYING | MEETING | PROPOSAL | NEGOTIATION | WON | LOST
-  stage    String @default("NEW")
-  source   String @default("manual") // manual | imported | derived_from_prospect
+  stage  String @default("NEW")
+  source String @default("manual") // manual | imported | derived_from_prospect
 
   // ── Economics ──
   // dealValue is the working estimate. `dealValueBasis` records where the
   // number came from so the UI never presents a guess as a quote.
   dealValue      Int
-  currency       String  @default("USD")
-  dealValueBasis String  @default("icp_midpoint") // user_entered | icp_midpoint | account_size_heuristic
+  currency       String @default("USD")
+  dealValueBasis String @default("icp_midpoint") // user_entered | icp_midpoint | account_size_heuristic
 
   // 0-100. Derived from the opportunity score band + stage; recomputed on
   // every rescore. Expected revenue = dealValue × winProbability / 100.
   winProbability Int @default(0)
 
   // ── Scoring cache (source of truth is OpportunityScoreSnapshot) ──
-  score        Int?
-  scoreBand    String? // hot | warm | cold
-  confidence   String? // low | medium | high
-  whyNow       String? // newline-separated, cached from latest snapshot
-  scoredAt     DateTime?
+  score      Int?
+  scoreBand  String? // hot | warm | cold
+  confidence String? // low | medium | high
+  whyNow     String? // newline-separated, cached from latest snapshot
+  scoredAt   DateTime?
 
   // ── Engagement/recency, denormalized for fast leak queries ──
   lastInteractionAt   DateTime?
@@ -633,6 +685,9 @@ model Opportunity {
   recommendations Recommendation[]
   outcomes        Outcome[]
   attributions    RevenueAttribution[]
+  signals         BuyingSignal[]
+  actions         Action[]
+  responses       Response[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -646,11 +701,11 @@ model Opportunity {
 // One row per scoring run — never overwritten, so score history stays
 // auditable. Mirrors IntentScoreSnapshot.
 model OpportunityScoreSnapshot {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   orgId         String
   org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   opportunityId String
-  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   score          Int // 0-100
   band           String // hot | warm | cold
@@ -661,7 +716,7 @@ model OpportunityScoreSnapshot {
   version        Int // REVENUE_CONFIG_VERSION at scoring time
 
   factors   OpportunityScoreFactor[]
-  createdAt DateTime @default(now())
+  createdAt DateTime                 @default(now())
 
   @@index([orgId, opportunityId, createdAt])
 }
@@ -686,11 +741,11 @@ model OpportunityScoreFactor {
 // A single "next best action" Sellora put in front of a human, and what
 // became of it. The recommendation → action → outcome chain lives here.
 model Recommendation {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   orgId         String
   org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   opportunityId String
-  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   // follow_up | call | book_meeting | send_case_study | send_pricing |
   // send_proposal | qualify | escalate_founder | reengage | wait | close_lost
@@ -709,19 +764,50 @@ model Recommendation {
   expectedValue Int
   dealValue     Int
 
-  // OPEN | COMPLETED | DISMISSED | SNOOZED
-  status      String    @default("OPEN")
-  completedAt DateTime?
-  dismissedAt DateTime?
-  snoozedUntil DateTime?
+  // OPEN | COMPLETED | DISMISSED | SNOOZED | EXPIRED
+  status        String    @default("OPEN")
+  completedAt   DateTime?
+  dismissedAt   DateTime?
+  snoozedUntil  DateTime?
   dismissReason String?
-  completedBy String?
+  completedBy   String?
+
+  // ── Evidence and confidence (§3: never an unexplained recommendation) ──
+  // JSON array of BuyingSignal ids this advice is actually built on. The UI
+  // resolves them to the real signal rows, so "why now" cites evidence that
+  // can be clicked through rather than prose that merely sounds specific.
+  supportingSignals String?
+
+  // What acting is expected to do, in money and in words. `expectedImpact` is
+  // the sentence; `expectedImpactValue` is the modelled delta in currency
+  // units, and is null when there is not enough history to model one.
+  expectedImpact      String?
+  expectedImpactValue Int?
+
+  // low | medium | high — how much Sellora trusts THIS advice, which is not
+  // the same as how strong the deal is.
+  confidence String @default("medium")
+
+  // 0-100 composite: expected revenue, signal strength, risk, time sensitivity
+  // and the historical hit rate of this action type. See lib/revenue/priority.ts.
+  priorityScore Int @default(0)
+
+  // Advice goes stale. A "follow up within 24h of the demo" that is eight days
+  // old is wrong, not merely late, so it is expired rather than left to rot.
+  expiresAt DateTime?
+
+  // Which rule/scoring generation produced this. Frozen so the learning layer
+  // can compare the hit rate of one generation against another.
+  modelVersion   Int @default(1)
+  scoringVersion Int @default(1)
 
   // Stable identity for a recurring recommendation, so regenerating the feed
   // updates the existing row instead of spawning duplicates every page load.
   dedupeKey String
 
   attributions RevenueAttribution[]
+  actions      Action[]
+  responses    Response[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -729,17 +815,18 @@ model Recommendation {
   @@unique([opportunityId, dedupeKey])
   @@index([orgId, status])
   @@index([orgId, urgency])
+  @@index([orgId, status, priorityScore])
 }
 
 // Materialized proof that Sellora moved money (§12). Written only when a
 // real event happens (a recommendation is acted on, an opportunity is won),
 // never inferred at read time — so the Impact page reports facts.
 model RevenueAttribution {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   orgId         String
   org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   opportunityId String
-  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   recommendationId String?
   recommendation   Recommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
@@ -760,19 +847,134 @@ model RevenueAttribution {
   @@index([opportunityId])
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// The closed loop: Action and Response
+//
+// These are the two links that turn a pile of advice into a learning system.
+// Without Action, "Sellora recommended X" is never connected to "a human
+// actually did X"; without Response, neither is connected to "the customer
+// reacted". The full chain the product is built on is:
+//
+//   BuyingSignal → Recommendation → Action → Response → Outcome
+//
+// Every hop stores its own timestamp and its own source, so the timeline can
+// be reconstructed exactly and no step is ever inferred at read time.
+// ═══════════════════════════════════════════════════════════════════════
+
+// Did a human actually do the thing, and what happened when they did.
+//
+// Distinct from AgentAction, which is the agent's own operational queue
+// (research this account, score that one). An Action is a customer-facing
+// move — an email, a call, a stage change — that a person approved.
+model Action {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // Nullable by design: reps act without being told to, and those actions are
+  // exactly the control group the learning layer needs. An Action with no
+  // recommendation is unprompted; one with a recommendation is attributable.
+  recommendationId String?
+  recommendation   Recommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contactId     String?
+  contact       Prospect?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  // follow_up | call | book_meeting | send_case_study | send_pricing |
+  // send_proposal | qualify | escalate_founder | reengage | close_lost |
+  // stage_change | note
+  actionType String
+  // email | call | linkedin | meeting | crm | manual
+  channel    String  @default("manual")
+  content    String? // what was actually sent/said, when we have it
+  summary    String // one line for the timeline
+
+  // ── The approval chain (§6: nothing customer-facing goes out unreviewed) ──
+  proposedAt DateTime  @default(now())
+  approvedAt DateTime?
+  executedAt DateTime?
+  approvedBy String?
+
+  // PROPOSED | APPROVED | EXECUTING | EXECUTED | FAILED | REJECTED | UNDONE
+  executionStatus String  @default("PROPOSED")
+  // True when the human changed Sellora's draft before approving. The single
+  // most useful quality signal there is: heavy editing means the draft was wrong.
+  humanEdited     Boolean @default(false)
+  errorMessage    String?
+
+  // Set when the action was reversed, so an undo leaves a trace instead of
+  // deleting history.
+  undoneAt DateTime?
+
+  responses Response[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, executionStatus])
+  @@index([opportunityId, executedAt])
+  @@index([recommendationId])
+}
+
+// How the customer reacted after an Action. This is the payoff measurement:
+// an action with no Response after its window closed is a real result
+// (no_response), not missing data, which is why `observedAt` is required.
+model Response {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  actionId         String?
+  action           Action?         @relation(fields: [actionId], references: [id], onDelete: SetNull)
+  // Denormalized so response rates can be computed per recommendation without
+  // a join through Action, and so a response still attributes when the action
+  // row is later removed.
+  recommendationId String?
+  recommendation   Recommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+
+  opportunityId String
+  opportunity   Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contactId     String?
+  contact       Prospect?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  // The signal that evidenced this response, when one exists (a reply is both).
+  signalId      String?
+  signal        BuyingSignal? @relation(fields: [signalId], references: [id], onDelete: SetNull)
+
+  // replied | meeting_booked | proposal_viewed | stakeholder_added |
+  // no_response | unsubscribed | opportunity_advanced | opportunity_regressed
+  responseType String
+  detail       String?
+  // Whether this reaction is good, bad or neutral for the deal. Stored rather
+  // than derived so the vocabulary can grow without rewriting every query.
+  sentiment    String  @default("neutral") // positive | neutral | negative
+
+  // How long the customer took. Null for no_response.
+  hoursToRespond Int?
+
+  observedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([orgId, responseType])
+  @@index([opportunityId, observedAt])
+  @@index([recommendationId])
+  @@index([actionId])
+}
+
 // Which data providers a workspace has enabled, and their last run status.
 // Non-secret config only — nothing here is an API key.
 model Integration {
-  id          String       @id @default(cuid())
-  orgId       String
-  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  provider    String // csv_import | manual | mock_recruiting_demo
-  status      String       @default("CONNECTED") // CONNECTED | ERROR | DISABLED
-  config      String? // JSON, non-secret
-  lastRunAt   DateTime?
-  lastError   String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  provider  String // csv_import | manual | mock_recruiting_demo
+  status    String       @default("CONNECTED") // CONNECTED | ERROR | DISABLED
+  config    String? // JSON, non-secret
+  lastRunAt DateTime?
+  lastError String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@unique([orgId, provider])
 }

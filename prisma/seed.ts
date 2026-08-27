@@ -12,6 +12,18 @@
 import crypto from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { computeOpportunityScore } from "@/lib/revenue/opportunity-score";
+import { SIGNAL_WEIGHTS } from "@/lib/intent/config";
+
+/** Mirrors lib/intent/signals.ts — duplicated here rather than imported
+ *  because that module is server-only and the seed runs as a plain script. */
+const CONFIDENCE_SCORES: Record<string, number> = { low: 30, medium: 60, high: 90 };
+
+function signalImportance(signalType: string): number {
+  const weight = SIGNAL_WEIGHTS[signalType as keyof typeof SIGNAL_WEIGHTS];
+  if (weight === undefined) return 50;
+  const maxWeight = Math.max(...Object.values(SIGNAL_WEIGHTS).map(Math.abs));
+  return Math.round((Math.abs(weight) / maxWeight) * 100);
+}
 import { expectedRevenue } from "@/lib/revenue/money";
 import { SIGNAL_TTL_DAYS, type SignalType } from "@/lib/intent/config";
 
@@ -420,7 +432,22 @@ async function main() {
 
   let opportunityCount = 0;
   const wonOpportunityIds: string[] = [];
-  const savedOpportunities: { id: string; expected: number; headline: string }[] = [];
+
+  /** Everything the loop seeding below needs, collected as deals are built. */
+  const demoDeals: {
+    opportunityId: string;
+    accountId: string;
+    contactId: string;
+    stage: string;
+    dealValue: number;
+    signalIds: string[];
+  }[] = [];
+  const savedOpportunities: {
+    id: string;
+    expected: number;
+    headline: string;
+    signalIds: string[];
+  }[] = [];
 
   for (const s of scenarios) {
     const p = createdProspects[s.prospectIdx];
@@ -443,10 +470,14 @@ async function main() {
     });
 
     // ── Signals ──
+    // Created before the opportunity exists, so the opportunity link is
+    // backfilled below — mirroring real ingestion, where a signal often
+    // arrives before anyone has opened a deal for it.
+    const seededSignalIds: string[] = [];
     for (const sig of s.signals) {
       const occurredAt = daysAgo(sig.daysAgo, sig.hour ?? 11);
       const ttl = SIGNAL_TTL_DAYS[sig.type] ?? 60;
-      await db.buyingSignal.create({
+      const created = await db.buyingSignal.create({
         data: {
           orgId: org.id,
           accountId: account.id,
@@ -458,8 +489,11 @@ async function main() {
           confidence: sig.confidence ?? "medium",
           dedupeKey: dedupeKey(sig.type, sig.title, occurredAt),
           expiresAt: new Date(occurredAt.getTime() + ttl * 86_400_000),
+          confidenceScore: CONFIDENCE_SCORES[sig.confidence ?? "medium"],
+          importanceScore: signalImportance(sig.type),
         },
       });
+      seededSignalIds.push(created.id);
     }
 
     // ── Opportunity ──
@@ -486,6 +520,21 @@ async function main() {
       },
     });
     opportunityCount++;
+
+    // Backfill the deal link now that the opportunity exists.
+    await db.buyingSignal.updateMany({
+      where: { id: { in: seededSignalIds } },
+      data: { opportunityId: opp.id },
+    });
+
+    demoDeals.push({
+      opportunityId: opp.id,
+      accountId: account.id,
+      contactId: p.id,
+      stage: s.stage,
+      dealValue: s.dealValue,
+      signalIds: seededSignalIds,
+    });
 
     // ── Score it with the real engine, so demo numbers are honest ──
     const emails = await db.email.findMany({
@@ -564,6 +613,7 @@ async function main() {
         id: opp.id,
         expected: expectedRevenue(s.dealValue, result.winProbability),
         headline: `Follow up with ${p.name.split(" ")[0]} at ${p.company}`,
+        signalIds: seededSignalIds,
       });
   }
 
@@ -582,6 +632,13 @@ async function main() {
         leakType: "going_cold",
         expectedValue: saved.expected,
         dealValue: saved.expected,
+        // Evidence and priority, so this legacy demo row renders the same way
+        // the engine's own recommendations do rather than showing a bare 0.
+        supportingSignals: JSON.stringify(saved.signalIds.slice(0, 2)),
+        confidence: saved.signalIds.length >= 2 ? "high" : "medium",
+        priorityScore: 72,
+        expectedImpact:
+          "Demo data — a worked recommendation, kept so Impact reports facts rather than zeros.",
         status: "COMPLETED",
         completedAt: daysAgo(3),
         completedBy: "demo_user",
@@ -624,6 +681,179 @@ async function main() {
       },
     });
   }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // The closed loop, seeded end to end.
+  //
+  // Recommendation → Action → Response → Outcome, on real rows, so the
+  // timeline and the learning panels have something to show on first run.
+  // The volume is chosen deliberately: lib/revenue/learning.ts refuses to
+  // report anything below MIN_SAMPLE (12) or MIN_SLICE_SAMPLE (8), so a
+  // handful of demo deals would render nothing but "Insufficient data" and
+  // the feature would look broken rather than careful.
+  //
+  // Outcomes here are a mix of wins, losses and non-responses on purpose. A
+  // demo dataset where every recommendation worked would teach the reader
+  // something false about the product.
+  // ══════════════════════════════════════════════════════════════════════
+
+  const LOOP_ACTIONS = [
+    { actionType: "follow_up", channel: "email", summary: "Followed up on the pricing-page visit" },
+    { actionType: "call", channel: "call", summary: "Called the champion to unblock the review" },
+    { actionType: "send_case_study", channel: "email", summary: "Sent the industry case study" },
+    { actionType: "book_meeting", channel: "email", summary: "Proposed three times for the next call" },
+    { actionType: "send_proposal", channel: "email", summary: "Sent the revised proposal" },
+    { actionType: "reengage", channel: "linkedin", summary: "Re-engaged after a quiet fortnight" },
+  ] as const;
+
+  // Reaction per action index, cycled. Roughly half draw nothing — which is
+  // what makes the reported rates believable rather than flattering.
+  const LOOP_REACTIONS: (
+    | "replied"
+    | "meeting_booked"
+    | "proposal_viewed"
+    | "no_response"
+    | "opportunity_advanced"
+    | "stakeholder_added"
+  )[] = [
+    "replied",
+    "no_response",
+    "meeting_booked",
+    "no_response",
+    "opportunity_advanced",
+    "proposal_viewed",
+    "no_response",
+    "stakeholder_added",
+  ];
+
+  const SENTIMENT: Record<string, string> = {
+    replied: "positive",
+    meeting_booked: "positive",
+    proposal_viewed: "positive",
+    stakeholder_added: "positive",
+    opportunity_advanced: "positive",
+    no_response: "negative",
+  };
+
+  let loopRecommendations = 0;
+  let loopActions = 0;
+  let loopResponses = 0;
+
+  for (const [dealIndex, deal] of demoDeals.entries()) {
+    // Three passes per deal gets the sample counts over the learning gates
+    // without inventing companies that do not exist in the demo narrative.
+    for (let pass = 0; pass < 3; pass++) {
+      const spec = LOOP_ACTIONS[(dealIndex + pass) % LOOP_ACTIONS.length];
+      const reaction = LOOP_REACTIONS[(dealIndex * 3 + pass) % LOOP_REACTIONS.length];
+
+      // Walk backwards in time so older passes sit earlier on the timeline.
+      const recommendedAt = daysAgo(28 - pass * 8, 9);
+      const executedAt = new Date(recommendedAt.getTime() + 6 * 3_600_000);
+      const respondedAt = new Date(executedAt.getTime() + 20 * 3_600_000);
+
+      const expectedValue = Math.round(deal.dealValue * 0.4);
+      const evidence = deal.signalIds.slice(0, 2);
+
+      const rec = await db.recommendation.create({
+        data: {
+          orgId: org.id,
+          opportunityId: deal.opportunityId,
+          actionType: spec.actionType,
+          headline: spec.summary,
+          rationale:
+            "Demo data — generated to illustrate the recommendation → action → response chain.",
+          urgency: pass === 0 ? "today" : "this_week",
+          expectedValue,
+          dealValue: deal.dealValue,
+          supportingSignals: JSON.stringify(evidence),
+          confidence: evidence.length >= 2 ? "high" : "medium",
+          priorityScore: 40 + ((dealIndex * 7 + pass * 11) % 55),
+          status: "COMPLETED",
+          completedAt: executedAt,
+          completedBy: "seed",
+          dedupeKey: `seed-${deal.opportunityId}-${pass}`,
+          createdAt: recommendedAt,
+        },
+      });
+      loopRecommendations++;
+
+      const action = await db.action.create({
+        data: {
+          orgId: org.id,
+          opportunityId: deal.opportunityId,
+          recommendationId: rec.id,
+          contactId: deal.contactId,
+          actionType: spec.actionType,
+          channel: spec.channel,
+          summary: spec.summary,
+          executionStatus: "EXECUTED",
+          proposedAt: recommendedAt,
+          approvedAt: executedAt,
+          executedAt,
+          approvedBy: "seed",
+          // Every third draft was rewritten — the edit rate is a real number
+          // in the demo, not a flattering zero.
+          humanEdited: (dealIndex + pass) % 3 === 0,
+          createdAt: recommendedAt,
+        },
+      });
+      loopActions++;
+
+      await db.response.create({
+        data: {
+          orgId: org.id,
+          opportunityId: deal.opportunityId,
+          actionId: action.id,
+          recommendationId: rec.id,
+          contactId: deal.contactId,
+          responseType: reaction,
+          sentiment: SENTIMENT[reaction] ?? "neutral",
+          detail: "Demo data",
+          hoursToRespond: reaction === "no_response" ? null : 20,
+          observedAt: reaction === "no_response" ? new Date(executedAt.getTime() + 72 * 3_600_000) : respondedAt,
+        },
+      });
+      loopResponses++;
+    }
+  }
+
+  // Closed outcomes on the deals that are already terminal, so the
+  // signal→win-rate comparison has both halves to compare.
+  for (const deal of demoDeals) {
+    if (deal.stage !== "WON" && deal.stage !== "LOST") continue;
+    const isWon = deal.stage === "WON";
+    const closedAt = daysAgo(4);
+    const existing = await db.outcome.findFirst({
+      where: { opportunityId: deal.opportunityId, stage: isWon ? "won" : "lost" },
+      select: { id: true },
+    });
+    if (existing) {
+      // The won-deal block above already wrote a row; enrich it rather than
+      // duplicating, so revenue is not double-counted.
+      await db.outcome.update({
+        where: { id: existing.id },
+        data: { revenueAmount: isWon ? deal.dealValue : null, salesCycleDays: 34 },
+      });
+      continue;
+    }
+    await db.outcome.create({
+      data: {
+        orgId: org.id,
+        accountId: deal.accountId,
+        opportunityId: deal.opportunityId,
+        stage: isWon ? "won" : "lost",
+        detail: "Demo data",
+        revenueAmount: isWon ? deal.dealValue : null,
+        salesCycleDays: 34,
+        lossReason: isWon ? null : "timing",
+        occurredAt: closedAt,
+      },
+    });
+  }
+
+  console.log(
+    `Seeded the closed loop — ${loopRecommendations} recommendations, ${loopActions} actions, ${loopResponses} responses.`
+  );
 
   console.log(
     `Seeded demo workspace “${org.name}” — ${prospects.length} prospects, ${opportunityCount} opportunities with signals and scores.`
