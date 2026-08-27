@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe } from "@/lib/billing";
+import { getStripe, resolvePlanId } from "@/lib/billing";
 import { db } from "@/lib/db";
 
 /**
@@ -42,9 +42,11 @@ export async function POST(req: Request) {
         await db.organization.update({
           where: { id: orgId },
           data: {
-            plan,
+            plan: resolvePlanId(plan),
             planInterval: interval ?? "month",
-            planStatus: "active",
+            // Checkout opens on a trial (see startCheckout), so the org is
+            // trialing until Stripe reports the first successful charge.
+            planStatus: session.metadata?.trial === "true" ? "trialing" : "active",
             stripeCustomerId:
               typeof session.customer === "string" ? session.customer : undefined,
             stripeSubscriptionId:
@@ -63,13 +65,18 @@ export async function POST(req: Request) {
         await db.organization.update({
           where: { id: orgId },
           data: {
+            // "trialing" is kept distinct from "active": planOf() meters a
+            // trial against TRIAL_LIMITS, so collapsing the two would hand
+            // every trial the full paid allowance.
             planStatus: sub.cancel_at_period_end
               ? "canceled"
-              : sub.status === "active" || sub.status === "trialing"
-                ? "active"
-                : sub.status === "past_due"
-                  ? "past_due"
-                  : "canceled",
+              : sub.status === "trialing"
+                ? "trialing"
+                : sub.status === "active"
+                  ? "active"
+                  : sub.status === "past_due"
+                    ? "past_due"
+                    : "canceled",
             planRenewsAt: renewsAt ? new Date(renewsAt * 1000) : null,
           },
         });

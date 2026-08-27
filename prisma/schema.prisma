@@ -25,7 +25,9 @@ model Organization {
   senderName  String?
   senderEmail String?
 
-  // Billing (Stripe). plan: free | pro | max. Without Stripe keys the
+  // Billing (Stripe). plan: free | starter | growth | enterprise (legacy
+  // rows may still read pro/max — see resolvePlanId in lib/billing.ts).
+  // planStatus "trialing" meters against TRIAL_LIMITS. Without Stripe keys the
   // upgrade flow still works in dev mode (subscription ids get a "sim_"
   // prefix and no money moves).
   plan                 String    @default("free")

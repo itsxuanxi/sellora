@@ -7,9 +7,10 @@ import {
   formatPrice,
   getStripe,
   PLANS,
+  TRIAL_DAYS,
   type BillingInterval,
-  type PlanId,
 } from "@/lib/billing";
+import type { PaidPlanId } from "@/lib/pricing";
 import { db } from "@/lib/db";
 import { actionError, type ActionResult } from "@/lib/types";
 
@@ -19,14 +20,23 @@ const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
  * Starts a subscription upgrade. With Stripe configured this redirects to
  * Stripe Checkout (real payment); without it the plan is activated directly
  * in dev mode so the full billing loop stays testable.
+ *
+ * Every subscription opens on a TRIAL_DAYS free trial with no card collected,
+ * which is what makes the pricing page's "14-day free trial · No credit card
+ * required" a description of the flow rather than a claim about it. Stripe
+ * only asks for a card when the trial ends.
+ *
+ * Enterprise is intentionally unreachable here: it is quoted, not bought, so
+ * its CTA goes to sales and there is no self-serve path that could charge the
+ * "starting at" floor as if it were the price.
  */
 export async function startCheckout(
-  planId: Exclude<PlanId, "free">,
+  planId: PaidPlanId,
   interval: BillingInterval
 ): Promise<ActionResult<{ simulated: boolean }>> {
   const plan = PLANS[planId];
-  if (!plan || plan.id === "free") {
-    return { ok: false, error: "Unknown plan." };
+  if (!plan || !plan.selfServe) {
+    return { ok: false, error: "That plan isn't available for self-serve checkout." };
   }
 
   let checkoutUrl: string | null = null;
@@ -36,17 +46,17 @@ export async function startCheckout(
     const stripe = getStripe();
 
     if (!stripe) {
-      // Dev mode: activate immediately, clearly marked as simulated.
-      const renewsAt = new Date();
-      if (interval === "year") renewsAt.setFullYear(renewsAt.getFullYear() + 1);
-      else renewsAt.setMonth(renewsAt.getMonth() + 1);
+      // Dev mode: start the same trial Stripe would, clearly marked simulated,
+      // so trial limits and the trial UI are exercised without payment keys.
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
       await db.organization.update({
         where: { id: org.id },
         data: {
           plan: plan.id,
           planInterval: interval,
-          planStatus: "active",
-          planRenewsAt: renewsAt,
+          planStatus: "trialing",
+          planRenewsAt: trialEndsAt,
           stripeSubscriptionId: `sim_${Date.now().toString(36)}`,
         },
       });
@@ -87,10 +97,23 @@ export async function startCheckout(
           },
         },
       ],
+      // No card up front — Stripe collects one only when the trial converts.
+      payment_method_collection: "if_required",
       success_url: `${appUrl()}/settings?tab=billing&checkout=success`,
       cancel_url: `${appUrl()}/settings?tab=billing&checkout=canceled`,
-      metadata: { orgId: org.id, plan: plan.id, interval },
-      subscription_data: { metadata: { orgId: org.id, plan: plan.id, interval } },
+      metadata: { orgId: org.id, plan: plan.id, interval, trial: "true" },
+      subscription_data: {
+        trial_period_days: TRIAL_DAYS,
+        // Required whenever payment_method_collection is "if_required": it
+        // tells Stripe what to do when the trial ends and no card was ever
+        // given. Cancelling is the only ending consistent with promising no
+        // credit card — the alternatives invoice or pause an account that
+        // never agreed to pay.
+        trial_settings: {
+          end_behavior: { missing_payment_method: "cancel" },
+        },
+        metadata: { orgId: org.id, plan: plan.id, interval },
+      },
     });
     checkoutUrl = checkout.url;
   } catch (err) {

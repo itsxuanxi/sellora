@@ -8,7 +8,7 @@ import {
 } from "@/components/settings/settings-forms";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isClerkEnabled, requireSession } from "@/lib/auth";
-import { isStripeEnabled, type PlanId } from "@/lib/billing";
+import { isStripeEnabled, planOf, resolvePlanId } from "@/lib/billing";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Settings" };
@@ -36,6 +36,12 @@ export default async function SettingsPage({
       where: { email: { orgId: org.id }, sentAt: { gte: monthStart } },
     }),
   ]);
+
+  // planOf() resolves legacy plan ids and swaps in trial limits, so the panel
+  // shows the ceilings actually being enforced rather than the plan's list
+  // limits. Infinity cannot cross the RSC boundary, so unlimited becomes null.
+  const activePlan = planOf(org);
+  const unlimitedAsNull = (n: number) => (Number.isFinite(n) ? n : null);
 
   return (
     <>
@@ -99,12 +105,17 @@ export default async function SettingsPage({
         <TabsContent value="billing">
           <BillingPanel
             state={{
-              plan: (org.plan as PlanId) ?? "free",
+              plan: resolvePlanId(org.plan),
               planInterval: org.planInterval,
               planStatus: org.planStatus,
               planRenewsAt: org.planRenewsAt?.toISOString() ?? null,
               stripeEnabled: isStripeEnabled,
               simulated: Boolean(org.stripeSubscriptionId?.startsWith("sim_")),
+              limits: {
+                prospects: unlimitedAsNull(activePlan.limits.prospects),
+                campaigns: unlimitedAsNull(activePlan.limits.campaigns),
+                emails: unlimitedAsNull(activePlan.limits.emailsPerMonth),
+              },
               usage: {
                 prospects,
                 campaigns,

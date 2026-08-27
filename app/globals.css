@@ -38,6 +38,10 @@
   --radius-xl: calc(var(--radius) + 4px);
   --animate-fade-up: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-fade-in: fade-in 0.6s ease both;
+  /* Pricing's monthly/yearly swap: a short fade on the changed numbers
+     only. Short enough to read as a value update rather than a
+     transition, and it never touches layout, so nothing shifts. */
+  --animate-price-fade: fade-in 260ms ease-out both;
   --animate-marquee: marquee 36s linear infinite;
 
   @keyframes fade-up {
