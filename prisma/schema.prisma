@@ -58,7 +58,14 @@ model Organization {
   outcomes             Outcome[]
   revenueActions       Action[]
   responses            Response[]
-  integrations         Integration[]
+
+  // Integration and ingestion layer
+  connections   IntegrationConnection[]
+  syncJobs      SyncJob[]
+  revenueEvents RevenueEvent[]
+  identityLinks IdentityLink[]
+  auditLogs     AuditLog[]
+  integrations  Integration[]
 
   // Revenue Intelligence layer
   opportunities       Opportunity[]
@@ -134,6 +141,7 @@ model Account {
   // Vertical Buying Intent → Qualified Meeting Engine
   campaignMemberships  IntentCampaignAccount[]
   buyingSignals        BuyingSignal[]
+  revenueEvents        RevenueEvent[]
   intentScoreSnapshots IntentScoreSnapshot[]
   outreachDrafts       OutreachDraft[]
   userFeedback         UserFeedback[]
@@ -183,7 +191,12 @@ model User {
   passwordHash String? // set only for built-in (non-Clerk) accounts
   name         String?
   imageUrl     String?
-  role         String       @default("owner") // owner | member
+  // owner | admin | manager | rep | viewer
+  // Least privilege by role: only owner/admin may connect or revoke an
+  // integration or export data; manager and above may approve actions that
+  // write to the customer's CRM; viewer is read-only. Enforced in
+  // lib/security/rbac.ts, never in the UI alone.
+  role         String       @default("owner")
   orgId        String
   org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   sessions     Session[]
@@ -277,6 +290,7 @@ model Prospect {
   opportunities  Opportunity[] // where this contact is the primary contact
   signals        BuyingSignal[]
   responses      Response[]
+  revenueEvents  RevenueEvent[]
   actions        Action[]
 
   @@index([orgId, stage])
@@ -688,6 +702,7 @@ model Opportunity {
   signals         BuyingSignal[]
   actions         Action[]
   responses       Response[]
+  revenueEvents   RevenueEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -960,6 +975,258 @@ model Response {
   @@index([opportunityId, observedAt])
   @@index([recommendationId])
   @@index([actionId])
+}
+
+// ===================================================================
+// Integration and ingestion layer
+//
+// Everything below exists so Sellora can learn from a customer's real CRM,
+// inbox and calendar instead of fixtures. Four rules hold across all of it:
+//
+//   1. Every row carries orgId. Tenant isolation is a column, not a filter
+//      somebody remembered to write.
+//   2. Secrets are never stored in plaintext (see lib/security/crypto.ts).
+//   3. Ingestion is idempotent. Providers redeliver, backfills overlap and
+//      retries double-fire; a replay must be a no-op, not a duplicate.
+//   4. Nothing fails silently. A stuck sync is a visible status with an error
+//      on it, because a CRM that quietly stopped syncing is worse than one
+//      that never connected.
+// ===================================================================
+
+// A live connection to an external provider, and its health.
+//
+// Separate from Integration below, which predates this and records only which
+// local providers (CSV, manual, mock) a workspace has enabled. This model owns
+// OAuth credentials and sync state, which those never had.
+model IntegrationConnection {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // hubspot | gmail | google_calendar | website_sdk | salesforce
+  provider            String
+  // The account on the provider's side: a HubSpot portal id, a Google sub.
+  // Stored so a reconnect to a *different* portal is detectable rather than
+  // silently mixing two CRMs into one workspace.
+  externalAccountId   String?
+  externalAccountName String?
+
+  // AES-256-GCM envelopes. Never plaintext, never logged, never returned to
+  // the client. Nullable because a connection row exists from the moment the
+  // OAuth dance starts, before any token comes back.
+  accessTokenEnc  String?
+  refreshTokenEnc String?
+  expiresAt       DateTime?
+  scopes          String? // space-delimited, as granted (not as requested)
+
+  // PENDING | CONNECTED | DEGRADED | REAUTH_REQUIRED | REVOKED | ERROR
+  //   DEGRADED        - syncing, but the last run had recoverable failures
+  //   REAUTH_REQUIRED - the refresh token no longer works; only a human can fix
+  status String @default("PENDING")
+
+  // Health, surfaced in the UI. "Connected" with a three-day-old sync is a lie
+  // by omission, so the timestamp travels with the status everywhere.
+  lastSyncStartedAt   DateTime?
+  lastSyncSucceededAt DateTime?
+  lastError           String?
+  lastErrorAt         DateTime?
+  consecutiveFailures Int       @default(0)
+
+  // Non-secret provider config: selected pipeline, property mappings.
+  config String?
+
+  connectedBy String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  syncJobs SyncJob[]
+  events   RevenueEvent[]
+
+  @@unique([orgId, provider])
+  @@index([status])
+}
+
+// One unit of ingestion work, with everything needed to retry it safely.
+model SyncJob {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  connectionId String
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  // backfill | incremental | webhook | reconcile
+  kind       String
+  // companies | contacts | deals | owners | engagements | pipelines
+  objectType String
+
+  // QUEUED | RUNNING | SUCCEEDED | FAILED | DEAD_LETTER | CANCELED
+  //   DEAD_LETTER - retries exhausted. Kept, never deleted: the payload is
+  //   the only record of what was lost, and replaying it is a support action.
+  status String @default("QUEUED")
+
+  // Resume point, so an interrupted backfill continues instead of restarting.
+  // A 40,000-deal backfill that starts over on every failure never finishes.
+  cursor String?
+  // Watermark for incremental runs: fetch only what changed since this.
+  since  DateTime?
+
+  attempt     Int       @default(0)
+  maxAttempts Int       @default(5)
+  nextRunAt   DateTime?
+
+  recordsProcessed Int @default(0)
+  recordsFailed    Int @default(0)
+
+  lastError String?
+  // Correlates every log line for one run across the whole system.
+  traceId   String?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([orgId, status])
+  @@index([status, nextRunAt])
+  @@index([connectionId, objectType])
+}
+
+// The unified event graph: every observation, from every source, in one
+// immutable shape.
+//
+// Immutable on purpose. Scores and recommendations are derived and can be
+// recomputed; the events they were derived from must not move underneath them,
+// or a score can never be reproduced or explained after the fact.
+//
+// `occurredAt` (when it happened) is kept distinct from `receivedAt` (when we
+// heard) because they differ by days on a backfill, and ordering by the wrong
+// one silently rewrites a deal's history.
+model RevenueEvent {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  connectionId String?
+  connection   IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  // Resolved by lib/identity. All nullable: an event routinely arrives before
+  // the entity it belongs to is known, and dropping it would lose the signal.
+  accountId     String?
+  account       Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  contactId     String?
+  contact       Prospect?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+
+  source        String // hubspot | gmail | google_calendar | website_sdk | manual
+  sourceEventId String // the provider's own id, for tracing back
+  eventType     String // deal.stage_changed | email.replied | meeting.no_show ...
+
+  occurredAt DateTime
+  receivedAt DateTime @default(now())
+
+  // Who caused it. The distinction drives scoring: a buyer replying and a rep
+  // sending are not the same evidence, and lumping them together is how
+  // engagement metrics come to measure a team's own activity.
+  actorType String // buyer | seller | system
+
+  // Parsed at ingest so scoring never re-parses raw provider payloads.
+  normalizedProperties String?
+  // Pointer to the raw payload if retained; not the payload itself.
+  rawPayloadRef        String?
+
+  schemaVersion String @default("1")
+  // 0-100. A CRM stage change is certain; an inferred no-show is not.
+  confidence    Int    @default(100)
+
+  // The uniqueness guarantee. Provider redeliveries, overlapping backfill
+  // windows and retried jobs all collapse onto one row.
+  idempotencyKey String
+
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, idempotencyKey])
+  @@index([orgId, occurredAt])
+  @@index([orgId, eventType, occurredAt])
+  @@index([opportunityId, occurredAt])
+  @@index([accountId, occurredAt])
+}
+
+// How Sellora decided that an email, domain or thread belongs to a given
+// account, contact or deal - and how sure it is.
+//
+// Every match is recorded with its evidence rather than being applied
+// silently. Identity resolution is where a revenue platform most easily does
+// quiet damage: attach a thread to the wrong deal and the score, the
+// recommendation and the attribution are all confidently wrong, with nothing
+// on screen to suggest it.
+model IdentityLink {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // email | domain | thread | calendar_attendee | crm_id | website_session
+  sourceKind  String
+  sourceValue String
+
+  // account | contact | opportunity
+  targetType String
+  targetId   String
+
+  // exact_crm_id | exact_email | domain_match | thread_participant |
+  // attendee_match | manual_override
+  method     String
+  // 0-100. Below AUTO_APPLY_MIN_CONFIDENCE a link is suggested, not applied:
+  // nothing writes to a customer's CRM on a guess.
+  confidence Int
+  // Human-readable justification, shown in the UI next to the match.
+  evidence   String
+
+  // A person's correction always wins, and is never overwritten by a later
+  // automatic pass.
+  manualOverride Boolean @default(false)
+  overriddenBy   String?
+
+  resolutionVersion Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, sourceKind, sourceValue, targetType])
+  @@index([orgId, targetType, targetId])
+  @@index([orgId, confidence])
+}
+
+// Who did what, when, from where.
+//
+// Append-only by contract: nothing in the application updates or deletes these
+// rows. An audit log that can be edited by the system it audits is decoration.
+model AuditLog {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  actorId    String?
+  actorType  String  @default("user") // user | system | integration
+  // integration.connected | action.approved | data.exported | member.role_changed
+  action     String
+  // opportunity | integration | organization | user
+  targetType String?
+  targetId   String?
+
+  // Redacted before write (lib/security/crypto.ts redact()).
+  metadata String?
+
+  ip        String?
+  userAgent String?
+  traceId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([orgId, action, createdAt])
+  @@index([orgId, targetType, targetId])
 }
 
 // Which data providers a workspace has enabled, and their last run status.

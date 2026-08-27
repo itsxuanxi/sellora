@@ -11,6 +11,10 @@ import { FeedbackButtons } from "@/components/intent/feedback-buttons";
 import { SIGNAL_LABELS, type SignalType } from "@/lib/intent/config";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { IntegrationHealthPanel } from "@/components/settings/integration-health";
+import { integrationHealth } from "@/lib/integrations/sync-runner";
+import { isHubspotConfigured } from "@/lib/integrations/hubspot/oauth";
+import { isEncryptionConfigured } from "@/lib/security/crypto";
 
 export const metadata = { title: "Intent Dashboard" };
 
@@ -19,7 +23,8 @@ export default async function IntentDashboardPage() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [campaigns, topAccounts] = await Promise.all([
+  const [health, campaigns, topAccounts] = await Promise.all([
+    integrationHealth(session.orgId),
     db.intentCampaign.findMany({
       where: { orgId: session.orgId },
       orderBy: { createdAt: "desc" },
@@ -64,6 +69,15 @@ export default async function IntentDashboardPage() {
           </Link>
         </Button>
       </PageHeader>
+
+      {/* Data sources come first: everything below this panel is only as
+          trustworthy as what is feeding it. */}
+      <div className="mb-6">
+        <IntegrationHealthPanel
+          health={health}
+          hubspotConfigured={isHubspotConfigured() && isEncryptionConfigured()}
+        />
+      </div>
 
       {campaigns.length > 0 && (
         <div className="mb-8 flex flex-wrap gap-2">
