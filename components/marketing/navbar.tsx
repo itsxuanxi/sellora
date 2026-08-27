@@ -9,6 +9,7 @@ import { getAuthState, isClerkEnabled } from "@/lib/auth";
 const LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#pricing", label: "Pricing" },
+  { href: "/demo", label: "Try Sellora" },
 ];
 
 export async function MarketingNavbar() {
@@ -38,6 +39,12 @@ export async function MarketingNavbar() {
           className="hidden rounded px-2 py-1 text-sm text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] sm:block"
         >
           {signedIn ? "Dashboard" : "Sign in"}
+        </Link>
+        <Link
+          href="/demo"
+          className="hidden rounded px-2 py-1 text-sm text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] md:block"
+        >
+          Try Sellora
         </Link>
         <Link
           href="mailto:hello@sellora.ai?subject=Sellora%20demo"

@@ -7,6 +7,7 @@ import { Logo } from "@/components/logo";
  */
 const LINKS = [
   { label: "Product", href: "/#how-it-works" },
+  { label: "Try Sellora", href: "/demo" },
   { label: "Pricing", href: "/#pricing" },
   { label: "Security", href: "/#how-it-works" },
   { label: "Privacy", href: "/privacy" },

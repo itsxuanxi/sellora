@@ -339,8 +339,14 @@ function ClosingCta({ startHref }: { startHref: string }) {
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link
-            href={DEMO_HREF}
+            href="/demo"
             className="inline-flex h-12 items-center rounded-full border border-white/20 px-7 text-[15px] font-medium text-[#F7F8F5] transition-colors hover:border-[#A99BFF] hover:text-[#CFC6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
+          >
+            Try Sellora
+          </Link>
+          <Link
+            href={DEMO_HREF}
+            className="inline-flex h-12 items-center px-3 text-[15px] font-medium text-[#C9CCC7] underline decoration-white/25 underline-offset-4 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF]"
           >
             Book a demo
           </Link>

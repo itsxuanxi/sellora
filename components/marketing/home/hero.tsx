@@ -79,8 +79,14 @@ export function Hero({ startHref }: { startHref: string }) {
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              href={startHref}
+              href="/demo"
               className="inline-flex h-12 items-center rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-6 text-[15px] font-medium text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-[var(--mkt-surface-2)]"
+            >
+              Try Sellora
+            </Link>
+            <Link
+              href={startHref}
+              className="inline-flex h-12 items-center px-2 text-[15px] font-medium text-[var(--mkt-muted)] underline decoration-[var(--mkt-line)] underline-offset-4 transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)]"
             >
               Start free trial
             </Link>
