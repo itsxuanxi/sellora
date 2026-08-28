@@ -315,6 +315,28 @@ function StepBody({
               </li>
             ))}
           </ul>
+          {/* The drafted message, shown as text a person edits rather than
+              behind an Edit button that would not do anything here. */}
+          {step.payload.draft && (
+            <div className="mt-2.5 rounded-lg border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-2.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
+                  Draft · editable before approval
+                </span>
+              </div>
+              <p className="mt-1.5 text-[12.5px] font-medium text-[var(--mkt-ink)]">
+                {step.payload.draft.subject}
+              </p>
+              <p className="mt-1 text-[12.5px] leading-snug text-[var(--mkt-muted)]">
+                {step.payload.draft.body}
+                {/* A caret, so the block reads as a text field mid-edit. */}
+                <span
+                  className="ml-0.5 inline-block h-[13px] w-px translate-y-[2px] bg-[var(--mkt-brand)] motion-safe:animate-pulse"
+                  aria-hidden
+                />
+              </p>
+            </div>
+          )}
           {step.payload.atStake != null && (
             <p className="mt-2.5 border-t border-[var(--mkt-brand)]/20 pt-2.5 text-[13px] font-medium text-[var(--mkt-ink)]">
               {formatMoney(step.payload.atStake, "USD")} of expected revenue at stake
@@ -420,11 +442,14 @@ function RankTable({
         </p>
       )}
 
-      <div className="grid grid-cols-[1.6fr_1fr_0.8fr_1.1fr] gap-2 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--mkt-muted)]">
+      <div className="grid grid-cols-[1.5fr_0.9fr_0.6fr_1fr] gap-2 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--mkt-muted)] sm:grid-cols-[1.5fr_0.9fr_0.6fr_1fr_0.9fr]">
         <span>Opportunity</span>
         <span className="text-right">Deal value</span>
         <span className="text-right">Win</span>
         <span className="text-right">Expected</span>
+        {/* Risk is the reason a rank is actionable rather than merely sorted,
+            but it is the first thing to drop when the panel gets narrow. */}
+        <span className="hidden text-right sm:block">Risk</span>
       </div>
 
       <ul>
@@ -434,7 +459,7 @@ function RankTable({
             <li
               key={d.company}
               className={cn(
-                "grid grid-cols-[1.6fr_1fr_0.8fr_1.1fr] items-center gap-2 rounded-lg px-3 py-2.5 text-[13.5px] tabular-nums",
+                "grid grid-cols-[1.5fr_0.9fr_0.6fr_1fr] items-center gap-2 rounded-lg px-3 py-2.5 text-[13.5px] tabular-nums sm:grid-cols-[1.5fr_0.9fr_0.6fr_1fr_0.9fr]",
                 // Rows re-key on their position so a reorder re-runs the
                 // entrance; movement is opacity only, never height.
                 !reduced && "animate-fade-up",
@@ -465,6 +490,18 @@ function RankTable({
                 )}
               >
                 {formatMoney(d.expected, "USD")}
+              </span>
+              <span
+                className={cn(
+                  "hidden text-right text-[12.5px] font-medium sm:block",
+                  d.priorityTone === "urgent"
+                    ? "text-[var(--mkt-danger)]"
+                    : d.priorityTone === "warn"
+                      ? "text-[var(--mkt-warn-ink)]"
+                      : "text-[var(--mkt-muted)]"
+                )}
+              >
+                {d.priority}
               </span>
             </li>
           );

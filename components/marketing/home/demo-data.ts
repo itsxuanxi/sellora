@@ -402,6 +402,8 @@ export interface RecommendStep extends DemoStepBase {
     why: string;
     evidence: string[];
     atStake?: number;
+    /** The drafted message, shown as editable text before approval. */
+    draft?: { subject: string; body: string };
   };
 }
 
@@ -464,7 +466,7 @@ export const RANKED_DEALS = [...DEMO_DEALS].sort((a, b) => b.expected - a.expect
  * room to read the result, and a test fails the build if any scenario's steps
  * would overrun, which is the failure a fixed dwell would otherwise hide.
  */
-export const HERO_STAGE_DURATION_MS = 6000;
+export const HERO_STAGE_DURATION_MS = 7200;
 
 /** Minimum quiet time after the last step lands, before the tab advances. */
 export const HERO_STAGE_TAIL_MS = 900;
@@ -472,8 +474,8 @@ export const HERO_STAGE_TAIL_MS = 900;
 export const HERO_SCENARIOS: HeroScenario[] = [
   {
     id: "detection",
-    tabLabel: "Signal detection",
-    panelLabel: "Signal monitor",
+    tabLabel: "Detect signals",
+    panelLabel: "Signal monitor · Cloudmint",
     subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
     steps: [
       {
@@ -514,26 +516,50 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       },
       {
         id: "s4",
-        delay: 700,
+        delay: 620,
+        action: "signal",
+        status: "Detecting signals",
+        payload: {
+          label: "Discovery call completed",
+          detail: "45 minutes with the evaluation team",
+          at: "8 days ago",
+          tone: "good",
+        },
+      },
+      {
+        id: "s5",
+        delay: 620,
+        action: "signal",
+        status: "Detecting signals",
+        payload: {
+          label: "Replied to the proposal thread",
+          detail: "Asked how implementation is staffed",
+          at: "6 days ago",
+          tone: "good",
+        },
+      },
+      {
+        id: "s6",
+        delay: 660,
         action: "signal",
         status: "Risk detected",
         payload: {
-          label: "Four days since last reply",
-          detail: "No outbound sent since the proposal",
+          label: "Four days of silence",
+          detail: "No reply since the proposal was opened",
           at: "now",
           tone: "risk",
         },
       },
       {
-        id: "s5",
-        delay: 700,
+        id: "s7",
+        delay: 640,
         action: "analyze",
         status: "Analyzing opportunity",
-        payload: { label: "Weighing four signals against this deal's stage" },
+        payload: { label: "Weighing six signals against this deal's stage" },
       },
       {
-        id: "s6",
-        delay: 700,
+        id: "s8",
+        delay: 660,
         action: "score",
         status: "Intent score updated",
         payload: {
@@ -545,11 +571,11 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         },
       },
     ],
-    closing: "4 signals detected on this deal today",
+    closing: "6 signals on this deal, read together rather than one by one",
   },
   {
     id: "priority",
-    tabLabel: "Opportunity priority",
+    tabLabel: "Prioritize revenue",
     panelLabel: "Prioritized pipeline",
     subject: { company: "All open opportunities", dealValue: 0, stage: "Ranking" },
     steps: [
@@ -607,8 +633,8 @@ export const HERO_SCENARIOS: HeroScenario[] = [
   },
   {
     id: "action",
-    tabLabel: "Next best action",
-    panelLabel: "Recommended action - Cloudmint",
+    tabLabel: "Recommend action",
+    panelLabel: "Recommended action · Cloudmint",
     subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
     steps: [
       {
@@ -644,6 +670,10 @@ export const HERO_SCENARIOS: HeroScenario[] = [
             "4 days of silence after the demo",
           ],
           atStake: 28_560,
+          draft: {
+            subject: "Security review before we go further",
+            body: "Hi Maya — noticed security may be the next step in your evaluation. I can bring our security lead into a short review this week. Would Tuesday or Wednesday suit?",
+          },
         },
       },
       {
@@ -665,12 +695,12 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         payload: { label: "Approved and scheduled", state: "approved" },
       },
     ],
-    closing: "One action, with the evidence behind it - never a list of five",
+    closing: "One action, with the evidence behind it — never a list of five",
   },
   {
     id: "outcome",
-    tabLabel: "Revenue outcome",
-    panelLabel: "Revenue outcome - Cloudmint",
+    tabLabel: "Measure outcome",
+    panelLabel: "Revenue outcome · Cloudmint",
     subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
     steps: [
       {
@@ -737,7 +767,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         },
       },
     ],
-    closing: "Signal to Recommendation to Action to Response to Revenue outcome",
+    closing: "Signal → Recommendation → Action → Response → Revenue outcome",
   },
 ];
 

@@ -26,7 +26,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero startHref={startHref} />
+      <Hero />
       <Scenarios />
       <Pricing startHref={startHref} />
     </>

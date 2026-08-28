@@ -104,7 +104,7 @@ export function TabStrip({
                     "shrink-0 sm:min-w-0 sm:flex-1"
                   : "shrink-0",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]",
-              size === "lg" ? "px-3.5 py-2.5" : size === "xl" ? "px-4 py-2" : "px-3 py-2",
+              size === "lg" ? "px-3.5 py-2.5" : size === "xl" ? "px-5 py-3.5" : "px-3 py-2",
               selected
                 ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand-wash)]"
                 : "border-transparent bg-[var(--mkt-surface-2)] hover:bg-[color-mix(in_srgb,var(--mkt-surface)_70%,var(--mkt-surface-2))]"
@@ -114,7 +114,7 @@ export function TabStrip({
               className={cn(
                 "block font-medium uppercase tracking-[0.11em] transition-colors",
                 orientation === "vertical" ? "" : "whitespace-nowrap",
-                size === "lg" ? "text-[11px]" : size === "xl" ? "text-[11.5px]" : "text-[10px]",
+                size === "lg" ? "text-[11px]" : size === "xl" ? "text-[12px] font-semibold" : "text-[10px]",
                 selected
                   ? "text-[var(--mkt-brand-deep)]"
                   : "text-[var(--mkt-muted)] group-hover:text-[var(--mkt-ink)]"
@@ -125,8 +125,9 @@ export function TabStrip({
 
             <span
               className={cn(
-                "mt-1.5 block w-full overflow-hidden rounded-full bg-[var(--mkt-line)]",
-                size === "xl" ? "h-[2px]" : "h-px"
+                "block w-full overflow-hidden rounded-full bg-[var(--mkt-line)]",
+                size === "xl" ? "mt-2.5" : "mt-1.5",
+                size === "xl" ? "h-[3px]" : "h-px"
               )}
               aria-hidden
             >
