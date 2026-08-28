@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FlaskConical, Loader2 } from "lucide-react";
+import { Compass, FlaskConical, Loader2 } from "lucide-react";
 import { SANDBOX_WORKSPACE_NOTICE, SIMULATION_NOTICE } from "@/lib/sandbox";
+import { useOptionalTour } from "@/components/tour/tour-provider";
 import {
   clearSampleDataAction,
   loadSampleDataAction,
@@ -33,6 +34,8 @@ export function SampleDataBar({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  // Present only in a sandbox; a real workspace has no tour to restart.
+  const tour = useOptionalTour();
 
   function run(action: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
@@ -64,6 +67,16 @@ export function SampleDataBar({
         </p>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          {tour && !tour.running && (
+            <button
+              type="button"
+              onClick={tour.start}
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 px-3 py-1.5 text-[12px] font-medium text-amber-900 transition-colors hover:bg-amber-500/10 dark:text-amber-200"
+            >
+              <Compass className="size-3" aria-hidden />
+              Guided tour
+            </button>
+          )}
           {sandbox && (
             <Link
               href="/sign-up"

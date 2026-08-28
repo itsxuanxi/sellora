@@ -201,7 +201,10 @@ export default async function OpportunityDetailPage({
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {/* ── Recommended Next Action (§7) ── */}
-          <section className="rounded-2xl border border-primary/25 bg-accent/30 p-5">
+          <section
+            data-tour="next-action"
+            className="rounded-2xl border border-primary/25 bg-accent/30 p-5"
+          >
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 Recommended next action
@@ -273,7 +276,10 @@ export default async function OpportunityDetailPage({
               </div>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div
+              data-tour="action-controls"
+              className="mt-4 flex flex-wrap items-center gap-2"
+            >
               <RecommendationActions
                 recommendationId={openRec?.id ?? null}
                 opportunityId={enriched.id}
@@ -352,7 +358,7 @@ export default async function OpportunityDetailPage({
                  another, which left the reader to join them by eye. Merged,
                  the sequence that actually matters — advice, what the rep did,
                  how the customer reacted — reads as adjacent rows. ── */}
-          <Section title="Deal timeline">
+          <Section title="Deal timeline" tour="deal-timeline">
             <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 p-3">
               <LoopStrip stages={loopStages} />
             </div>
@@ -429,7 +435,7 @@ export default async function OpportunityDetailPage({
 
         {/* ── Right rail ── */}
         <div className="space-y-6">
-          <Section title="Opportunity score">
+          <Section title="Opportunity score" tour="opportunity-score">
             <div className="flex items-start justify-between gap-3">
               <OpportunityScore
                 score={enriched.score}
@@ -530,9 +536,18 @@ function Panel({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+  tour,
+}: {
+  title: string;
+  children: React.ReactNode;
+  /** Anchor for the guided tour; absent on sections it does not point at. */
+  tour?: string;
+}) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-card p-5">
+    <section data-tour={tour} className="rounded-2xl border border-border/70 bg-card p-5">
       <h2 className="mb-3 text-sm font-semibold">{title}</h2>
       {children}
     </section>

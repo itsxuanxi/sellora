@@ -58,7 +58,7 @@ export function PriorityTable({
               {openable && row.href ? (
                 <Link
                   href={row.href}
-                  data-demo-target={row.demoTarget}
+                  data-tour={i === 0 ? "priority-row-1" : undefined}
                   className={shared}
                 >
                   {body}
@@ -66,7 +66,7 @@ export function PriorityTable({
               ) : (
                 <button
                   type="button"
-                  data-demo-target={row.demoTarget}
+                  data-tour={i === 0 ? "priority-row-1" : undefined}
                   disabled={!openable}
                   onClick={openable ? () => onSelect?.(row.id) : undefined}
                   aria-label={

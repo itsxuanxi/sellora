@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { MobileNav } from "@/components/app/mobile-nav";
 import { SampleDataBar } from "@/components/app/sample-data-bar";
+import { SandboxLayer } from "@/components/tour/sandbox-layer";
 import { OnboardingDialog } from "@/components/app/onboarding-dialog";
 import { Sidebar } from "@/components/app/sidebar";
 import { isClerkEnabled, requireSession } from "@/lib/auth";
@@ -43,15 +44,17 @@ export default async function AppLayout({
       />
       <MobileNav orgName={session.org.name} />
       <main className="lg:pl-60">
-        {showSampleBar && (
-          <SampleDataBar
-            sandbox={session.org.isSample}
-            hasSampleData={session.org.sampleSeededAt !== null}
-          />
-        )}
-        <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 md:py-10">
-          {children}
-        </div>
+        <SandboxLayer enabled={session.org.isSample}>
+          {showSampleBar && (
+            <SampleDataBar
+              sandbox={session.org.isSample}
+              hasSampleData={session.org.sampleSeededAt !== null}
+            />
+          )}
+          <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 md:py-10">
+            {children}
+          </div>
+        </SandboxLayer>
       </main>
       {needsOnboarding && (
         <OnboardingDialog defaultWorkspaceName={session.org.name} />
