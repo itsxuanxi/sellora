@@ -1,6 +1,8 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { BillingPanel } from "@/components/settings/billing-panel";
+import { NotificationsForm } from "@/components/settings/notifications-form";
+import { NotificationHistory } from "@/components/settings/notification-history";
 import {
   ApiKeysForm,
   CompanyForm,
@@ -13,7 +15,7 @@ import { db } from "@/lib/db";
 
 export const metadata = { title: "Settings" };
 
-const TAB_VALUES = ["profile", "company", "api-keys", "billing"];
+const TAB_VALUES = ["profile", "company", "notifications", "api-keys", "billing"];
 
 export default async function SettingsPage({
   searchParams,
@@ -28,6 +30,27 @@ export default async function SettingsPage({
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
+  const [notificationPref, notifications] = await Promise.all([
+    db.notificationPreference.findUnique({ where: { userId: session.id } }),
+    // Recent deliveries, so the lifecycle the Resend webhook records is
+    // visible rather than a claim in a changelog.
+    db.notification.findMany({
+      where: { orgId: org.id, userId: session.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        kind: true,
+        subject: true,
+        status: true,
+        simulated: true,
+        sentAt: true,
+        createdAt: true,
+        failureReason: true,
+      },
+    }),
+  ]);
+
   const [prospects, campaigns, emailsSent, followUpsSent] = await Promise.all([
     db.prospect.count({ where: { orgId: org.id } }),
     db.campaign.count({ where: { orgId: org.id } }),
@@ -68,6 +91,7 @@ export default async function SettingsPage({
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="company">Company</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
@@ -91,6 +115,32 @@ export default async function SettingsPage({
               senderEmail: org.senderEmail ?? "",
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <div className="space-y-8">
+            <NotificationsForm
+              simulated={org.isSample}
+              defaults={{
+                dailyDigest: notificationPref?.dailyDigest ?? true,
+                riskAlerts: notificationPref?.riskAlerts ?? false,
+                digestHour: notificationPref?.digestHour ?? 8,
+                timezone: notificationPref?.timezone ?? settings?.timezone ?? "UTC",
+                weekdaysOnly: notificationPref?.weekdaysOnly ?? true,
+                minAlertValue: notificationPref?.minAlertValue ?? 0,
+                alertCooldownHours: notificationPref?.alertCooldownHours ?? 24,
+                unsubscribed: notificationPref?.unsubscribedAt !== null &&
+                  notificationPref?.unsubscribedAt !== undefined,
+              }}
+            />
+            <NotificationHistory
+              rows={notifications.map((n) => ({
+                ...n,
+                sentAt: n.sentAt?.toISOString() ?? null,
+                createdAt: n.createdAt.toISOString(),
+              }))}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="api-keys">

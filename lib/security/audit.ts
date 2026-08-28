@@ -28,6 +28,10 @@ export type AuditAction =
   | "action.executed"
   | "action.execution_failed"
   | "action.undone"
+  // Anything Selryn sends on the customer's behalf
+  | "notification.sent"
+  | "notification.failed"
+  | "notification.unsubscribed"
   // Data leaving the tenant
   | "data.exported"
   | "org.deleted"

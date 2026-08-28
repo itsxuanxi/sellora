@@ -38,6 +38,10 @@ export async function sendEmail(params: {
   from?: string | null;
   /** Sandbox workspace, or a sample recipient — see lib/sandbox.ts. */
   sandbox?: boolean;
+  /** Pre-rendered HTML. Without it the plain body is wrapped for display. */
+  html?: string;
+  /** Reply-To, so a reply reaches a person rather than the sending domain. */
+  replyTo?: string | null;
 }): Promise<SendResult> {
   if (params.sandbox) {
     return { id: simulatedId(), simulated: true, sandbox: true };
@@ -59,7 +63,8 @@ export async function sendEmail(params: {
     to: params.to,
     subject: params.subject,
     text: params.body,
-    html: textToHtml(params.body),
+    html: params.html ?? textToHtml(params.body),
+    ...(params.replyTo ? { replyTo: params.replyTo } : {}),
   });
 
   if (error) {

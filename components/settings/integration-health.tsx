@@ -1,8 +1,26 @@
+"use client";
+
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { AlertTriangle, CheckCircle2, Clock, Plug, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Plug,
+  RefreshCw,
+  Unplug,
+  XCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { IntegrationHealth } from "@/lib/integrations/sync-runner";
+import {
+  disconnectHubspot,
+  resyncHubspot,
+} from "@/app/(app)/intent/integration-actions";
 
 /**
  * Connection health.
@@ -49,12 +67,18 @@ export function IntegrationHealthPanel({
   health,
   hubspotConfigured,
   sandbox = false,
+  connected = false,
+  canManage = true,
 }: {
   health: IntegrationHealth[];
   /** False when the deployment has no HubSpot credentials at all. */
   hubspotConfigured: boolean;
   /** Sandbox workspaces may not hold a real customer credential. */
   sandbox?: boolean;
+  /** A HubSpot connection row exists — show operating controls. */
+  connected?: boolean;
+  /** The viewer holds `integration:connect`. */
+  canManage?: boolean;
 }) {
   return (
     <section className="rounded-2xl border border-border/70 bg-card p-5">
@@ -66,7 +90,9 @@ export function IntegrationHealthPanel({
             delayed rather than connected.
           </p>
         </div>
-        {hubspotConfigured &&
+        {connected && canManage && !sandbox ? (
+          <HubspotControls />
+        ) : hubspotConfigured &&
           (sandbox ? (
             // Shown, disabled and explained — never a live-looking button that
             // would fail on click.
@@ -104,6 +130,8 @@ export function IntegrationHealthPanel({
           says so everywhere it does.
         </p>
       )}
+
+      <PlannedChannels />
 
       {health.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
@@ -202,6 +230,121 @@ function Stat({
       >
         {value}
       </dd>
+    </div>
+  );
+}
+
+/**
+ * Operating controls for a live connection.
+ *
+ * Disconnect asks first. It is the one control here that cannot be undone
+ * without sending the customer back through an OAuth consent screen, and the
+ * confirmation states what is kept as well as what is lost — the fear when
+ * disconnecting a CRM is that the synced pipeline vanishes with it.
+ */
+function HubspotControls() {
+  const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+
+  const run = (fn: () => Promise<{ ok: boolean; data?: string; error?: string }>) =>
+    startTransition(async () => {
+      const result = await fn();
+      if (result.ok) toast.success(result.data ?? "Done.");
+      else toast.error(result.error ?? "Something went wrong.");
+      setConfirming(false);
+    });
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        onClick={() => run(resyncHubspot)}
+      >
+        {pending ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <RefreshCw className="size-3.5" />
+        )}
+        Sync now
+      </Button>
+
+      {confirming ? (
+        <div className="flex items-center gap-2 rounded-full border border-rose-300 bg-rose-50 px-3 py-1 dark:bg-rose-950/30">
+          <span className="text-xs text-rose-800 dark:text-rose-300">
+            Disconnect? Synced records are kept.
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={pending}
+            onClick={() => run(disconnectHubspot)}
+          >
+            Disconnect
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pending}
+          onClick={() => setConfirming(true)}
+        >
+          <Unplug className="size-3.5" />
+          Disconnect
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Channels that are designed but not built.
+ *
+ * Listed rather than hidden, and deliberately not rendered as controls: a
+ * disabled-looking button still invites a click and still implies the feature
+ * is one toggle away. Naming what is coming is honest; a dead button is not.
+ *
+ * Both will run on the notification service email already uses — same
+ * composition, same dedupe, same rate limit — so what is missing is the
+ * OAuth install and a renderer per channel, not the reasoning.
+ */
+function PlannedChannels() {
+  const planned = [
+    {
+      name: "Slack",
+      body: "OAuth install, a channel picker, and the same digest and risk alerts posted as messages with a link back into Selryn.",
+    },
+    {
+      name: "Microsoft Teams",
+      body: "Notification bot via Microsoft Graph — not the retiring Office 365 connectors — matching Slack feature for feature.",
+    },
+  ];
+
+  return (
+    <div className="mt-5 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
+      <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+        Planned channels
+      </div>
+      <ul className="mt-3 space-y-2.5">
+        {planned.map((c) => (
+          <li key={c.name} className="flex gap-3">
+            <span className="mt-0.5 shrink-0 rounded-full bg-muted px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+              Planned
+            </span>
+            <span className="min-w-0">
+              <span className="text-sm font-medium">{c.name}</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                {c.body}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

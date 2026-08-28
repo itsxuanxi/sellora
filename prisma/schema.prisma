@@ -79,6 +79,10 @@ model Organization {
   auditLogs     AuditLog[]
   integrations  Integration[]
 
+  // Notifications
+  notificationPrefs NotificationPreference[]
+  notifications     Notification[]
+
   // Revenue Intelligence layer
   opportunities       Opportunity[]
   opportunityScores   OpportunityScoreSnapshot[]
@@ -208,28 +212,121 @@ model AgentAction {
 }
 
 model User {
-  id           String       @id @default(cuid())
+  id               String                  @id @default(cuid())
   // Clerk user id when Clerk is enabled; "local_…" for built-in auth accounts;
   // "demo_user" for the shared demo workspace.
-  clerkId      String       @unique
-  email        String?      @unique
-  phone        String?      @unique // E.164-ish, for OTP sign-in
-  passwordHash String? // set only for built-in (non-Clerk) accounts
-  name         String?
-  imageUrl     String?
+  clerkId          String                  @unique
+  email            String?                 @unique
+  phone            String?                 @unique // E.164-ish, for OTP sign-in
+  passwordHash     String? // set only for built-in (non-Clerk) accounts
+  name             String?
+  imageUrl         String?
   // owner | admin | manager | rep | viewer
   // Least privilege by role: only owner/admin may connect or revoke an
   // integration or export data; manager and above may approve actions that
   // write to the customer's CRM; viewer is read-only. Enforced in
   // lib/security/rbac.ts, never in the UI alone.
-  role         String       @default("owner")
-  orgId        String
-  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  sessions     Session[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  role             String                  @default("owner")
+  orgId            String
+  org              Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sessions         Session[]
+  notificationPref NotificationPreference?
+  notifications    Notification[]
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
 
   @@index([orgId])
+}
+
+/// What a person wants to be told about, and how often.
+///
+/// Per user rather than per workspace: two reps sharing an org do not share a
+/// timezone or a tolerance for interruption. Absent row means the defaults
+/// below, so a new user is opted into the daily digest and nothing else fires
+/// until they raise their hand.
+model NotificationPreference {
+  id     String       @id @default(cuid())
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId String       @unique
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// One email each working morning summarising the ranked pipeline.
+  dailyDigest Boolean @default(true)
+  /// Immediate mail when a deal starts leaking real money.
+  riskAlerts  Boolean @default(false)
+
+  /// Local hour the digest should land, 0-23, interpreted in `timezone`.
+  digestHour   Int     @default(8)
+  /// IANA zone. The scheduler converts, so the user never does the maths.
+  timezone     String  @default("UTC")
+  /// Weekdays only, by default: a Sunday digest is noise.
+  weekdaysOnly Boolean @default(true)
+
+  /// Alerts below this expected revenue are not worth an interruption.
+  minAlertValue      Int @default(0)
+  /// The same deal will not alert twice inside this window.
+  alertCooldownHours Int @default(24)
+
+  /// Set when the person turns everything off from an email footer. Kept
+  /// distinct from the per-type switches: an unsubscribe is a standing
+  /// instruction and must survive someone else editing their preferences.
+  unsubscribedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+}
+
+/// One outbound notification and everything that happened to it.
+///
+/// Written before the send, not after: the row is the idempotency record, so
+/// a retried cron run finds the existing `dedupeKey` and declines to send a
+/// second copy rather than trusting that the first attempt failed cleanly.
+model Notification {
+  id     String       @id @default(cuid())
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId String
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// daily_digest | risk_alert
+  kind    String
+  /// email | slack | teams — one row per delivery attempt per channel.
+  channel String @default("email")
+
+  /// Stable per (org, user, kind, subject-of-the-notification, window).
+  dedupeKey String
+
+  toAddress String
+  subject   String
+  /// JSON snapshot of what was reported, so a delivered notice can be
+  /// explained months later without re-deriving vanished state.
+  payload   String
+
+  /// PENDING | SENT | DELIVERED | OPENED | CLICKED | BOUNCED | COMPLAINED
+  /// | FAILED | SUPPRESSED | SIMULATED
+  status            String  @default("PENDING")
+  /// Resend's id, or a sandbox id. Unique so a webhook cannot be applied twice.
+  providerMessageId String? @unique
+  /// True when the sandbox suppressed a real send. See lib/sandbox.ts.
+  simulated         Boolean @default(false)
+
+  scheduledFor  DateTime
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  openedAt      DateTime?
+  clickedAt     DateTime?
+  bouncedAt     DateTime?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, dedupeKey])
+  @@index([orgId, kind, createdAt])
+  @@index([orgId, userId, createdAt])
 }
 
 model Session {
