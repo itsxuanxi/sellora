@@ -10,15 +10,20 @@ import { deliverNotification, type DeliveryOutcome } from "@/lib/notifications/s
 /**
  * Deciding who hears from Selryn, and when.
  *
- * Runs hourly and asks, for each subscriber, "is it their digest hour where
- * they are?". The alternative — one nightly job that mails everyone at once —
- * would deliver a "today's priorities" email at 3am to half the users.
+ * Asks, for each subscriber, "is their digest due where they are, and have
+ * they had it today?" — not "is it exactly their hour right now". That
+ * distinction is what makes the job correct at whatever frequency the
+ * deployment can actually run it:
  *
- * Firing hourly means the job sees each person up to 24 times a day, so it
- * must be safe to run when there is nothing to do. It is: the digest's dedupe
- * key is the recipient's own local date, so the twenty-three ticks that are
- * not their hour compose nothing, and a tick that double-fires loses the
- * insert race in `deliverNotification`.
+ *   - Hourly (Vercel Pro): everyone gets the digest within an hour of the
+ *     time they picked. This is the intended configuration.
+ *   - Daily (Vercel Hobby, the current plan): one tick, and everyone whose
+ *     local time is inside their window at that moment gets it. Some people
+ *     will be outside their window and get nothing — a real limitation of the
+ *     plan, not something to paper over by mailing a stale digest at 11pm.
+ *
+ * Either way nobody gets two, because the dedupe key is the recipient's own
+ * local date and the insert race in `deliverNotification` settles ties.
  */
 
 /** The recipient's current local hour, 0-23. UTC if the zone is unusable. */
@@ -53,6 +58,25 @@ export function localWeekday(now: Date, timezone: string): number {
 export function isWeekend(now: Date, timezone: string): boolean {
   const day = localWeekday(now, timezone);
   return day === 0 || day === 6;
+}
+
+/**
+ * How long after the chosen hour a digest is still worth sending.
+ *
+ * Bounded because "today's priorities" arriving at bedtime is not a late
+ * delivery, it is the wrong message. Outside the window the tick sends
+ * nothing and tomorrow's key is a fresh chance.
+ */
+export const DIGEST_WINDOW_HOURS = 11;
+
+export function digestIsDue(
+  now: Date,
+  timezone: string,
+  digestHour: number,
+  windowHours = DIGEST_WINDOW_HOURS
+): boolean {
+  const hour = localHour(now, timezone);
+  return hour >= digestHour && hour <= digestHour + windowHours;
 }
 
 export interface SchedulerReport {
@@ -114,7 +138,7 @@ export async function runNotificationTick(opts: {
     report.digestsConsidered++;
 
     if (!opts.force) {
-      if (localHour(now, pref.timezone) !== pref.digestHour) continue;
+      if (!digestIsDue(now, pref.timezone, pref.digestHour)) continue;
       if (pref.weekdaysOnly && isWeekend(now, pref.timezone)) continue;
     }
     if (!pref.user.email) continue;

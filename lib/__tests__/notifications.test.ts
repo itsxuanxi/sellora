@@ -7,7 +7,7 @@ import {
   verifyResendSignature,
 } from "@/lib/notifications/resend-webhook";
 import { renderNotificationEmail } from "@/lib/notifications/email-template";
-import { localHour, isWeekend } from "@/lib/notifications/scheduler";
+import { digestIsDue, localHour, isWeekend } from "@/lib/notifications/scheduler";
 import { localDayKey } from "@/lib/notifications/digest";
 import type { NotificationMessage } from "@/lib/notifications/types";
 
@@ -238,4 +238,31 @@ test("a simulated send says so in the message itself", () => {
   });
   assert.ok(/sample data/i.test(html));
   assert.ok(/sample data/i.test(text));
+});
+
+// ── Due-ness ──────────────────────────────────────────────────────────────
+
+test("a digest is due from the chosen hour onward, not only on the hour", () => {
+  // 15:00 UTC. A daily cron may be the only tick this person gets, so an
+  // 08:00 preference must still be considered due at 15:00.
+  const now = new Date("2026-08-28T15:00:00Z");
+  assert.equal(digestIsDue(now, "UTC", 8), true);
+  assert.equal(digestIsDue(now, "UTC", 15), true);
+  // Not yet their hour.
+  assert.equal(digestIsDue(now, "UTC", 16), false);
+});
+
+test("a digest goes stale rather than arriving at bedtime", () => {
+  const nearMidnight = new Date("2026-08-28T23:00:00Z");
+  // 08:00 + an 11 hour window closes at 19:00; 23:00 is past it.
+  assert.equal(digestIsDue(nearMidnight, "UTC", 8), false);
+  assert.equal(digestIsDue(nearMidnight, "UTC", 20), true);
+});
+
+test("due-ness is judged in the recipient's zone", () => {
+  const now = new Date("2026-08-28T15:00:00Z");
+  // 23:00 in Shanghai — past the window for an 08:00 preference.
+  assert.equal(digestIsDue(now, "Asia/Shanghai", 8), false);
+  // 08:00 in Los Angeles — exactly due.
+  assert.equal(digestIsDue(now, "America/Los_Angeles", 8), true);
 });
