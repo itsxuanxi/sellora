@@ -9,7 +9,7 @@
 # GitHub delay, which is common on the shared runners - costs nothing.
 #
 # Requires two repository secrets (Settings > Secrets and variables > Actions):
-#   APP_URL      e.g. https://sellora-mu.vercel.app
+#   APP_URL      e.g. https://selryn-mu.vercel.app
 #   CRON_SECRET  must match the value set in Vercel
 name: Sync worker
 
