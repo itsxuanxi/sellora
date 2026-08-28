@@ -67,7 +67,7 @@ export function ProfileForm({
   return (
     <SectionCard
       title="Profile"
-      description="How you appear inside Sellora."
+      description="How you appear inside Selryn."
     >
       <form onSubmit={submit} className="max-w-md space-y-4">
         <div className="space-y-1.5">

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Privacy",
-  description: "Sellora's privacy policy.",
+  description: "Selryn's privacy policy.",
 };
 
 /**
@@ -26,14 +26,14 @@ export default function PrivacyPage() {
         <p className="text-[15px] leading-relaxed text-amber-100">
           A formal privacy policy is in preparation and has not yet been
           published. Rather than post placeholder legal text, the factual
-          statements below describe how Sellora currently handles data. They
+          statements below describe how Selryn currently handles data. They
           are not a substitute for the policy.
         </p>
       </div>
 
       <div className="mt-10 space-y-6 text-[15px] leading-relaxed text-neutral-300">
         <section>
-          <h2 className="text-lg font-medium text-white">What Sellora stores</h2>
+          <h2 className="text-lg font-medium text-white">What Selryn stores</h2>
           <p className="mt-2">
             The accounts, contacts, opportunities, email activity and buying
             signals you add or import, plus the scores and recommendations
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-medium text-white">Model training</h2>
           <p className="mt-2">
-            Sellora does not train any model on your data. Scoring is a
+            Selryn does not train any model on your data. Scoring is a
             hand-tuned, documented rule set rather than a learned model, so
             there is no training process for your pipeline to feed.
           </p>

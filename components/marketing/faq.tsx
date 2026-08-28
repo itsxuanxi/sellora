@@ -8,7 +8,7 @@ import {
 const faqs = [
   {
     q: "Will the emails actually sound like me?",
-    a: "Yes. Sellora writes from your company profile — your product, your pitch, your sender name — and every email is fully editable before it sends. Most users tweak the first few, then let the agent run.",
+    a: "Yes. Selryn writes from your company profile — your product, your pitch, your sender name — and every email is fully editable before it sends. Most users tweak the first few, then let the agent run.",
   },
   {
     q: "Do I need my own OpenAI or Resend account?",
@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "How do follow-ups work?",
-    a: "For every email that doesn't get a reply, Sellora generates a 3-step sequence with escalating tones — a friendly bump, a direct yes/no question, and a graceful breakup. Each step has its own call-to-action strategy, and the sequence stops the moment a prospect replies.",
+    a: "For every email that doesn't get a reply, Selryn generates a 3-step sequence with escalating tones — a friendly bump, a direct yes/no question, and a graceful breakup. Each step has its own call-to-action strategy, and the sequence stops the moment a prospect replies.",
   },
   {
     q: "Can I import my existing prospect list?",

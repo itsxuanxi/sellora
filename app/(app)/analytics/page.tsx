@@ -24,7 +24,7 @@ import { getImpactSummary, getRevenueOverview } from "@/lib/revenue/queries";
 export const metadata = { title: "Impact" };
 
 /**
- * Revenue Attribution (§12) — what Sellora actually did for the business.
+ * Revenue Attribution (§12) — what Selryn actually did for the business.
  *
  * Every figure traces to a RevenueAttribution row written when a human acted
  * on a recommendation. Nothing is inferred at read time and nothing is
@@ -59,11 +59,11 @@ export default async function AnalyticsPage() {
   if (!impact.hasData) {
     return (
       <>
-        <PageHeader title="Impact" description="What Sellora has done for your revenue." />
+        <PageHeader title="Impact" description="What Selryn has done for your revenue." />
         <EmptyState
           icon={BarChart3}
           title="No impact recorded yet"
-          description="Sellora records impact when you act on a recommendation — not before. Work a recommendation from the Overview or Recover page and it will show up here with the revenue attached to it."
+          description="Selryn records impact when you act on a recommendation — not before. Work a recommendation from the Overview or Recover page and it will show up here with the revenue attached to it."
         >
           <Button asChild>
             <Link href="/recover">Open the recovery queue</Link>
@@ -77,7 +77,7 @@ export default async function AnalyticsPage() {
     <>
       <PageHeader
         title="Impact"
-        description={`What Sellora has done for your revenue — ${impact.monthLabel}.`}
+        description={`What Selryn has done for your revenue — ${impact.monthLabel}.`}
       />
 
       {/* ── The four numbers that justify the subscription ── */}
@@ -85,13 +85,13 @@ export default async function AnalyticsPage() {
         <BigStat
           label="Revenue recovered"
           value={formatMoney(impact.revenueRecovered, currency)}
-          note="from deals Sellora flagged and you rescued"
+          note="from deals Selryn flagged and you rescued"
           tone="positive"
         />
         <BigStat
           label="Pipeline influenced"
           value={formatMoney(impact.pipelineInfluenced, currency)}
-          note="expected revenue on deals Sellora touched"
+          note="expected revenue on deals Selryn touched"
         />
         <BigStat
           label="Opportunities saved"
@@ -106,7 +106,7 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* ── Influenced pipeline and revenue ──
-             "Influenced" is a factual claim about contact: a Sellora-prompted
+             "Influenced" is a factual claim about contact: a Selryn-prompted
              action was executed on these deals while they were open. It is
              not a claim that they closed because of it, and the note says so. ── */}
       <section className="mt-8 rounded-2xl border border-border/70 bg-card p-5">
@@ -184,7 +184,7 @@ export default async function AnalyticsPage() {
         <section className="rounded-2xl border border-border/70 bg-card p-5">
           <h2 className="text-sm font-semibold">Recommendation performance</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            How much of what Sellora surfaced actually got worked.
+            How much of what Selryn surfaced actually got worked.
           </p>
 
           <dl className="mt-4 space-y-3">
@@ -213,7 +213,7 @@ export default async function AnalyticsPage() {
 
           {impact.recommendationsShown > 0 && impact.recommendationsActedOn === 0 && (
             <p className="mt-4 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-              Sellora has surfaced {impact.recommendationsShown} recommendation
+              Selryn has surfaced {impact.recommendationsShown} recommendation
               {impact.recommendationsShown === 1 ? "" : "s"} that nobody has marked
               complete. Impact stays at zero until recommendations get worked —
               this page only counts real actions.

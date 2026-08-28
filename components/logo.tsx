@@ -2,9 +2,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 /**
- * Sellora brand system — monochrome horizontal lockup.
+ * Selryn brand system — monochrome horizontal lockup.
  *
- *   [ S emblem ] │ SELLORA
+ *   [ S emblem ] │ SELRYN
  *
  * The emblem is an original geometric S: two equal-radius arcs (upper swept
  * counter-clockwise, lower swept clockwise) meeting tangentially at the
@@ -58,7 +58,7 @@ export function LogoMark({
       viewBox="0 0 32 32"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Sellora"
+      aria-label="Selryn"
       className={cn(
         MARK_SIZES[size],
         "shrink-0 text-[#0A0A0A] dark:text-white",
@@ -92,7 +92,7 @@ export function Logo({
   return (
     <Link
       href={href}
-      aria-label="Sellora home"
+      aria-label="Selryn home"
       style={{ gap: s.gap }}
       className={cn(
         "inline-flex items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-current/40 focus-visible:ring-offset-2",
@@ -132,7 +132,7 @@ export function Logo({
         // trailing tracking adds phantom space after the last glyph
         className="-mr-[0.16em] whitespace-nowrap"
       >
-        SELLORA
+        SELRYN
       </span>
     </Link>
   );

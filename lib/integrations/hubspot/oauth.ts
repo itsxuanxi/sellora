@@ -36,7 +36,7 @@ export const HUBSPOT_CALLBACK_PATH = "/api/integrations/hubspot/callback";
 /**
  * Least privilege, and read-only for now.
  *
- * Sellora currently reads CRM data and proposes writes for a human to approve
+ * Selryn currently reads CRM data and proposes writes for a human to approve
  * elsewhere. Requesting write scopes we do not yet use would mean asking a
  * customer to grant standing mutation access to their pipeline on the promise
  * we will not use it, which is the wrong trade to ask them to make.

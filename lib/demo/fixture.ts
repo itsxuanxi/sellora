@@ -93,7 +93,7 @@ function row(
 /**
  * Cloudmint leads. Note Brightcart is the larger deal and still ranks below —
  * the ranking is by expected revenue, and the list would be dishonest about
- * how Sellora works if the biggest number simply won.
+ * how Selryn works if the biggest number simply won.
  */
 export const DEMO_PIPELINE: DemoPipelineRow[] = [
   row({

@@ -4,13 +4,13 @@ import { Pricing } from "@/components/marketing/home/pricing";
 import { getAuthState } from "@/lib/auth";
 
 /**
- * The Sellora home page — three screens, one scroll each.
+ * The Selryn home page — three screens, one scroll each.
  *
- *   1. Hero      → What is Sellora, and what does it actually do?
+ *   1. Hero      → What is Selryn, and what does it actually do?
  *   2. Scenarios → How does it work, and why should I trust it?
  *   3. Pricing   → What does it cost, and how do I start?
  *
- * This replaces a ten-block page. Problem, Capabilities, Ask Sellora,
+ * This replaces a ten-block page. Problem, Capabilities, Ask Selryn,
  * Solutions, Control and the integrations strip were not deleted so much as
  * absorbed: their content now lives inside the two rotating product demos,
  * where it is demonstrated rather than asserted. The closing CTA moved into

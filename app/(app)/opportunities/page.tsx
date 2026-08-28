@@ -75,7 +75,7 @@ export default async function OpportunitiesPage({
         <EmptyState
           icon={Briefcase}
           title="No opportunities yet"
-          description="Sellora creates an opportunity for each account that has contacts, estimates its value from your ICP, and starts scoring it against buying signals."
+          description="Selryn creates an opportunity for each account that has contacts, estimates its value from your ICP, and starts scoring it against buying signals."
         >
           <RefreshIntelligenceButton
             action={refreshRevenueIntelligence}

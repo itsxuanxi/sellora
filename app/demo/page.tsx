@@ -19,19 +19,19 @@ const STAGES = [
     n: "01",
     eyebrow: "Detect",
     title: "Capture the signals that matter",
-    body: "Sellora connects website activity, email engagement, meetings and CRM changes into one opportunity timeline.",
+    body: "Selryn connects website activity, email engagement, meetings and CRM changes into one opportunity timeline.",
   },
   {
     n: "02",
     eyebrow: "Decide",
     title: "Know what to do next",
-    body: "Sellora ranks the opportunity by expected revenue and recommends one action with the evidence attached.",
+    body: "Selryn ranks the opportunity by expected revenue and recommends one action with the evidence attached.",
   },
   {
     n: "03",
     eyebrow: "Learn",
     title: "Connect action to outcome",
-    body: "The customer response, pipeline movement and revenue result flow back into Sellora’s learning loop.",
+    body: "The customer response, pipeline movement and revenue result flow back into Selryn’s learning loop.",
   },
 ];
 
@@ -55,7 +55,7 @@ export default function DemoIntroPage() {
         Follow one deal from signal to revenue.
       </h1>
       <p className="mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-[var(--mkt-muted)]">
-        See how Sellora detects buying intent, prioritizes the opportunity,
+        See how Selryn detects buying intent, prioritizes the opportunity,
         recommends the next best action, and connects the result back to
         pipeline and revenue.
       </p>

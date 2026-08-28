@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Brand wordmark — tall, narrow grotesque; used only by the Sellora lockup.
+// Brand wordmark — tall, narrow grotesque; used only by the Selryn lockup.
 const brandNarrow = Archivo_Narrow({
   variable: "--font-brand",
   subsets: ["latin"],
@@ -25,16 +25,16 @@ const brandNarrow = Archivo_Narrow({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Sellora — AI Revenue Intelligence for B2B Sales",
-    template: "%s · Sellora",
+    default: "Selryn — AI Revenue Intelligence for B2B Sales",
+    template: "%s · Selryn",
   },
   description:
-    "Find the revenue your sales team is leaving on the table. Sellora detects buying signals, identifies revenue at risk, and tells your team exactly what to do next.",
+    "Find the revenue your sales team is leaving on the table. Selryn detects buying signals, identifies revenue at risk, and tells your team exactly what to do next.",
   openGraph: {
-    title: "Sellora — AI Revenue Intelligence for B2B Sales",
+    title: "Selryn — AI Revenue Intelligence for B2B Sales",
     description:
-      "Stop losing deals you should have won. Sellora finds the revenue leaking out of your pipeline and prioritizes the opportunities worth your attention.",
-    siteName: "Sellora",
+      "Stop losing deals you should have won. Selryn finds the revenue leaking out of your pipeline and prioritizes the opportunities worth your attention.",
+    siteName: "Selryn",
   },
 };
 

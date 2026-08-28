@@ -80,7 +80,7 @@ export default async function ProspectsPage({
         <EmptyState
           icon={Users}
           title="No prospects yet"
-          description="Add your first prospect and Sellora will generate a personalized cold email, icebreaker, and outreach angle for them."
+          description="Add your first prospect and Selryn will generate a personalized cold email, icebreaker, and outreach angle for them."
         >
           <ProspectFormDialog
             trigger={

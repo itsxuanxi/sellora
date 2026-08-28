@@ -7,7 +7,7 @@ const clerkEnabled = Boolean(
 
 // Must match lib/local-auth.ts SESSION_COOKIE (middleware can't import
 // server-only modules).
-const SESSION_COOKIE = "sellora_session";
+const SESSION_COOKIE = "selryn_session";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",

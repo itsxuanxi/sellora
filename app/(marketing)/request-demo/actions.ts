@@ -193,7 +193,7 @@ function formatNotification(v: {
     `Monthly active opportunities: ${labelFor(OPPORTUNITY_VOLUMES, v.opportunityVolume)}`,
     `Heard about us:  ${v.heardFrom || "Not provided"}`,
     "",
-    "What they want Sellora to improve:",
+    "What they want Selryn to improve:",
     v.goal,
     "",
     `Reply directly to ${v.workEmail}.`,

@@ -1,7 +1,7 @@
 /**
  * Every tunable number in the Revenue Intelligence layer lives here — the
  * scoring weights, the stage win-rate baselines, and the leak thresholds.
- * If you are calibrating Sellora against a real pipeline, this is the only
+ * If you are calibrating Selryn against a real pipeline, this is the only
  * file you should need to touch.
  *
  * Bump REVENUE_CONFIG_VERSION whenever these change: every
@@ -48,7 +48,7 @@ export const STAGE_LABELS: Record<OpportunityStage, string> = {
 };
 
 /**
- * Baseline win rate for a deal sitting at each stage, before Sellora's score
+ * Baseline win rate for a deal sitting at each stage, before Selryn's score
  * adjusts it. These are deliberately conservative industry-shaped defaults,
  * NOT learned from this workspace's history — `winProbability` is an
  * estimate and the UI labels it as one.
@@ -72,7 +72,7 @@ export const STAGE_HELP: Record<OpportunityStage, string> = {
   PROPOSAL: "Deals with a proposal out convert around 50%. Response speed after a proposal open matters most.",
   NEGOTIATION: "Deals in negotiation convert around 70%. Delay is now the main risk, not fit.",
   WON: "Closed won.",
-  LOST: "Closed lost. Sellora keeps watching for new buying signals from this account.",
+  LOST: "Closed lost. Selryn keeps watching for new buying signals from this account.",
 };
 
 /** How long a deal should sit in a stage before silence is suspicious. */

@@ -5,7 +5,7 @@
  * One deal — Cloudmint — is followed through all four stages of the hero
  * carousel and reused by the capability panels and the query demo further
  * down the page. That continuity is the point: a visitor should feel they are
- * watching Sellora do one piece of work, not flipping through four unrelated
+ * watching Selryn do one piece of work, not flipping through four unrelated
  * screenshots.
  *
  * Because every surface reads from here, the arithmetic can only be wrong in
@@ -118,7 +118,7 @@ export const NEXT_ACTION = {
     "No follow-up has been sent since the demo",
   ],
   action: "Send a stakeholder-specific follow-up today.",
-  approvalNote: "Human approval required — Sellora never sends on its own.",
+  approvalNote: "Human approval required — Selryn never sends on its own.",
   draft: {
     subject: "Following up on the proposal — happy to bring in your finance lead",
     body: "Hi Dana — I saw the proposal came back around your side, and that Priya from finance has joined the thread. Happy to put together a short breakdown of the commercial terms for her specifically, so she has what she needs without another call.\n\nWould Thursday work for a 15-minute walkthrough?",
@@ -214,7 +214,7 @@ export const SCENARIOS: Scenario[] = [
       { label: "Demo completed", note: "Discovery call held with the champion", delay: 650 },
       { label: "Four days without a reply", note: "No outbound sent since", delay: 1000 },
       { label: "Risk level increases", note: "Silence at this stage is the top loss cause", delay: 1100 },
-      { label: "Sellora identifies the missing stakeholder", note: "No finance contact on the thread", delay: 1000 },
+      { label: "Selryn identifies the missing stakeholder", note: "No finance contact on the thread", delay: 1000 },
       { label: "A targeted follow-up is prepared", note: "Draft written against the actual gap", delay: 950 },
       { label: "Sales rep approves", note: "Nothing sends without a human", delay: 1150 },
       { label: "CRM is updated", note: "Stage, next step and activity written back", delay: 900 },
@@ -231,7 +231,7 @@ export const SCENARIOS: Scenario[] = [
     title: "Every open deal, ranked by what the next hour is worth.",
     account: "All open opportunities",
     steps: [
-      { label: "Sellora scans every open opportunity", note: "248 monitored continuously", delay: 700 },
+      { label: "Selryn scans every open opportunity", note: "248 monitored continuously", delay: 700 },
       { label: "Deal signals are scored", note: "Buying actions and silence both count", delay: 900 },
       { label: "Expected revenue is calculated", note: "Deal value × probability of closing", delay: 1000 },
       { label: "Accounts are ranked for today", note: "Highest expected value first", delay: 1100 },
@@ -253,7 +253,7 @@ export const SCENARIOS: Scenario[] = [
       { label: "Security document downloaded", note: "A procurement signal, not a browse" },
       { label: "Second stakeholder appears", note: "New contact from the same domain" },
       { label: "Intent changes from Medium to High", note: "Score moves on evidence, not a guess" },
-      { label: "Sellora recommends technical validation", note: "The usual blocker at this stage" },
+      { label: "Selryn recommends technical validation", note: "The usual blocker at this stage" },
       { label: "Meeting link is prepared", note: "Ready for the rep to send" },
       { label: "Opportunity advances", note: "Stage updated on approval" },
     ],
@@ -307,7 +307,7 @@ export const OUTCOME_METRICS = [
 // Hero: four auto-executing scenarios
 //
 // Each tab is a script, not a screenshot. A step's `action` says what kind of
-// work Sellora is doing at that moment and its `payload` carries the data the
+// work Selryn is doing at that moment and its `payload` carries the data the
 // stage renders — so adding a step is a data edit, not another branch of
 // animation code.
 //
@@ -351,7 +351,7 @@ export interface SignalStep extends DemoStepBase {
   };
 }
 
-/** Sellora thinking. Renders as a working line, never a spinner for its own sake. */
+/** Selryn thinking. Renders as a working line, never a spinner for its own sake. */
 export interface AnalyzeStep extends DemoStepBase {
   action: "analyze";
   payload: { label: string };

@@ -342,7 +342,7 @@ function localInsights(ctx: InsightsContext): InsightDraft[] {
     out.push({
       kind: "action",
       title: "Send your first campaign to unlock insights",
-      body: "Sellora generates recommendations from your real outreach data. Add prospects, generate personalized emails, and send a campaign — insights will appear as replies and opens come in.",
+      body: "Selryn generates recommendations from your real outreach data. Add prospects, generate personalized emails, and send a campaign — insights will appear as replies and opens come in.",
     });
   }
   return out.slice(0, 4);

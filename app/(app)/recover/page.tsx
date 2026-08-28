@@ -15,7 +15,7 @@ import { refreshRevenueIntelligence } from "@/app/(app)/opportunities/actions";
 export const metadata = { title: "Recover" };
 
 /**
- * The Revenue Recovery Queue (§8): opportunities Sellora believes are being
+ * The Revenue Recovery Queue (§8): opportunities Selryn believes are being
  * lost unnecessarily, grouped by *why* and sorted by expected recoverable
  * revenue.
  *
@@ -48,7 +48,7 @@ export default async function RecoverPage() {
         <EmptyState
           icon={LifeBuoy}
           title="Nothing to recover"
-          description="No open deal is overdue, silent, or sitting on an unanswered proposal. This is the state you want — Sellora will fill this page the moment something starts slipping."
+          description="No open deal is overdue, silent, or sitting on an unanswered proposal. This is the state you want — Selryn will fill this page the moment something starts slipping."
         >
           <Button asChild variant="outline">
             <Link href="/opportunities">Review open opportunities</Link>

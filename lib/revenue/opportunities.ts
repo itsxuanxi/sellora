@@ -272,7 +272,7 @@ const PROSPECT_STAGE_MAP: Record<string, OpportunityStage> = {
  * Creates opportunities for accounts that do not have one yet, deriving the
  * deal from the account's most advanced contact.
  *
- * This is what lets an existing Sellora workspace light up immediately
+ * This is what lets an existing Selryn workspace light up immediately
  * rather than showing an empty revenue dashboard: the pipeline data is
  * already there, it just had no money attached to it. Idempotent — an
  * account that already has an opportunity is skipped.

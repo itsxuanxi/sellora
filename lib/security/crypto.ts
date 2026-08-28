@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 /**
  * Envelope encryption for integration secrets.
  *
- * OAuth access and refresh tokens are the most dangerous data Sellora holds: a
+ * OAuth access and refresh tokens are the most dangerous data Selryn holds: a
  * leaked HubSpot refresh token is standing read/write access to a customer's
  * entire CRM. They are never written to the database in plaintext.
  *

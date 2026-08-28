@@ -290,7 +290,7 @@ export async function refreshRevenueIntelligence(): Promise<
 //
 // These are the write endpoints for lib/revenue/loop.ts. Every one of them
 // requires an explicit human click: §6's rule is that nothing customer-facing
-// leaves Sellora unreviewed, and the way that is guaranteed is that no code
+// leaves Selryn unreviewed, and the way that is guaranteed is that no code
 // path executes an action except this one, called from a button.
 
 const actionInput = z.object({

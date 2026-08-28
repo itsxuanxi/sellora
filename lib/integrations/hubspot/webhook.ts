@@ -6,7 +6,7 @@ import { safeEqual } from "@/lib/security/crypto";
  * HubSpot webhook signature verification (v3).
  *
  * A webhook endpoint is an unauthenticated door into a customer's data. Any
- * request that reaches it can claim a deal moved stage, and Sellora would
+ * request that reaches it can claim a deal moved stage, and Selryn would
  * score, recommend and surface on that basis. Verification is the only thing
  * standing between "HubSpot said so" and "somebody said so".
  *
@@ -124,7 +124,7 @@ export function parseNotifications(rawBody: string): HubspotNotification[] {
 }
 
 /**
- * Maps a HubSpot subscription type onto Sellora's event vocabulary.
+ * Maps a HubSpot subscription type onto Selryn's event vocabulary.
  *
  * Unknown types return null and are skipped rather than stored under a
  * guessed name: an event graph with invented types is worse than one with

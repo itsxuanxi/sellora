@@ -10,7 +10,7 @@ import { getAuthState, isClerkEnabled } from "@/lib/auth";
 const LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#pricing", label: "Pricing" },
-  { href: "/demo", label: "Try Sellora" },
+  { href: "/demo", label: "Try Selryn" },
 ];
 
 /**
@@ -51,7 +51,7 @@ export async function MarketingNavbar() {
           href="/demo"
           className="hidden rounded px-2 py-1 text-sm text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] md:block"
         >
-          Try Sellora
+          Try Selryn
         </Link>
         <NavDemoCta />
         <MobileNavMenu links={MOBILE_LINKS} appHref={appHref} signedIn={signedIn} />

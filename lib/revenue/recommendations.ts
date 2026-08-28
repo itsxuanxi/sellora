@@ -98,7 +98,7 @@ function describeImpact(opp: EnrichedOpportunity, hitRate: number | null): strin
  * The recommendation ledger — the part of §15's data moat that this MVP
  * actually implements.
  *
- * Every action Sellora puts in front of a human is written down before they
+ * Every action Selryn puts in front of a human is written down before they
  * act on it, and the row records what happened next: completed, dismissed
  * (and why), or ignored. That chain — recommended → acted → outcome — is the
  * only honest foundation for the outcome-based learning described in Phase 3.
@@ -309,7 +309,7 @@ export async function dismissRecommendation(
   });
   if (!rec) return;
 
-  // Dismissals are kept, not deleted: "Sellora suggested this and a human
+  // Dismissals are kept, not deleted: "Selryn suggested this and a human
   // said no" is the most useful training signal in the whole table.
   await db.recommendation.update({
     where: { id: rec.id },
@@ -342,7 +342,7 @@ export async function snoozeRecommendation(
 }
 
 /**
- * Records that an opportunity was won and, if Sellora influenced it,
+ * Records that an opportunity was won and, if Selryn influenced it,
  * attributes the recovered revenue.
  */
 export async function markOpportunityWon(
@@ -361,7 +361,7 @@ export async function markOpportunityWon(
     data: { stage: "WON", closedAt: now, winProbability: 100 },
   });
 
-  // Only claim the revenue if Sellora actually touched this deal.
+  // Only claim the revenue if Selryn actually touched this deal.
   if (opp.attributions.length > 0) {
     await db.revenueAttribution.create({
       data: {
@@ -369,7 +369,7 @@ export async function markOpportunityWon(
         opportunityId: opp.id,
         kind: "recovered",
         amount: opp.dealValue,
-        reason: "Deal closed won after Sellora surfaced and recovered it.",
+        reason: "Deal closed won after Selryn surfaced and recovered it.",
         occurredAt: now,
       },
     });

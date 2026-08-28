@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
  * validation happens here on every request.
  */
 
-export const SESSION_COOKIE = "sellora_session";
+export const SESSION_COOKIE = "selryn_session";
 const SESSION_DAYS = 30;
 
 /** Creates the DB session row and returns the token — no cookie side effect. */

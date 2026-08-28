@@ -44,7 +44,7 @@ export default function DemoAnalyticsPage() {
             Close the signal–action–outcome loop
           </h1>
           <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[var(--mkt-muted)]">
-            Sellora records which signals led to which recommendation, what the
+            Selryn records which signals led to which recommendation, what the
             team executed, how the buyer responded, and how the opportunity
             changed.
           </p>
@@ -104,7 +104,7 @@ export default function DemoAnalyticsPage() {
         </dl>
         <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--mkt-muted)]">
           The opportunity advanced from {DEMO_OPPORTUNITY.initialStage} to{" "}
-          {DEMO_OPPORTUNITY.advancedStage}. It has not been won, and Sellora is
+          {DEMO_OPPORTUNITY.advancedStage}. It has not been won, and Selryn is
           not claiming to have closed it — the loop records what happened, in
           order, so the connection can be checked rather than asserted.
         </p>
@@ -173,7 +173,7 @@ function CompletionPanel({ onReplay }: { onReplay: () => void }) {
         You moved one deal from signal to revenue action.
       </h2>
       <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[#C9CCC7]">
-        You saw how Sellora detects buying signals, prioritizes an opportunity,
+        You saw how Selryn detects buying signals, prioritizes an opportunity,
         recommends one action, keeps the seller in control, and connects the
         buyer response back to pipeline.
       </p>

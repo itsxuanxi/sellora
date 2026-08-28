@@ -91,7 +91,7 @@ export async function startCheckout(
             unit_amount: amount,
             recurring: { interval },
             product_data: {
-              name: `Sellora ${plan.name}`,
+              name: `Selryn ${plan.name}`,
               description: `${plan.name} plan · ${formatPrice(amount)}/${interval}`,
             },
           },

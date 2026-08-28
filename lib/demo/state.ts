@@ -15,7 +15,7 @@ import { GUIDED_DEMO_STEPS, TOTAL_STEPS, type DemoFlag } from "@/lib/demo/steps"
  * button would be one refactor away from disappearing.
  */
 
-export const STORAGE_KEY = "sellora-guided-demo-v1";
+export const STORAGE_KEY = "selryn-guided-demo-v1";
 
 export interface DemoState {
   currentStep: number;

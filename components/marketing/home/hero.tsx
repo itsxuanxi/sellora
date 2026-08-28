@@ -4,7 +4,7 @@ import { SignalField } from "@/components/marketing/home/signal-field";
 import { HeroDemo } from "@/components/marketing/home/hero-demo";
 
 /**
- * Screen 1 — "What is Sellora, and what does it actually do?"
+ * Screen 1 — "What is Selryn, and what does it actually do?"
  *
  * Warm white, with two very low-opacity radial washes purely for depth. The
  * only saturated colour in the headline is the closing phrase; a fully
@@ -52,7 +52,7 @@ export function Hero({ startHref }: { startHref: string }) {
           </h1>
 
           <p className="mt-6 max-w-lg text-pretty text-[17px] leading-relaxed text-[var(--mkt-muted)]">
-            Sellora learns which signals matter, recommends the action most
+            Selryn learns which signals matter, recommends the action most
             likely to move each deal forward, and connects every decision to
             pipeline and revenue outcomes.
           </p>
@@ -86,7 +86,7 @@ export function Hero({ startHref }: { startHref: string }) {
               href="/demo"
               className="inline-flex h-12 items-center rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-6 text-[15px] font-medium text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-[var(--mkt-surface-2)]"
             >
-              Try Sellora
+              Try Selryn
             </Link>
             <Link
               href={startHref}
@@ -96,7 +96,7 @@ export function Hero({ startHref }: { startHref: string }) {
             </Link>
           </div>
 
-          {/* Each is true of the product as built: Sellora is a separate layer
+          {/* Each is true of the product as built: Selryn is a separate layer
               from the CRM, nothing sends without approval, and no model is
               trained on customer data. */}
           <p className="mt-7 text-[13px] leading-relaxed text-[var(--mkt-muted)]">

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Terms",
-  description: "Sellora's terms of service.",
+  description: "Selryn's terms of service.",
 };
 
 /**
@@ -29,10 +29,10 @@ export default function TermsPage() {
       </div>
 
       <p className="mt-10 text-[15px] leading-relaxed text-neutral-300">
-        If you need terms in place before evaluating or purchasing Sellora,
+        If you need terms in place before evaluating or purchasing Selryn,
         contact{" "}
         <a
-          href="mailto:itsxuanxi8@icloud.com?subject=Sellora%20terms"
+          href="mailto:itsxuanxi8@icloud.com?subject=Selryn%20terms"
           className="rounded text-violet-300 underline underline-offset-4 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
         >
           itsxuanxi8@icloud.com

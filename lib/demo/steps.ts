@@ -66,7 +66,7 @@ export const GUIDED_DEMO_STEPS: GuidedDemoStep[] = [
     eyebrow: "Detect",
     title: "Start with the opportunity most likely to move revenue",
     description:
-      "Sellora ranks every open opportunity by expected revenue, urgency and recent buying signals.",
+      "Selryn ranks every open opportunity by expected revenue, urgency and recent buying signals.",
     instruction: "Click Cloudmint to open the opportunity.",
     // The pipeline row is full-width, so there is no column beside it.
     placement: "bottom",
@@ -81,7 +81,7 @@ export const GUIDED_DEMO_STEPS: GuidedDemoStep[] = [
     eyebrow: "Detect",
     title: "See every signal in one timeline",
     description:
-      "Sellora combines proposal activity, stakeholder engagement, website intent and CRM history into one evidence trail.",
+      "Selryn combines proposal activity, stakeholder engagement, website intent and CRM history into one evidence trail.",
     instruction: "Click “View signals”.",
     placement: "bottom",
     requiredAction: "click",
@@ -108,7 +108,7 @@ export const GUIDED_DEMO_STEPS: GuidedDemoStep[] = [
     eyebrow: "Decide",
     title: "Turn the evidence into one clear action",
     description:
-      "Sellora recommends one action based on the opportunity stage, stakeholder activity and recent silence.",
+      "Selryn recommends one action based on the opportunity stage, stakeholder activity and recent silence.",
     instruction: "Click “Generate next best action”.",
     placement: "bottom",
     requiredAction: "click",
@@ -121,7 +121,7 @@ export const GUIDED_DEMO_STEPS: GuidedDemoStep[] = [
     eyebrow: "Act",
     title: "Review before anything is sent",
     description:
-      "Sellora drafts the action, but your team keeps the final decision.",
+      "Selryn drafts the action, but your team keeps the final decision.",
     instruction: "Click “Review draft”.",
     placement: "top",
     requiredAction: "click",
@@ -147,7 +147,7 @@ export const GUIDED_DEMO_STEPS: GuidedDemoStep[] = [
     eyebrow: "Learn",
     title: "Connect the action to the buyer’s response",
     description:
-      "Sellora tracks what happened after the action instead of stopping at email generation.",
+      "Selryn tracks what happened after the action instead of stopping at email generation.",
     instruction: "Click “View response”.",
     placement: "top",
     requiredAction: "click",
@@ -173,7 +173,7 @@ export const GUIDED_DEMO_STEPS: GuidedDemoStep[] = [
     target: "complete-demo",
     eyebrow: "Learn",
     title: "Close the signal–action–outcome loop",
-    description: `Sellora records which signals led to which recommendation, what the team executed, how ${DEMO_CONTACT.name.split(" ")[0]} responded, and how the opportunity changed.`,
+    description: `Selryn records which signals led to which recommendation, what the team executed, how ${DEMO_CONTACT.name.split(" ")[0]} responded, and how the opportunity changed.`,
     instruction: "Click “Complete demo”.",
     placement: "top",
     requiredAction: "click",

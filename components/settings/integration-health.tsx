@@ -59,7 +59,7 @@ export function IntegrationHealthPanel({
         <div>
           <h2 className="text-sm font-semibold">Connected data sources</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Sellora scores and recommends from these. A stale source is shown as
+            Selryn scores and recommends from these. A stale source is shown as
             delayed rather than connected.
           </p>
         </div>
@@ -82,14 +82,14 @@ export function IntegrationHealthPanel({
           Set <code className="rounded bg-muted px-1">HUBSPOT_CLIENT_ID</code>,{" "}
           <code className="rounded bg-muted px-1">HUBSPOT_CLIENT_SECRET</code> and{" "}
           <code className="rounded bg-muted px-1">ENCRYPTION_KEY</code>, then
-          restart. Until then Sellora runs on imported and demo data only, and
+          restart. Until then Selryn runs on imported and demo data only, and
           says so everywhere it does.
         </p>
       )}
 
       {health.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
-          No data source connected yet. Until one is, every figure in Sellora
+          No data source connected yet. Until one is, every figure in Selryn
           comes from imported or demo data.
         </p>
       ) : (

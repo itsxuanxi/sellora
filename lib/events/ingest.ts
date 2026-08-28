@@ -5,7 +5,7 @@ import { stableHash } from "@/lib/security/crypto";
 /**
  * The single door into the Revenue Event Graph.
  *
- * Everything Sellora observes - a CRM stage change, a reply, a no-show, a
+ * Everything Selryn observes - a CRM stage change, a reply, a no-show, a
  * pricing-page visit - becomes a RevenueEvent through this module and no
  * other. One door means one place where idempotency, tenant scoping and
  * normalisation are guaranteed, instead of each integration reimplementing

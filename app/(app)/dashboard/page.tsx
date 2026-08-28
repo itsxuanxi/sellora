@@ -54,12 +54,12 @@ export default async function OverviewPage() {
       <>
         <PageHeader
           title="Revenue Overview"
-          description="Sellora finds the revenue your pipeline is leaking — and tells you what to do about it."
+          description="Selryn finds the revenue your pipeline is leaking — and tells you what to do about it."
         />
         <EmptyState
           icon={Radar}
           title="No opportunities to analyze yet"
-          description="Sellora builds opportunities from your accounts and contacts, estimates what each deal is worth, then watches for the moments revenue starts leaking. Run the first analysis to see your pipeline in money terms."
+          description="Selryn builds opportunities from your accounts and contacts, estimates what each deal is worth, then watches for the moments revenue starts leaking. Run the first analysis to see your pipeline in money terms."
         >
           <div className="flex flex-wrap items-center justify-center gap-2">
             <RefreshIntelligenceButton
@@ -142,7 +142,7 @@ export default async function OverviewPage() {
         <StatTile
           label="Pipeline influenced"
           value={formatMoneyCompact(overview.pipelineInfluenced, overview.currency)}
-          sublabel="by Sellora"
+          sublabel="by Selryn"
           href="/analytics"
         />
       </div>

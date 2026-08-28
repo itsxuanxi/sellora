@@ -31,7 +31,7 @@ const features = [
   {
     icon: Kanban,
     title: "Pipeline you can feel",
-    body: "A drag-and-drop CRM board from New Lead to Won. Move deals with your cursor; Sellora logs every stage change for you.",
+    body: "A drag-and-drop CRM board from New Lead to Won. Move deals with your cursor; Selryn logs every stage change for you.",
   },
   {
     icon: LineChart,
@@ -50,7 +50,7 @@ export function Features() {
             Everything a great SDR does. Without hiring one.
           </h2>
           <p className="mt-4 text-pretty text-muted-foreground md:text-lg">
-            Sellora runs the whole outbound motion — research, writing,
+            Selryn runs the whole outbound motion — research, writing,
             sending, following up, and reporting — so you can stay focused on
             closing.
           </p>

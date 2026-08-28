@@ -19,7 +19,7 @@ import {
 } from "@/components/marketing/home/demo-data";
 
 /**
- * Screen 2 — "How does Sellora work, and why should I trust it?"
+ * Screen 2 — "How does Selryn work, and why should I trust it?"
  *
  * Sits on the slightly deeper band so the three screens read as light →
  * slightly deeper → light, giving the page tonal structure without any dark
@@ -82,7 +82,7 @@ export function Scenarios() {
             One revenue brain. From signal to action.
           </h2>
           <p className="mt-5 text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
-            Sellora connects pipeline activity, detects what changed, ranks
+            Selryn connects pipeline activity, detects what changed, ranks
             every opportunity by expected revenue, and recommends the next best
             action.
           </p>
@@ -100,7 +100,7 @@ export function Scenarios() {
               labels={LABELS}
               ids={IDS}
               baseId={baseId}
-              ariaLabel="Sellora workflow scenarios"
+              ariaLabel="Selryn workflow scenarios"
               size="lg"
               orientation="vertical"
             />
@@ -335,7 +335,7 @@ export function Scenarios() {
               ))}
             </ul>
             <p className="mt-5 border-t border-[var(--mkt-line)] pt-4 text-[12px] leading-relaxed text-[var(--mkt-muted)]">
-              Sellora holds no third-party security certification at this time
+              Selryn holds no third-party security certification at this time
               and does not claim one. If your procurement needs a security
               review, contact us and we will work through it directly.
             </p>

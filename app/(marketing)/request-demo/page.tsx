@@ -4,9 +4,9 @@ import { RequestDemoForm } from "@/components/marketing/request-demo-form";
 import { DEMO_INBOX } from "@/lib/marketing/demo-request";
 
 export const metadata: Metadata = {
-  // Absolute, so the root layout's " · Sellora" template does not double the
-  // brand up into "Request a Demo | Sellora · Sellora".
-  title: { absolute: "Request a Demo | Sellora" },
+  // Absolute, so the root layout's " · Selryn" template does not double the
+  // brand up into "Request a Demo | Selryn · Selryn".
+  title: { absolute: "Request a Demo | Selryn" },
   description:
     "See where your pipeline is leaking revenue. Tell us how your sales team works today and we will build the walkthrough around it.",
 };
@@ -33,7 +33,7 @@ const POINTS = [
 /**
  * Categories, not logos.
  *
- * Sellora has no customer logos it can truthfully show, and a "Trusted by"
+ * Selryn has no customer logos it can truthfully show, and a "Trusted by"
  * strip of invented marks is the exact kind of claim this product is built to
  * argue against. Saying who it is built for is true and costs nothing.
  */
@@ -67,7 +67,7 @@ export default function RequestDemoPage() {
 
           <p className="mt-6 text-pretty text-[16.5px] leading-relaxed text-[var(--mkt-muted)]">
             Tell us how your sales team works today. We&apos;ll show you which
-            buying signals Sellora can detect, how it prioritizes opportunities,
+            buying signals Selryn can detect, how it prioritizes opportunities,
             and what actions could move your deals forward.
           </p>
 

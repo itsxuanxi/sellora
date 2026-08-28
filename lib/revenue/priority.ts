@@ -1,5 +1,5 @@
 /**
- * Action Priority — how Sellora decides which of fifty open deals a rep
+ * Action Priority — how Selryn decides which of fifty open deals a rep
  * should look at first.
  *
  * A pure function, deliberately: it takes numbers in and returns a score and
@@ -175,7 +175,7 @@ export function computeActionPriority(input: PriorityInput): PriorityResult {
 }
 
 /**
- * How confident Sellora is in a specific piece of advice — which is not the
+ * How confident Selryn is in a specific piece of advice — which is not the
  * same as how strong the deal is. High confidence requires both real evidence
  * behind the recommendation and some history that the action works here.
  */

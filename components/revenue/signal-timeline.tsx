@@ -33,7 +33,7 @@ export function SignalTimeline({
   interpretation,
 }: {
   signals: TimelineSignal[];
-  /** Sellora's read on what the signals mean together. */
+  /** Selryn's read on what the signals mean together. */
   interpretation?: string | null;
 }) {
   if (signals.length === 0) {
@@ -58,7 +58,7 @@ export function SignalTimeline({
       {interpretation && (
         <div className="mb-5 rounded-xl border border-primary/20 bg-accent/40 p-4">
           <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Sellora&rsquo;s interpretation
+            Selryn&rsquo;s interpretation
           </div>
           <p className="mt-1.5 text-sm font-medium">{interpretation}</p>
         </div>

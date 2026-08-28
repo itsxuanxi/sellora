@@ -28,12 +28,12 @@ export default async function SignalsPage() {
       <>
         <PageHeader
           title="Signals"
-          description="Every buying signal Sellora has detected, newest first."
+          description="Every buying signal Selryn has detected, newest first."
         />
         <EmptyState
           icon={Radio}
           title="No signals detected yet"
-          description="Signals are the evidence behind every score. Connect a source or import them, and Sellora will start attaching intent to the money in your pipeline."
+          description="Signals are the evidence behind every score. Connect a source or import them, and Selryn will start attaching intent to the money in your pipeline."
         >
           <Button asChild>
             <Link href="/intent">Set up signal sources</Link>
@@ -64,7 +64,7 @@ export default async function SignalsPage() {
     <>
       <PageHeader
         title="Signals"
-        description="Every buying signal Sellora has detected, newest first."
+        description="Every buying signal Selryn has detected, newest first."
       >
         <Button asChild variant="outline">
           <Link href="/intent">Signal sources</Link>

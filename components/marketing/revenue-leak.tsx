@@ -3,7 +3,7 @@ import { Reveal, Section, SectionLabel } from "@/components/marketing/section";
 /**
  * §16's problem and solution sections. Placed immediately after the hero so
  * the repositioning lands before any product detail: the reader should
- * recognise their own pipeline in the problem before Sellora is described.
+ * recognise their own pipeline in the problem before Selryn is described.
  */
 
 const losses = [
@@ -75,7 +75,7 @@ export function RevenueLeak() {
 
         <Reveal delay={120}>
           <p className="mt-10 max-w-xl text-pretty text-lg leading-relaxed text-neutral-400">
-            Sellora watches for these gaps continuously, prices what each one is
+            Selryn watches for these gaps continuously, prices what each one is
             costing you, and puts the fix in front of the right person.
           </p>
         </Reveal>
@@ -88,7 +88,7 @@ export function RevenueLeak() {
             Your AI revenue intelligence layer.
           </h2>
           <p className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-neutral-400">
-            Sellora monitors your pipeline and answers four questions — the only
+            Selryn monitors your pipeline and answers four questions — the only
             four that decide whether a quarter lands.
           </p>
         </Reveal>
@@ -113,7 +113,7 @@ export function RevenueLeak() {
             <p className="text-[15px] leading-relaxed text-neutral-400">
               <span className="text-violet-300">The scarce resource in sales
               isn&rsquo;t email-writing ability. It&rsquo;s attention.</span>{" "}
-              Sellora continuously works out where a rep&rsquo;s next hour creates
+              Selryn continuously works out where a rep&rsquo;s next hour creates
               the most expected revenue — and shows its reasoning every time, so
               you can disagree with it.
             </p>

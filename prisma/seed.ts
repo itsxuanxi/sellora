@@ -627,7 +627,7 @@ async function main() {
         actionType: "follow_up",
         headline: saved.headline,
         rationale:
-          "Buying signals spiked and the deal had gone quiet — Sellora surfaced it and the follow-up went out the same day.",
+          "Buying signals spiked and the deal had gone quiet — Selryn surfaced it and the follow-up went out the same day.",
         urgency: "today",
         leakType: "going_cold",
         expectedValue: saved.expected,
@@ -666,7 +666,7 @@ async function main() {
         opportunityId: wonId,
         kind: "recovered",
         amount: won.dealValue,
-        reason: "Deal closed won after Sellora surfaced and recovered it.",
+        reason: "Deal closed won after Selryn surfaced and recovered it.",
         occurredAt: daysAgo(5),
       },
     });

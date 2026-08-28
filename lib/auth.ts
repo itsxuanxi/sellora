@@ -65,7 +65,7 @@ export async function getOrCreateDemoUser(): Promise<SessionContext> {
     include: userInclude,
   });
   if (user) return user;
-  return provisionWorkspace(DEMO_CLERK_ID, "demo@sellora.ai", "Demo User");
+  return provisionWorkspace(DEMO_CLERK_ID, "demo@selryn.ai", "Demo User");
 }
 
 async function loadSession(): Promise<SessionContext | null> {
@@ -83,7 +83,7 @@ async function loadSession(): Promise<SessionContext | null> {
   if (existing) return existing;
 
   const clerkUser = await currentUser();
-  const email = clerkUser?.emailAddresses[0]?.emailAddress ?? "unknown@sellora.ai";
+  const email = clerkUser?.emailAddresses[0]?.emailAddress ?? "unknown@selryn.ai";
   const name = clerkUser
     ? [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null
     : null;

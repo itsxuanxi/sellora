@@ -14,7 +14,7 @@ function easeInOut(t: number) {
 }
 
 /**
- * The "Sellora AI Revenue Core" — a real WebGL scene (not a canvas particle
+ * The "Selryn AI Revenue Core" — a real WebGL scene (not a canvas particle
  * sketch): a wireframe icosahedron core with an inner glow shell, three
  * tilted orbital rings, a converging signal-particle field, and a dormant
  * "neural network" point cloud that only becomes visible once the camera

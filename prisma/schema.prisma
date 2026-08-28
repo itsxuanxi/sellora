@@ -1,4 +1,4 @@
-// Sellora — relational schema
+// Selryn — relational schema
 //
 // Local development uses SQLite (zero-config). For production on Supabase,
 // change `provider` to "postgresql" and point DATABASE_URL at your Supabase
@@ -468,7 +468,7 @@ model BuyingSignal {
   sourceUrl   String?
   sourceId    String?
   source      SignalSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  detectedAt  DateTime      @default(now()) // when Sellora recorded it
+  detectedAt  DateTime      @default(now()) // when Selryn recorded it
   occurredAt  DateTime // when the real-world event happened
   confidence  String        @default("medium") // low | medium | high
   rawData     String? // JSON, original provider payload — never shown as fact, only as "raw"
@@ -645,7 +645,7 @@ model Outcome {
 //   → user acts / dismisses → Outcome → RevenueAttribution
 //
 // Recommendation is deliberately persisted rather than computed-and-thrown-
-// away: "what Sellora recommended → what the rep did → what happened" is the
+// away: "what Selryn recommended → what the rep did → what happened" is the
 // training set the learning layer will eventually need. Nothing in this MVP
 // learns from it automatically; it only records honestly.
 //
@@ -753,7 +753,7 @@ model OpportunityScoreFactor {
   @@index([snapshotId])
 }
 
-// A single "next best action" Sellora put in front of a human, and what
+// A single "next best action" Selryn put in front of a human, and what
 // became of it. The recommendation → action → outcome chain lives here.
 model Recommendation {
   id            String       @id @default(cuid())
@@ -799,7 +799,7 @@ model Recommendation {
   expectedImpact      String?
   expectedImpactValue Int?
 
-  // low | medium | high — how much Sellora trusts THIS advice, which is not
+  // low | medium | high — how much Selryn trusts THIS advice, which is not
   // the same as how strong the deal is.
   confidence String @default("medium")
 
@@ -833,7 +833,7 @@ model Recommendation {
   @@index([orgId, status, priorityScore])
 }
 
-// Materialized proof that Sellora moved money (§12). Written only when a
+// Materialized proof that Selryn moved money (§12). Written only when a
 // real event happens (a recommendation is acted on, an opportunity is won),
 // never inferred at read time — so the Impact page reports facts.
 model RevenueAttribution {
@@ -849,7 +849,7 @@ model RevenueAttribution {
   // influenced | saved | recovered | meeting
   //   influenced — a recommendation was acted on while the deal was open
   //   saved      — an at-risk deal was rescued after a recommendation
-  //   recovered  — the deal was won, and Sellora had influenced it
+  //   recovered  — the deal was won, and Selryn had influenced it
   //   meeting    — a meeting was booked off a recommendation
   kind   String
   amount Int
@@ -866,7 +866,7 @@ model RevenueAttribution {
 // The closed loop: Action and Response
 //
 // These are the two links that turn a pile of advice into a learning system.
-// Without Action, "Sellora recommended X" is never connected to "a human
+// Without Action, "Selryn recommended X" is never connected to "a human
 // actually did X"; without Response, neither is connected to "the customer
 // reacted". The full chain the product is built on is:
 //
@@ -914,7 +914,7 @@ model Action {
 
   // PROPOSED | APPROVED | EXECUTING | EXECUTED | FAILED | REJECTED | UNDONE
   executionStatus String  @default("PROPOSED")
-  // True when the human changed Sellora's draft before approving. The single
+  // True when the human changed Selryn's draft before approving. The single
   // most useful quality signal there is: heavy editing means the draft was wrong.
   humanEdited     Boolean @default(false)
   errorMessage    String?
@@ -980,7 +980,7 @@ model Response {
 // ===================================================================
 // Integration and ingestion layer
 //
-// Everything below exists so Sellora can learn from a customer's real CRM,
+// Everything below exists so Selryn can learn from a customer's real CRM,
 // inbox and calendar instead of fixtures. Four rules hold across all of it:
 //
 //   1. Every row carries orgId. Tenant isolation is a column, not a filter
@@ -1153,7 +1153,7 @@ model RevenueEvent {
   @@index([accountId, occurredAt])
 }
 
-// How Sellora decided that an email, domain or thread belongs to a given
+// How Selryn decided that an email, domain or thread belongs to a given
 // account, contact or deal - and how sure it is.
 //
 // Every match is recorded with its evidence rather than being applied

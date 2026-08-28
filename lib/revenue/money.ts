@@ -1,7 +1,7 @@
 /**
  * Money formatting and the one formula the whole product ranks by.
  *
- * All amounts in Sellora are whole currency units (dollars, not cents) —
+ * All amounts in Selryn are whole currency units (dollars, not cents) —
  * see the MONEY UNITS note in prisma/schema.prisma.
  */
 

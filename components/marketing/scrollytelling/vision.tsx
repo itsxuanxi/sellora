@@ -52,7 +52,7 @@ export function Vision() {
         className="mx-auto max-w-4xl text-balance text-center text-3xl font-light leading-[1.3] tracking-tight text-neutral-200 md:text-5xl"
       >
         Every B2B pipeline leaks the same way — in the hours nobody&apos;s
-        watching. Sellora is the layer that never clocks out: one brain,
+        watching. Selryn is the layer that never clocks out: one brain,
         six agents, working every visitor until they&apos;re a meeting on
         your calendar.
       </p>

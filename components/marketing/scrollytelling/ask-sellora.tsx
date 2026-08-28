@@ -23,12 +23,12 @@ const AMBIENT = Array.from({ length: 11 }, (_, i) => ({
 }));
 
 /**
- * Act V — "Ask Sellora": a floating AI terminal with a light 3D tilt,
+ * Act V — "Ask Selryn": a floating AI terminal with a light 3D tilt,
  * scroll-scrubbed through a scripted exchange. Each ranked account lights up
  * a matching node in the network behind the terminal and draws a line to it,
  * with its intent score counting up — all bound to progress, reversible.
  */
-export function AskSellora() {
+export function AskSelryn() {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const questionRef = useRef<HTMLParagraphElement>(null);
@@ -163,7 +163,7 @@ export function AskSellora() {
 
       <div className="relative mx-auto w-full max-w-6xl">
         <div className="mb-8 flex justify-center md:mb-10 md:justify-start">
-          <SectionLabel number="04" label="Ask Sellora" />
+          <SectionLabel number="04" label="Ask Selryn" />
         </div>
 
         {/* the floating terminal */}
@@ -175,7 +175,7 @@ export function AskSellora() {
           >
             <div className="mb-5 flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-neutral-500">
               <Sparkles className="size-3.5 text-violet-300" />
-              Sellora terminal
+              Selryn terminal
             </div>
 
             <p ref={questionRef} className="text-sm text-neutral-400">

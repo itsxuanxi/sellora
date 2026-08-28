@@ -19,7 +19,7 @@ import {
 
 /**
  * Controls on a recommendation. Every branch writes to the ledger — even
- * "Not useful", which is the most informative thing a user can tell Sellora
+ * "Not useful", which is the most informative thing a user can tell Selryn
  * and the one most products throw away.
  */
 export function RecommendationActions({
@@ -91,7 +91,7 @@ export function RecommendationActions({
             onClick={() =>
               run(
                 () => dismissRecommendationAction(ref, "not_useful"),
-                "Dismissed — Sellora will use that."
+                "Dismissed — Selryn will use that."
               )
             }
           >

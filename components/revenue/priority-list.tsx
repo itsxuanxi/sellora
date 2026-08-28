@@ -22,7 +22,7 @@ export function PriorityList({
   if (opportunities.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center text-sm text-muted-foreground">
-        Nothing needs chasing today. Sellora will surface the moment that changes.
+        Nothing needs chasing today. Selryn will surface the moment that changes.
       </p>
     );
   }

@@ -22,7 +22,7 @@ function Chrome({ children, url }: { children: React.ReactNode; url: string }) {
 
 function PersonalizationDemo() {
   return (
-    <Chrome url="app.sellora.ai/prospects/maya-lindqvist">
+    <Chrome url="app.selryn.ai/prospects/maya-lindqvist">
       <div className="grid gap-5 md:grid-cols-[1.5fr_1fr]">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -111,7 +111,7 @@ function FollowUpDemo() {
     },
   ];
   return (
-    <Chrome url="app.sellora.ai/campaigns/q3-outbound">
+    <Chrome url="app.selryn.ai/campaigns/q3-outbound">
       <div className="space-y-3">
         {followUps.map((f) => (
           <div
@@ -171,7 +171,7 @@ function PipelineDemo() {
     },
   ];
   return (
-    <Chrome url="app.sellora.ai/pipeline">
+    <Chrome url="app.selryn.ai/pipeline">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {columns.map((col) => (
           <div key={col.title} className="rounded-xl bg-muted/60 p-2.5">

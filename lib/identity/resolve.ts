@@ -183,7 +183,7 @@ export async function resolveOpportunityForAccount(
       targetId: open[0].id,
       method: "domain_match",
       confidence: 40,
-      evidence: `${open.length} open opportunities on this account. Sellora will not attribute this automatically.`,
+      evidence: `${open.length} open opportunities on this account. Selryn will not attribute this automatically.`,
       autoApplied: false,
     };
   }
@@ -247,7 +247,7 @@ async function findManualOverride(
  * Persists a match so the decision is auditable and reusable.
  *
  * A manual override is never overwritten by a later automatic pass. A person
- * who has corrected a match has told Sellora something it could not derive,
+ * who has corrected a match has told Selryn something it could not derive,
  * and quietly reverting that on the next sync is the fastest way to lose their
  * trust in every other match on the screen.
  */

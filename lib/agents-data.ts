@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-/** Single source of truth for Sellora's six agents — used by the hero chip
+/** Single source of truth for Selryn's six agents — used by the hero chip
  * strip, the capabilities grid, and the "One brain, six agents" scrollytelling
  * section, so the narrative stays consistent everywhere it appears. */
 export type AgentDef = {

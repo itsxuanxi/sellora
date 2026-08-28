@@ -19,12 +19,12 @@ export function FinalCta() {
           </span>
         </h2>
         <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-neutral-400">
-          See Sellora engage, qualify, and book on your own pipeline. Set up
+          See Selryn engage, qualify, and book on your own pipeline. Set up
           takes minutes.
         </p>
         <div className="mt-10 flex items-center justify-center gap-3">
           <Link
-            href="mailto:itsxuanxi8@icloud.com?subject=Sellora%20demo"
+            href="mailto:itsxuanxi8@icloud.com?subject=Selryn%20demo"
             className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 text-[15px] font-medium text-black transition-all hover:bg-neutral-200"
           >
             Book a Demo

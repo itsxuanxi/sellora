@@ -1,13 +1,13 @@
-# Sellora — AI Revenue Intelligence for B2B Sales
+# Selryn — AI Revenue Intelligence for B2B Sales
 
 **Find the revenue your sales team is leaving on the table.**
 
-Sellora continuously analyses every opportunity in your pipeline, detects where
+Selryn continuously analyses every opportunity in your pipeline, detects where
 revenue is leaking, prices what each leak is costing, ranks opportunities by
 expected revenue, and tells the rep exactly what to do next.
 
 The premise: the scarce resource in sales is not email-writing ability, it is
-**attention**. Sellora works out where the next hour of selling time creates the
+**attention**. Selryn works out where the next hour of selling time creates the
 most expected revenue — and always shows its reasoning, so a human can disagree
 with it.
 
@@ -26,7 +26,7 @@ npx prisma db seed     # loads the demo workspace (14 prospects, 2 campaigns)
 npm run dev
 ```
 
-Open http://localhost:3000. Sellora works fully with zero keys:
+Open http://localhost:3000. Selryn works fully with zero keys:
 
 - **Auth** — built-in and keyless. The default sign-in is a **one-time code**
   sent to an email address or phone number (unknown identifiers get a
@@ -162,7 +162,7 @@ model is retuned.
 *current state* ("no follow-up for 4 days"), so storing it would need a cron job
 to stay true — and a stale leak table is worse than none, since it would tell a
 rep to chase a deal they closed yesterday. A recommendation is a *decision*, so
-it is written down: what Sellora suggested → what the rep did → what happened.
+it is written down: what Selryn suggested → what the rep did → what happened.
 
 **Revenue at risk is deliberately conservative.** It is deal value × win
 probability × a severity discount, not the full deal value. Inflating the

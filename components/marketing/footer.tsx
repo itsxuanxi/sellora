@@ -7,7 +7,7 @@ import { Logo } from "@/components/logo";
  */
 const LINKS = [
   { label: "Product", href: "/#how-it-works" },
-  { label: "Try Sellora", href: "/demo" },
+  { label: "Try Selryn", href: "/demo" },
   { label: "Request a demo", href: "/request-demo" },
   { label: "Pricing", href: "/#pricing" },
   { label: "Security", href: "/#how-it-works" },
@@ -38,7 +38,7 @@ export function MarketingFooter() {
         </nav>
 
         <span className="text-xs text-[var(--mkt-muted)]">
-          © {new Date().getFullYear()} Sellora
+          © {new Date().getFullYear()} Selryn
         </span>
       </div>
     </footer>

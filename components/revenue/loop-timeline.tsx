@@ -96,7 +96,7 @@ export function LoopTimeline({ events }: { events: TimelineEvent[] }) {
     return (
       <p className="py-6 text-sm text-muted-foreground">
         Nothing recorded on this deal yet. Signals arrive from your connected
-        sources; recommendations appear once Sellora has scored the
+        sources; recommendations appear once Selryn has scored the
         opportunity.
       </p>
     );

@@ -19,7 +19,7 @@ type Step = { icon: LucideIcon; label: string; body: string };
 
 const STEPS: Step[] = [
   { icon: UserRound, label: "Visitor arrives", body: "Someone lands on your site — from an ad, a search, a cold email link." },
-  { icon: MessageCircle, label: "Sellora starts the conversation", body: "The chat agent greets them and answers questions using your product knowledge." },
+  { icon: MessageCircle, label: "Selryn starts the conversation", body: "The chat agent greets them and answers questions using your product knowledge." },
   { icon: Sparkles, label: "Buying intent is detected", body: "Behavior and language get read in real time — this isn't a browser, it's a buyer." },
   { icon: UserCheck, label: "Lead is qualified", body: "Budget, need, and timing get scored automatically from what they say and do." },
   { icon: CalendarCheck2, label: "Meeting is booked", body: "A qualified lead gets a calendar link on the spot — no back-and-forth." },

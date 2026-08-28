@@ -10,7 +10,7 @@ import {
 } from "@/lib/integrations/hubspot/webhook";
 
 const SECRET = "test-client-secret";
-const URI = "https://app.sellora.ai/api/integrations/hubspot/webhook";
+const URI = "https://app.selryn.ai/api/integrations/hubspot/webhook";
 const NOW = 1_800_000_000_000;
 
 before(() => {
@@ -51,7 +51,7 @@ test("a correctly signed request verifies", () => {
 
 test("a tampered body is rejected", () => {
   // The attack this exists to stop: a valid-looking notification claiming a
-  // deal moved stage, which Sellora would then score and recommend on.
+  // deal moved stage, which Selryn would then score and recommend on.
   const ts = String(NOW);
   const signature = sign("POST", URI, BODY, ts);
   const tampered = BODY.replace('"objectId":99', '"objectId":1234');
@@ -74,7 +74,7 @@ test("a signature is bound to its URI, so it cannot be replayed elsewhere", () =
 
   const result = verifyWebhookSignature({
     method: "POST",
-    uri: "https://app.sellora.ai/api/integrations/other/webhook",
+    uri: "https://app.selryn.ai/api/integrations/other/webhook",
     rawBody: BODY,
     signature,
     timestamp: ts,
@@ -175,7 +175,7 @@ test("malformed JSON yields nothing rather than throwing", () => {
   assert.deepEqual(parseNotifications('{"not":"an array"}'), []);
 });
 
-test("subscription types map to Sellora's vocabulary", () => {
+test("subscription types map to Selryn's vocabulary", () => {
   assert.equal(toEventType("deal.propertyChange", "dealstage"), "deal.stage_changed");
   assert.equal(toEventType("deal.propertyChange", "amount"), "deal.amount_changed");
   assert.equal(toEventType("deal.creation"), "deal.created");

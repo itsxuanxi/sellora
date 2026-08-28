@@ -40,7 +40,7 @@ export function InsufficientData({
         <p className="text-sm font-medium">Insufficient data</p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
           {what} needs at least {need} records to say anything meaningful. You
-          have {have}. Sellora will start reporting this once the loop has run
+          have {have}. Selryn will start reporting this once the loop has run
           enough times.
         </p>
       </div>
@@ -98,7 +98,7 @@ export function InsightsList({ insights }: { insights: LearningInsight[] }) {
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
             Findings appear once enough recommendations have been acted on and
             enough deals have closed for a pattern to be distinguishable from
-            noise. Sellora will not guess before then.
+            noise. Selryn will not guess before then.
           </p>
         </div>
       </div>

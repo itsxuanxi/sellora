@@ -66,7 +66,7 @@ export function AskTerminal() {
         <span className="size-2.5 rounded-full bg-white/15" />
         <span className="size-2.5 rounded-full bg-white/15" />
         <span className="ml-2 font-mono text-xs text-neutral-500">
-          ask.sellora
+          ask.selryn
         </span>
       </div>
       <div className="min-h-[168px] space-y-4 p-6 font-mono text-sm">

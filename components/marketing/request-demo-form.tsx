@@ -205,7 +205,7 @@ export function RequestDemoForm() {
 
         <div className="grid gap-1.5">
           <Label htmlFor={`${baseId}-goal`} required>
-            What would you like Sellora to improve?
+            What would you like Selryn to improve?
           </Label>
           <textarea
             id={`${baseId}-goal`}

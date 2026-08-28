@@ -1,5 +1,5 @@
 /**
- * The single source of truth for what Sellora costs.
+ * The single source of truth for what Selryn costs.
  *
  * Both the marketing pricing screen (components/marketing/home/pricing.tsx)
  * and the Stripe Checkout amounts (lib/billing.ts) read the cents below, so a
@@ -97,7 +97,7 @@ export const PLAN_TIERS: PlanTier[] = [
     ],
     features: [
       { label: "Everything in Starter" },
-      { label: "All Sellora agents" },
+      { label: "All Selryn agents" },
       { label: "CRM, email and calendar sync", planned: true },
       { label: "Revenue-at-risk alerts" },
       { label: "Automated workflows" },

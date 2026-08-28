@@ -12,8 +12,8 @@ import "server-only";
  *      the safe failure is "cannot", not "can".
  *
  * The dangerous permissions are deliberately narrow. Connecting an integration
- * hands Sellora standing access to a customer's CRM; approving a CRM write
- * changes data Sellora does not own; exporting data moves it out of the
+ * hands Selryn standing access to a customer's CRM; approving a CRM write
+ * changes data Selryn does not own; exporting data moves it out of the
  * tenant. Those three are owner/admin territory.
  */
 
@@ -35,7 +35,7 @@ export type Permission =
   // Working deals
   | "opportunity:write"
   | "recommendation:dismiss"
-  // Anything that leaves Sellora and touches a customer's systems or buyers
+  // Anything that leaves Selryn and touches a customer's systems or buyers
   | "action:approve"
   | "action:execute"
   // Administration

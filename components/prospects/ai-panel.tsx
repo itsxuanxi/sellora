@@ -144,7 +144,7 @@ export function AiPanel({
           </div>
           <h3 className="text-sm font-semibold">Nothing generated yet</h3>
           <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
-            Sellora will write a company summary, icebreaker, outreach angle,
+            Selryn will write a company summary, icebreaker, outreach angle,
             cold email, and LinkedIn message tailored to {prospectName}.
           </p>
         </div>

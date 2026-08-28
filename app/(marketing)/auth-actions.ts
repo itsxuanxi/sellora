@@ -127,8 +127,8 @@ export async function requestOtp(rawIdentifier: string): Promise<
     if (identifier.channel === "email") {
       const result = await sendEmail({
         to: identifier.value,
-        subject: `${code} is your Sellora sign-in code`,
-        body: `Your Sellora sign-in code is:\n\n${code}\n\nIt expires in ${OTP_TTL_MINUTES} minutes. If you didn't request this, you can ignore this email.`,
+        subject: `${code} is your Selryn sign-in code`,
+        body: `Your Selryn sign-in code is:\n\n${code}\n\nIt expires in ${OTP_TTL_MINUTES} minutes. If you didn't request this, you can ignore this email.`,
       });
       if (result.simulated && !devMode) {
         return {
@@ -148,7 +148,7 @@ export async function requestOtp(rawIdentifier: string): Promise<
     if (isSmsEnabled) {
       await sendSms(
         identifier.value,
-        `${code} is your Sellora sign-in code. It expires in ${OTP_TTL_MINUTES} minutes.`
+        `${code} is your Selryn sign-in code. It expires in ${OTP_TTL_MINUTES} minutes.`
       );
       return { ok: true, data: { channel: "phone" } };
     }

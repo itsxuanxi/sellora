@@ -54,7 +54,7 @@ export function Pricing({ startHref }: { startHref: string }) {
           Plans that grow with your pipeline.
         </h2>
         <p className="mt-5 max-w-2xl text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
-          Start with the workflows you need today. Expand as Sellora covers
+          Start with the workflows you need today. Expand as Selryn covers
           more of your revenue operation.
         </p>
       </Reveal>
@@ -345,7 +345,7 @@ function ClosingCta({ startHref }: { startHref: string }) {
             href="/demo"
             className="inline-flex h-12 items-center rounded-full border border-white/20 px-7 text-[15px] font-medium text-[#F7F8F5] transition-colors hover:border-[#A99BFF] hover:text-[#CFC6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
           >
-            Try Sellora
+            Try Selryn
           </Link>
           <Link
             href={DEMO_HREF}

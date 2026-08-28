@@ -7,7 +7,7 @@ import { recordAudit } from "@/lib/security/audit";
  * The job runner: retries, backoff, dead letters, and never failing silently.
  *
  * A sync that stops working without saying so is the worst outcome available
- * to this product. Sellora would keep scoring, keep recommending and keep
+ * to this product. Selryn would keep scoring, keep recommending and keep
  * looking confident, on data that stopped moving days ago. Every path here
  * ends in a status somebody can see.
  *

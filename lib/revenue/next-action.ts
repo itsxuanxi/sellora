@@ -13,7 +13,7 @@ import { expectedRevenue } from "@/lib/revenue/money";
  * The Next Best Action engine (§7).
  *
  * For every opportunity it returns exactly ONE action. That constraint is
- * the product: a list of five things a rep could do is the problem Sellora
+ * the product: a list of five things a rep could do is the problem Selryn
  * exists to solve, not the solution. The runner-up actions are returned
  * separately so the detail page can offer alternatives without diluting the
  * recommendation.
@@ -142,8 +142,8 @@ export function decideNextAction(input: NextActionInput): NextAction {
       headline: stage === "WON" ? "Nothing to do — this one is closed won" : "Closed — no action",
       rationale:
         stage === "WON"
-          ? "This deal is won. Sellora keeps it here so its history can inform future scoring."
-          : "This deal is closed. Sellora will resurface it if fresh buying signals appear.",
+          ? "This deal is won. Selryn keeps it here so its history can inform future scoring."
+          : "This deal is closed. Selryn will resurface it if fresh buying signals appear.",
       urgency: "monitor",
       expectedValue: 0,
       leakType: null,
@@ -201,7 +201,7 @@ export function decideNextAction(input: NextActionInput): NextAction {
     return {
       actionType: "wait",
       headline: `Wait — you contacted ${who} recently`,
-      rationale: `You reached out ${input.quietDays < 1 ? "today" : "yesterday"} and there are no new signals. Following up again this soon tends to cost more goodwill than it gains. Sellora will flag this the moment that changes.`,
+      rationale: `You reached out ${input.quietDays < 1 ? "today" : "yesterday"} and there are no new signals. Following up again this soon tends to cost more goodwill than it gains. Selryn will flag this the moment that changes.`,
       urgency: "monitor",
       expectedValue: value,
       leakType: null,

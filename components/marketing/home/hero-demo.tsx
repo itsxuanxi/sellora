@@ -15,7 +15,7 @@ import {
 /**
  * Screen 1's product surface: four scenarios of one continuous piece of work
  * on one deal — Cloudmint is detected, ranked, acted on, then the result is
- * recorded — so the hero shows Sellora working rather than four screenshots.
+ * recorded — so the hero shows Selryn working rather than four screenshots.
  *
  * Two clocks, and only two, both shared:
  *
@@ -62,7 +62,7 @@ export function HeroDemo() {
         labels={LABELS}
         ids={IDS}
         baseId={baseId}
-        ariaLabel="Sellora product walkthrough"
+        ariaLabel="Selryn product walkthrough"
         size="xl"
         fill
       />

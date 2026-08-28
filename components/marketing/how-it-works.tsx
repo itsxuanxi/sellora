@@ -2,7 +2,7 @@ const steps = [
   {
     number: "01",
     title: "Add your prospects",
-    body: "Import or create the accounts you want to win — founders, growth leads, whoever signs. Sellora enriches each with an AI company summary.",
+    body: "Import or create the accounts you want to win — founders, growth leads, whoever signs. Selryn enriches each with an AI company summary.",
   },
   {
     number: "02",
@@ -12,7 +12,7 @@ const steps = [
   {
     number: "03",
     title: "Meetings land on your calendar",
-    body: "Sellora follows up three times with escalating tones, tracks every open and reply, and moves deals through your pipeline as they warm up.",
+    body: "Selryn follows up three times with escalating tones, tracks every open and reply, and moves deals through your pipeline as they warm up.",
   },
 ];
 

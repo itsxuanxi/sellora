@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Oversized stat number that counts up from 0 once it scrolls into view —
- * the Terafab-style "1 Billion" reveal, sized down to Sellora's real numbers.
+ * the Terafab-style "1 Billion" reveal, sized down to Selryn's real numbers.
  */
 export function Counter({
   to,

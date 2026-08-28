@@ -131,7 +131,7 @@ export async function proposeAction(input: ProposeActionInput): Promise<Action> 
 
 /**
  * Stage 3b: a human approves. `editedContent` being present is what sets
- * `humanEdited` — the single most useful quality signal Sellora gets, because
+ * `humanEdited` — the single most useful quality signal Selryn gets, because
  * heavy editing means the draft was wrong in a way no rating scale captures.
  */
 export async function approveAction(
@@ -228,7 +228,7 @@ export async function executeAction(
 }
 
 /**
- * Records something the rep already did outside Sellora. Approval and
+ * Records something the rep already did outside Selryn. Approval and
  * execution are stamped together because they genuinely happened together,
  * off-platform — pretending there was a separate approval step would put a
  * fiction in the audit log.

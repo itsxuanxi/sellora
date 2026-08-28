@@ -39,7 +39,7 @@ export async function sendEmail(params: {
 
   const resend = new Resend(apiKey);
   const { data, error } = await resend.emails.send({
-    from: params.from || process.env.RESEND_FROM_EMAIL || "Sellora <onboarding@resend.dev>",
+    from: params.from || process.env.RESEND_FROM_EMAIL || "Selryn <onboarding@resend.dev>",
     to: params.to,
     subject: params.subject,
     text: params.body,

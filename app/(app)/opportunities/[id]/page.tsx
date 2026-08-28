@@ -357,7 +357,7 @@ export default async function OpportunityDetailPage({
               <LoopStrip stages={loopStages} />
             </div>
             <p className="mb-4 text-xs text-muted-foreground">
-              Sellora&apos;s read on the signals:{" "}
+              Selryn&apos;s read on the signals:{" "}
               {interpretSignals(timelineSignals, enriched.score)}
             </p>
             <LoopTimeline events={timeline} />
@@ -397,7 +397,7 @@ export default async function OpportunityDetailPage({
 
           {/* ── Recommendation history: the learning loop, visible ── */}
           {recommendations.length > 0 && (
-            <Section title="What Sellora recommended">
+            <Section title="What Selryn recommended">
               <ul className="divide-y divide-border/60">
                 {recommendations.map((r) => (
                   <li key={r.id} className="flex items-baseline justify-between gap-3 py-2.5">
@@ -587,7 +587,7 @@ function buildSummary(
 
   if (opp.primaryLeak) parts.push(opp.primaryLeak.summary);
 
-  parts.push(`Sellora's recommendation: ${opp.nextAction.headline.toLowerCase()}.`);
+  parts.push(`Selryn's recommendation: ${opp.nextAction.headline.toLowerCase()}.`);
 
   return parts.join(" ");
 }

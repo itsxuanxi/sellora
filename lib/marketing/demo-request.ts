@@ -118,7 +118,7 @@ export const demoRequestSchema = z.object({
     message: "Select the size of your sales team.",
   }),
 
-  // Optional: someone evaluating Sellora may not have picked a CRM yet, and
+  // Optional: someone evaluating Selryn may not have picked a CRM yet, and
   // forcing a choice would make them guess.
   crm: z.enum(values(CRM_OPTIONS)).optional().or(z.literal("")),
 

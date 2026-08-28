@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
  *
  * useAutoRotate decides which scenario is on screen. This decides how far
  * through that scenario we are, revealing steps one at a time so a visitor
- * watches Sellora work rather than reading a finished screenshot.
+ * watches Selryn work rather than reading a finished screenshot.
  *
  * It deliberately does not own any pause logic. `paused` and `reduced` are
  * passed in from useAutoRotate, which already tracks hover, tab visibility,

@@ -150,7 +150,7 @@ export function CinematicHero() {
             ref={subRef}
             className="mt-8 max-w-md text-pretty text-lg leading-relaxed text-neutral-500"
           >
-            Sellora detects buying signals, identifies revenue at risk, prioritizes
+            Selryn detects buying signals, identifies revenue at risk, prioritizes
             your best opportunities, and tells your sales team exactly what to do
             next.
           </p>
@@ -164,10 +164,10 @@ export function CinematicHero() {
               <ArrowUpRight className="size-4" />
             </Link>
             <Link
-              href="mailto:itsxuanxi8@icloud.com?subject=Sellora%20demo"
+              href="mailto:itsxuanxi8@icloud.com?subject=Selryn%20demo"
               className="inline-flex h-12 items-center rounded-full border border-white/15 px-7 text-[15px] font-medium text-white transition-colors hover:bg-white/5"
             >
-              See Sellora in action
+              See Selryn in action
             </Link>
           </div>
         </div>

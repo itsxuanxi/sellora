@@ -221,7 +221,7 @@ function SignalsPanel({ reduced, onExpand }: { reduced: boolean; onExpand: () =>
     >
       {!state.signalsExpanded ? (
         <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
-          Sellora has been collecting proposal activity, stakeholder changes,
+          Selryn has been collecting proposal activity, stakeholder changes,
           website intent and CRM history against this opportunity.
         </p>
       ) : (
@@ -412,7 +412,7 @@ function RecommendationPanel({
     >
       {!state.recommendationGenerated ? (
         <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
-          Sellora recommends one action, not a menu of five — with the evidence
+          Selryn recommends one action, not a menu of five — with the evidence
           it rests on attached.
         </p>
       ) : (
@@ -599,7 +599,7 @@ function ResponsePanel({
     >
       {!state.buyerResponseReceived ? (
         <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
-          Sellora keeps watching after the action goes out. A reply, a booked
+          Selryn keeps watching after the action goes out. A reply, a booked
           meeting or continued silence are all results worth recording.
         </p>
       ) : (

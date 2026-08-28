@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  * protects an explicit list of app routes and /demo is not on it, so this is
  * public without any auth change.
  *
- * `.mkt` carries Sellora's warm-white palette, so the demo looks like the rest
+ * `.mkt` carries Selryn's warm-white palette, so the demo looks like the rest
  * of the product rather than a separate microsite.
  */
 export default function DemoLayout({ children }: { children: React.ReactNode }) {

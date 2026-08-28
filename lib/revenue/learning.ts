@@ -308,11 +308,11 @@ export interface InfluencedTotals {
 }
 
 /**
- * Money on deals Sellora demonstrably touched — where a recommendation led to
+ * Money on deals Selryn demonstrably touched — where a recommendation led to
  * an executed action while the deal was open.
  *
  * "Influenced" is a factual claim about contact, not a claim about credit:
- * these deals had a Sellora-prompted action taken on them. It is not asserted
+ * these deals had a Selryn-prompted action taken on them. It is not asserted
  * that they closed because of it.
  */
 export async function getInfluencedTotals(orgId: string): Promise<InfluencedTotals> {

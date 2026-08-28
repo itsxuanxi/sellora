@@ -35,7 +35,7 @@ export type AuditAction =
   | "member.invited"
   | "member.role_changed"
   | "member.removed"
-  // Identity decisions that alter what Sellora believes
+  // Identity decisions that alter what Selryn believes
   | "identity.manual_override";
 
 export interface AuditEntry {

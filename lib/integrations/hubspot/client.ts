@@ -5,7 +5,7 @@ import { getAccessToken } from "@/lib/integrations/hubspot/oauth";
  * The HubSpot REST client: retries, backoff, and rate-limit manners.
  *
  * HubSpot's limits are per-portal, not per-integration. Exceeding them does
- * not just fail Sellora's request - it degrades every other tool the customer
+ * not just fail Selryn's request - it degrades every other tool the customer
  * has connected to the same portal. So this client backs off on the customer's
  * behalf rather than hammering until it wins.
  *

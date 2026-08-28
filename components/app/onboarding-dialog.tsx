@@ -36,7 +36,7 @@ export function OnboardingDialog({
       const result = await completeOnboarding({ name, orgName });
       if (result.ok) {
         setDone(true);
-        toast.success(`Welcome to Sellora, ${name.split(/\s+/)[0]}!`);
+        toast.success(`Welcome to Selryn, ${name.split(/\s+/)[0]}!`);
       } else {
         toast.error(result.error);
       }
@@ -53,7 +53,7 @@ export function OnboardingDialog({
       >
         <DialogHeader className="items-center text-center">
           <LogoMark size="xl" />
-          <DialogTitle className="mt-2">Welcome to Sellora 👋</DialogTitle>
+          <DialogTitle className="mt-2">Welcome to Selryn 👋</DialogTitle>
           <DialogDescription>
             Two quick details so your outreach is signed properly — you can
             change both anytime in Settings.
