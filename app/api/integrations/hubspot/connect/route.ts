@@ -29,6 +29,19 @@ export async function GET(req: Request) {
     const session = await requireSession();
     requirePermission(session.role, "integration:connect");
 
+    // A sandbox must never hold a real customer credential. Connecting a CRM
+    // is the one outbound effect that cannot be meaningfully simulated —
+    // there is no fake OAuth grant — so it is refused rather than faked.
+    if (session.org.isSample) {
+      return NextResponse.json(
+        {
+          error:
+            "This is a sandbox workspace. Connecting a real CRM is disabled here — create a real workspace to connect HubSpot.",
+        },
+        { status: 403 }
+      );
+    }
+
     if (!isHubspotConfigured()) {
       return NextResponse.json(
         {

@@ -48,10 +48,13 @@ const TONE_ICON: Record<Tone, typeof CheckCircle2> = {
 export function IntegrationHealthPanel({
   health,
   hubspotConfigured,
+  sandbox = false,
 }: {
   health: IntegrationHealth[];
   /** False when the deployment has no HubSpot credentials at all. */
   hubspotConfigured: boolean;
+  /** Sandbox workspaces may not hold a real customer credential. */
+  sandbox?: boolean;
 }) {
   return (
     <section className="rounded-2xl border border-border/70 bg-card p-5">
@@ -63,15 +66,30 @@ export function IntegrationHealthPanel({
             delayed rather than connected.
           </p>
         </div>
-        {hubspotConfigured && (
-          <Link
-            href="/api/integrations/hubspot/connect"
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-colors hover:opacity-90"
-          >
-            <Plug className="size-3.5" aria-hidden />
-            Connect HubSpot
-          </Link>
-        )}
+        {hubspotConfigured &&
+          (sandbox ? (
+            // Shown, disabled and explained — never a live-looking button that
+            // would fail on click.
+            <span
+              aria-disabled
+              title="Sandbox workspaces cannot hold a real CRM credential."
+              className="inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-full border border-border/70 px-4 text-[13px] font-medium text-muted-foreground"
+            >
+              <Plug className="size-3.5" aria-hidden />
+              Connect HubSpot
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide">
+                Real workspace only
+              </span>
+            </span>
+          ) : (
+            <Link
+              href="/api/integrations/hubspot/connect"
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-colors hover:opacity-90"
+            >
+              <Plug className="size-3.5" aria-hidden />
+              Connect HubSpot
+            </Link>
+          ))}
       </div>
 
       {!hubspotConfigured && (

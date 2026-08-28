@@ -74,6 +74,7 @@ export default async function IntentDashboardPage() {
           trustworthy as what is feeding it. */}
       <div className="mb-6">
         <IntegrationHealthPanel
+          sandbox={session.org.isSample}
           health={health}
           hubspotConfigured={isHubspotConfigured() && isEncryptionConfigured()}
         />
