@@ -30,24 +30,36 @@ model Organization {
   // planStatus "trialing" meters against TRIAL_LIMITS. Without Stripe keys the
   // upgrade flow still works in dev mode (subscription ids get a "sim_"
   // prefix and no money moves).
-  plan                 String        @default("free")
+  plan                 String    @default("free")
   planInterval         String? // month | year
   planStatus           String? // active | past_due | canceled
   planRenewsAt         DateTime?
-  stripeCustomerId     String?       @unique
-  stripeSubscriptionId String?       @unique
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
-  users                User[]
-  prospects            Prospect[]
-  campaigns            Campaign[]
-  emails               Email[]
-  activities           Activity[]
-  insights             Insight[]
-  settings             Settings?
-  icpProfile           IcpProfile?
-  accounts             Account[]
-  agentActions         AgentAction[]
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+
+  // ── Sandbox / sample data ──
+  // isSample marks a throwaway sandbox workspace (the public demo). Every
+  // outbound side effect is simulated for these orgs — see lib/sandbox.ts.
+  // sampleSeededAt is set on ANY org holding sample rows, including a real
+  // customer's workspace that chose "Load sample data" at onboarding; it
+  // drives the persistent "Sample data" badge and the one-click clear.
+  isSample        Boolean   @default(false)
+  sampleSeededAt  DateTime?
+  // Anonymous sandbox sessions are reaped after this instant.
+  sampleExpiresAt DateTime?
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  users        User[]
+  prospects    Prospect[]
+  campaigns    Campaign[]
+  emails       Email[]
+  activities   Activity[]
+  insights     Insight[]
+  settings     Settings?
+  icpProfile   IcpProfile?
+  accounts     Account[]
+  agentActions AgentAction[]
 
   // Vertical Buying Intent → Qualified Meeting Engine
   intentCampaigns      IntentCampaign[]
@@ -108,6 +120,8 @@ model Account {
   region      String?
   source      String       @default("manual") // manual | imported | ai_suggested
   verified    Boolean      @default(true) // false for ai_suggested until confirmed
+  /// Sample row: excluded from real sends and removable in one click.
+  isSample    Boolean      @default(false)
 
   // Research brief (AI-generated; confidence + sources always shown)
   summary          String?
@@ -269,6 +283,8 @@ model Prospect {
   // NEW_LEAD | CONTACTED | INTERESTED | MEETING | PROPOSAL | WON | LOST
   stage       String       @default("NEW_LEAD")
   notes       String?
+  /// Sample row: never a real send target. See lib/sandbox.ts.
+  isSample    Boolean      @default(false)
   accountId   String?
   account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
@@ -689,10 +705,12 @@ model Opportunity {
   primaryContactId String?
   primaryContact   Prospect? @relation(fields: [primaryContactId], references: [id], onDelete: SetNull)
 
-  name   String
+  name     String
   // NEW | QUALIFYING | MEETING | PROPOSAL | NEGOTIATION | WON | LOST
-  stage  String @default("NEW")
-  source String @default("manual") // manual | imported | derived_from_prospect
+  stage    String  @default("NEW")
+  source   String  @default("manual") // manual | imported | derived_from_prospect
+  /// Sample row: removable in one click.
+  isSample Boolean @default(false)
 
   // ── Economics ──
   // dealValue is the working estimate. `dealValueBasis` records where the

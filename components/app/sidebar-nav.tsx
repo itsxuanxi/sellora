@@ -35,7 +35,8 @@ export interface NavItem {
   name: string;
   href: string;
   icon: typeof LayoutDashboard;
-  comingSoon?: boolean;
+  /** Not built yet. Shown, disabled, and labelled Planned — never faked. */
+  planned?: boolean;
 }
 
 /**
@@ -50,7 +51,7 @@ export const primaryNav: NavItem[] = [
   { name: "Recover", href: "/recover", icon: LifeBuoy },
   { name: "Signals", href: "/signals", icon: Radio },
   { name: "Conversations", href: "/campaigns", icon: Mail },
-  { name: "Meetings", href: "#", icon: CalendarCheck, comingSoon: true },
+  { name: "Meetings", href: "#", icon: CalendarCheck, planned: true },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 
@@ -85,7 +86,7 @@ function NavLink({
   resolve: NavResolver;
 }) {
   const resolved = resolve(item);
-  const disabled = item.comingSoon || resolved.disabled;
+  const disabled = item.planned || resolved.disabled;
 
   if (disabled) {
     return (
@@ -95,9 +96,9 @@ function NavLink({
       >
         <item.icon className="size-4" />
         {item.name}
-        {item.comingSoon && (
+        {item.planned && (
           <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
-            Soon
+            Planned
           </span>
         )}
       </span>

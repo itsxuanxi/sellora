@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { isSimulated } from "@/lib/sandbox";
 import type { SessionContext } from "@/lib/auth";
 import { generateIntentBrief, type EvidenceItem } from "@/lib/intent/ai";
 
@@ -154,11 +155,21 @@ export async function approveAndSendDraft(session: SessionContext, draftId: stri
     throw new Error("No contact email on file for this account — add a contact first.");
   }
 
+  // Either a sandbox workspace or a sample contact suppresses the send. The
+  // rest of this function is unchanged, so the draft still transitions to
+  // SENT and the audit trail still records it — the demo exercises the real
+  // code path, it just never reaches a real inbox.
+  const sandbox = isSimulated({
+    orgIsSample: session.org.isSample,
+    recordIsSample: draft.prospect.isSample,
+  });
+
   const result = await sendEmail({
     to: draft.prospect.email,
     subject: draft.subject,
     body: draft.body,
     orgApiKey: session.org.settings?.resendApiKey,
+    sandbox,
   });
 
   const updated = await db.outreachDraft.update({
@@ -175,7 +186,11 @@ export async function approveAndSendDraft(session: SessionContext, draftId: stri
     session.orgId,
     "send_intent_outreach",
     `Sent outreach to ${draft.account.name}`,
-    result.simulated ? "Simulated send (no Resend key configured)." : "Sent via Resend.",
+    result.sandbox
+      ? "Simulated send — sample data is never delivered to a real inbox."
+      : result.simulated
+        ? "Simulated send (no Resend key configured)."
+        : "Sent via Resend.",
     draft.accountId,
     session.id
   );

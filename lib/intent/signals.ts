@@ -1,22 +1,16 @@
 import "server-only";
-import crypto from "node:crypto";
 import { db } from "@/lib/db";
 import type { SessionContext } from "@/lib/auth";
-import {
-  SIGNAL_TTL_DAYS,
-  SIGNAL_WEIGHTS,
-  type SignalType,
-} from "@/lib/intent/config";
+import { SIGNAL_TTL_DAYS, type SignalType } from "@/lib/intent/config";
 import { computeIntentScore, type Confidence } from "@/lib/intent/scoring";
+import {
+  CONFIDENCE_SCORE,
+  dedupeKey,
+  signalImportance,
+} from "@/lib/intent/signal-facts";
 
-/** Stable dedup key: same type + normalized title + same calendar day of the
- * real-world event collapses to one row, so re-importing the same CSV or
- * re-running detection never creates duplicates. */
-export function dedupeKey(signalType: string, title: string, occurredAt: Date): string {
-  const day = occurredAt.toISOString().slice(0, 10);
-  const norm = title.trim().toLowerCase().replace(/\s+/g, " ");
-  return crypto.createHash("sha1").update(`${signalType}|${norm}|${day}`).digest("hex").slice(0, 24);
-}
+// Re-exported so existing importers of this module keep working.
+export { dedupeKey, signalImportance };
 
 export interface RawSignalInput {
   signalType: SignalType | string;
@@ -36,23 +30,6 @@ export interface RawSignalInput {
   /** Machine-readable fields parsed from the payload at ingest, so scoring
    *  rules never re-parse `rawData`. */
   normalizedProperties?: Record<string, unknown> | null;
-}
-
-/** The band → number fallback, used when a provider gives no numeric score. */
-const CONFIDENCE_SCORE: Record<string, number> = { low: 30, medium: 60, high: 90 };
-
-/**
- * 0-100 importance for a signal type, derived from the scoring weight rather
- * than maintained as a second list that could disagree with it. Negative
- * weights (a no-show, prolonged silence) are strong evidence too — importance
- * is magnitude, so it uses the absolute value while the sign stays in
- * SIGNAL_WEIGHTS where the arithmetic happens.
- */
-export function signalImportance(signalType: string): number {
-  const weight = SIGNAL_WEIGHTS[signalType as SignalType];
-  if (weight === undefined) return 50;
-  const maxWeight = Math.max(...Object.values(SIGNAL_WEIGHTS).map(Math.abs));
-  return Math.round((Math.abs(weight) / maxWeight) * 100);
 }
 
 /** Finds-or-creates the small SignalSource lookup rows on demand. */

@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Bot, ChevronLeft, Eye, ShieldCheck, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Bot,
+  ChevronLeft,
+  Database,
+  Eye,
+  FlaskConical,
+  Loader2,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +22,7 @@ import {
   completeBusinessOnboarding,
   skipBusinessOnboarding,
 } from "@/app/onboarding/actions";
+import { loadSampleDataAction } from "@/app/(app)/sample-actions";
 
 const AUTONOMY_OPTIONS = [
   {
@@ -36,6 +47,10 @@ const AUTONOMY_OPTIONS = [
 ];
 
 export function OnboardingWizard() {
+  // Nothing about the workspace is decided until this is answered, because
+  // the two branches want different things: sample data brings its own ICP
+  // and needs no questions, real data needs the profile the agent scores on.
+  const [source, setSource] = useState<"sample" | "real" | null>(null);
   const [step, setStep] = useState(0);
   const [pending, startTransition] = useTransition();
   const [skipping, startSkip] = useTransition();
@@ -71,6 +86,10 @@ export function OnboardingWizard() {
       // On success the action redirects; only failures return.
       if (result && !result.ok) toast.error(result.error);
     });
+  }
+
+  if (source === null) {
+    return <DataSourceStep onChoose={setSource} />;
   }
 
   return (
@@ -263,6 +282,92 @@ export function OnboardingWizard() {
               {pending ? "Building your ICP…" : "Generate my ICP"}
             </Button>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The fork every new workspace starts at.
+ *
+ * Offering sample data up front is what lets someone evaluate Selryn before
+ * they have connected anything — and because the sample rows are tagged, the
+ * decision is reversible from the banner on every screen afterwards.
+ */
+function DataSourceStep({
+  onChoose,
+}: {
+  onChoose: (source: "sample" | "real") => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  function loadSample() {
+    startTransition(async () => {
+      const result = await loadSampleDataAction();
+      if (!result.ok) {
+        toast.error(result.error ?? "Could not load the sample data.");
+        return;
+      }
+      router.push("/dashboard");
+    });
+  }
+
+  return (
+    <div className="w-full max-w-xl">
+      <div className="rounded-2xl border border-border/70 bg-card p-8 shadow-sm">
+        <h2 className="text-xl font-semibold tracking-tight">
+          How do you want to start?
+        </h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Both lead to the same product. Sample data lets you judge it in a
+          minute; you can clear it in one click whenever you like.
+        </p>
+
+        <div className="mt-6 space-y-3">
+          <button
+            type="button"
+            onClick={loadSample}
+            disabled={pending}
+            className="flex w-full gap-4 rounded-xl border border-border/70 p-4 text-left transition-colors hover:border-primary/40 hover:bg-accent/40 disabled:opacity-60"
+          >
+            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent">
+              {pending ? (
+                <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
+              ) : (
+                <FlaskConical className="size-4 text-primary" aria-hidden />
+              )}
+            </span>
+            <span className="min-w-0">
+              <span className="block font-medium">
+                {pending ? "Loading sample data…" : "Load sample data"}
+              </span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
+                Nine invented companies with signals, scores, recommendations
+                and buyer responses — the whole loop, working. Nothing is ever
+                sent to them, and every screen says so.
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChoose("real")}
+            disabled={pending}
+            className="flex w-full gap-4 rounded-xl border border-border/70 p-4 text-left transition-colors hover:border-primary/40 hover:bg-accent/40 disabled:opacity-60"
+          >
+            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent">
+              <Database className="size-4 text-primary" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-medium">Connect real data</span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
+                Tell the agent what you sell and who you sell to, then import
+                your accounts or connect a CRM.
+              </span>
+            </span>
+          </button>
         </div>
       </div>
     </div>

@@ -2,13 +2,17 @@
 
 import { redirect } from "next/navigation";
 import {
-  getOrCreateDemoUser,
+  createSandboxWorkspace,
   isClerkEnabled,
   provisionWorkspace,
 } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
-import { createSession, destroySession } from "@/lib/local-auth";
+import {
+  createSession,
+  destroySession,
+  getLocalSessionUser,
+} from "@/lib/local-auth";
 import {
   generateOtpCode,
   hashOtpCode,
@@ -225,14 +229,23 @@ export async function verifyOtp(
   redirect("/dashboard");
 }
 
-/** One-click access to the shared, seeded demo workspace. */
+/**
+ * Opens a private sandbox workspace — the real product, seeded with sample
+ * data, with every outbound side effect simulated.
+ *
+ * A visitor who already holds a sandbox session keeps it, so a refresh or a
+ * second click does not throw away the work they have done in the tour.
+ */
 export async function signInToDemo(): Promise<ActionResult> {
   if (isClerkEnabled) return { ok: false, error: "Demo mode is disabled." };
   try {
-    const demo = await getOrCreateDemoUser();
-    await createSession(demo.id);
+    const existing = await getLocalSessionUser();
+    if (!existing?.org.isSample) {
+      const sandbox = await createSandboxWorkspace();
+      await createSession(sandbox.id);
+    }
   } catch (err) {
-    return actionError(err, "Could not open the demo workspace.");
+    return actionError(err, "Could not open the sandbox workspace.");
   }
   redirect("/dashboard");
 }
