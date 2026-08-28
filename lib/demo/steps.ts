@@ -66,7 +66,7 @@ export const GUIDED_DEMO_STEPS: GuidedDemoStep[] = [
     eyebrow: "Detect",
     title: "Start with the opportunity most likely to move revenue",
     description:
-      "Selryn ranks every open opportunity by expected revenue, urgency and recent buying signals.",
+      "Every open opportunity, sorted by expected revenue — deal value multiplied by win probability. The arithmetic is a column, so the ranking can be checked rather than trusted.",
     instruction: "Click Cloudmint to open the opportunity.",
     // The pipeline row is full-width, so there is no column beside it.
     placement: "bottom",

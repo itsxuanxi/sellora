@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/app/page-header";
 import { useCompleteStep, useDemo } from "@/components/demo/demo-store";
 import { DemoDataBadge } from "@/components/demo/demo-chrome";
 import { DEMO_ROUTES } from "@/lib/demo/steps";
@@ -34,44 +35,34 @@ export default function DemoAnalyticsPage() {
   const router = useRouter();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--mkt-muted)]">
-            Outcome
-          </p>
-          <h1 className="mt-2 text-2xl font-medium tracking-tight sm:text-[28px]">
-            Close the signal–action–outcome loop
-          </h1>
-          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[var(--mkt-muted)]">
-            Selryn records which signals led to which recommendation, what the
-            team executed, how the buyer responded, and how the opportunity
-            changed.
-          </p>
-        </div>
+    <>
+      <PageHeader
+        title="Close the signal–action–outcome loop"
+        description="Selryn records which signals led to which recommendation, what the team executed, how the buyer responded, and how the opportunity changed."
+      >
         <DemoDataBadge />
-      </div>
+      </PageHeader>
 
       {/* The chain */}
-      <ol className="mt-8 grid gap-3 lg:grid-cols-5">
+      <ol className="grid gap-3 lg:grid-cols-5">
         {DEMO_LOOP.map((link, i) => (
           <li key={link.stage} className="relative">
-            <div className="h-full rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-4">
+            <div className="h-full rounded-2xl border border-border/70 bg-card p-4">
               <div className="flex items-center gap-2">
-                <span className="flex size-5 items-center justify-center rounded-full bg-[var(--mkt-brand-wash)] font-mono text-[10px] text-[var(--mkt-brand-deep)]">
+                <span className="flex size-5 items-center justify-center rounded-full bg-accent font-mono text-[10px] text-primary">
                   {i + 1}
                 </span>
-                <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--mkt-brand-deep)]">
+                <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-primary">
                   {link.stage}
                 </span>
               </div>
-              <p className="mt-2.5 text-[13px] leading-relaxed text-[var(--mkt-ink)]">
+              <p className="mt-2.5 text-[13px] leading-relaxed text-foreground">
                 {link.body}
               </p>
             </div>
             {i < DEMO_LOOP.length - 1 && (
               <ArrowRight
-                className="absolute -right-[13px] top-1/2 hidden size-4 -translate-y-1/2 text-[var(--mkt-line)] lg:block"
+                className="absolute -right-[13px] top-1/2 hidden size-4 -translate-y-1/2 text-border lg:block"
                 aria-hidden
               />
             )}
@@ -80,7 +71,7 @@ export default function DemoAnalyticsPage() {
       </ol>
 
       {/* Outcome numbers */}
-      <section className="mt-8 rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-5">
+      <section className="mt-8 rounded-2xl border border-border/70 bg-card p-5">
         <h2 className="text-[15px] font-medium tracking-tight">
           What changed on {DEMO_OPPORTUNITY.name}
         </h2>
@@ -102,7 +93,7 @@ export default function DemoAnalyticsPage() {
             tone="good"
           />
         </dl>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--mkt-muted)]">
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
           The opportunity advanced from {DEMO_OPPORTUNITY.initialStage} to{" "}
           {DEMO_OPPORTUNITY.advancedStage}. It has not been won, and Selryn is
           not claiming to have closed it — the loop records what happened, in
@@ -116,7 +107,7 @@ export default function DemoAnalyticsPage() {
             type="button"
             data-demo-target="complete-demo"
             onClick={() => completeStep("demoCompleted")}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-[var(--mkt-brand)] px-7 text-[15px] font-medium text-white transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]"
+            className="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <Check className="size-4" strokeWidth={3} aria-hidden />
             Complete demo
@@ -125,7 +116,7 @@ export default function DemoAnalyticsPage() {
       ) : (
         <CompletionPanel onReplay={() => router.push(DEMO_ROUTES.workspace)} />
       )}
-    </div>
+    </>
   );
 }
 
@@ -141,15 +132,15 @@ function Stat({
   tone?: "good";
 }) {
   return (
-    <div className="rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-4 py-3">
-      <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
+    <div className="rounded-xl border border-border/70 bg-muted/40 px-4 py-3">
+      <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </dt>
       <dd
         className={cn(
           "mt-1 text-[20px] tabular-nums leading-none tracking-tight",
           strong && "font-medium",
-          tone === "good" && "text-[var(--mkt-success)]"
+          tone === "good" && "text-emerald-600 dark:text-emerald-400"
         )}
       >
         {value}
@@ -164,7 +155,7 @@ function CompletionPanel({ onReplay }: { onReplay: () => void }) {
   return (
     <section
       role="status"
-      className="mt-8 overflow-hidden rounded-3xl bg-[var(--mkt-dark)] px-6 py-10 sm:px-10 sm:py-12"
+      className="mt-8 overflow-hidden rounded-3xl bg-foreground px-6 py-10 sm:px-10 sm:py-12"
     >
       <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#A99BFF]">
         Demo complete
@@ -197,9 +188,9 @@ function CompletionPanel({ onReplay }: { onReplay: () => void }) {
       <div className="mt-8 flex flex-wrap gap-3">
         <Link
           href="/sign-in"
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-[#F7F8F5] px-6 text-[14px] font-medium text-[var(--mkt-dark)] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-[#F7F8F5] px-6 text-[14px] font-medium text-foreground transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-foreground"
         >
-          Start a 14-day free trial
+          Start free
           <ArrowRight className="size-4" aria-hidden />
         </Link>
         <Link

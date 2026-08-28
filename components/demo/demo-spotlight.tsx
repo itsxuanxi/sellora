@@ -228,7 +228,7 @@ export function DemoSpotlight() {
       aria-modal="false"
       aria-labelledby="demo-coachmark-title"
       className={cn(
-        "pointer-events-auto z-[70] rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-5 shadow-[0_24px_70px_rgba(20,20,30,0.28)]",
+        "pointer-events-auto z-[70] rounded-2xl border border-border/70 bg-card p-5 shadow-[0_24px_70px_rgba(20,20,30,0.28)]",
         isMobile ? "fixed inset-x-3 bottom-3" : "fixed w-[348px]"
       )}
       style={
@@ -238,10 +238,10 @@ export function DemoSpotlight() {
       }
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--mkt-brand-deep)]">
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-primary">
           {step.eyebrow}
         </span>
-        <span className="text-[10px] font-medium uppercase tracking-[0.1em] tabular-nums text-[var(--mkt-muted)]">
+        <span className="text-[10px] font-medium uppercase tracking-[0.1em] tabular-nums text-muted-foreground">
           Step {stepNumber} of {totalSteps}
         </span>
       </div>
@@ -252,7 +252,7 @@ export function DemoSpotlight() {
             key={i}
             className={cn(
               "h-[3px] flex-1 rounded-full transition-colors duration-300",
-              i < stepNumber ? "bg-[var(--mkt-brand)]" : "bg-[var(--mkt-line)]"
+              i < stepNumber ? "bg-primary" : "bg-border"
             )}
           />
         ))}
@@ -260,17 +260,17 @@ export function DemoSpotlight() {
 
       <h2
         id="demo-coachmark-title"
-        className="mt-3.5 text-[15px] font-medium leading-snug tracking-tight text-[var(--mkt-ink)]"
+        className="mt-3.5 text-[15px] font-medium leading-snug tracking-tight text-foreground"
       >
         {step.title}
       </h2>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--mkt-muted)]">
+      <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
         {step.description}
       </p>
 
       {/* The instruction sits on its own tinted ground so the one thing to do
           next is never mistaken for more explanatory prose. */}
-      <p className="mt-3 rounded-lg bg-[var(--mkt-brand-wash)] px-3 py-2 text-[13px] font-medium leading-snug text-[var(--mkt-brand-deep)]">
+      <p className="mt-3 rounded-lg bg-accent px-3 py-2 text-[13px] font-medium leading-snug text-primary">
         {step.instruction}
       </p>
 
@@ -279,7 +279,7 @@ export function DemoSpotlight() {
           type="button"
           onClick={back}
           disabled={stepNumber === 1}
-          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
         >
           <ArrowLeft className="size-3" aria-hidden />
           Back
@@ -287,7 +287,7 @@ export function DemoSpotlight() {
         <button
           type="button"
           onClick={skipTour}
-          className="rounded-full px-2 py-1 text-[12px] text-[var(--mkt-muted)] underline decoration-[var(--mkt-line)] underline-offset-4 transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)]"
+          className="rounded-full px-2 py-1 text-[12px] text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Skip tour
         </button>
@@ -297,7 +297,7 @@ export function DemoSpotlight() {
           only way forward, which is the difference between using the product
           and paging through screenshots. */}
       {step.requiredAction === "click" && !currentTaskDone && (
-        <p className="mt-3 border-t border-[var(--mkt-line)] pt-2.5 text-[11px] text-[var(--mkt-muted)]">
+        <p className="mt-3 border-t border-border/70 pt-2.5 text-[11px] text-muted-foreground">
           Complete the highlighted step to continue.
         </p>
       )}
@@ -305,12 +305,10 @@ export function DemoSpotlight() {
   );
 
   return createPortal(
-    // `mkt` is essential, not cosmetic: every --mkt-* colour is scoped to that
-    // class in globals.css, and this subtree is portalled to document.body —
-    // outside the demo layout that carries it. Without the class the variables
-    // resolve to nothing and the coachmark renders with a transparent
-    // background over a dimmed page, which is illegible.
-    <div className="mkt pointer-events-none fixed inset-0 z-[60]">
+    // Portalled to document.body, outside the demo layout — which is fine now
+    // that the demo paints with the app's own tokens: those are defined on
+    // :root and resolve anywhere on the page.
+    <div className="pointer-events-none fixed inset-0 z-[60]">
       {/* Announce each step for screen readers without stealing focus. */}
       <p className="sr-only" aria-live="polite">
         Step {stepNumber} of {totalSteps}. {step.title}. {step.instruction}
@@ -337,7 +335,7 @@ export function DemoSpotlight() {
           <div
             aria-hidden
             className={cn(
-              "pointer-events-none fixed rounded-xl ring-2 ring-[var(--mkt-brand)]",
+              "pointer-events-none fixed rounded-xl ring-2 ring-ring",
               "shadow-[0_0_0_6px_rgba(103,87,229,0.16)]",
               !reduced && "transition-all duration-300 ease-out"
             )}

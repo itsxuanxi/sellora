@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Check,
   ChevronDown,
@@ -14,6 +15,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/app/page-header";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useCountUp } from "@/components/marketing/home/use-count-up";
 import { useCompleteStep, useDemo } from "@/components/demo/demo-store";
@@ -57,13 +59,14 @@ export default function DemoOpportunityPage() {
   useEffect(() => setReduced(prefersReducedMotion()), []);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+    <>
       <button
         type="button"
         onClick={() => router.push(DEMO_ROUTES.workspace)}
-        className="text-[12px] text-[var(--mkt-muted)] underline decoration-[var(--mkt-line)] underline-offset-4 transition-colors hover:text-[var(--mkt-ink)]"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        ← Back to workspace
+        <ArrowLeft className="size-3.5" />
+        Opportunities
       </button>
 
       <Header />
@@ -94,7 +97,7 @@ export default function DemoOpportunityPage() {
           <AccountPanel />
         </aside>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -103,33 +106,22 @@ export default function DemoOpportunityPage() {
 function Header() {
   const { state } = useDemo();
   return (
-    <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--mkt-muted)]">
-          Opportunity
-        </p>
-        <h1 className="mt-2 text-2xl font-medium tracking-tight sm:text-[28px]">
-          {DEMO_OPPORTUNITY.name}
-        </h1>
-        <p className="mt-2 text-[13.5px] text-[var(--mkt-muted)]">
-          {DEMO_ACCOUNT.industry} · {DEMO_ACCOUNT.employees} employees ·{" "}
-          {DEMO_ACCOUNT.region} · Owner {DEMO_OPPORTUNITY.owner}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] transition-colors",
-            state.opportunityUpdated
-              ? "bg-[var(--mkt-success)]/10 text-[var(--mkt-success)]"
-              : "bg-[var(--mkt-surface-2)] text-[var(--mkt-muted)]"
-          )}
-        >
-          {state.stage}
-        </span>
-        <DemoDataBadge />
-      </div>
-    </div>
+    <PageHeader
+      title={DEMO_ACCOUNT.company}
+      description={`${DEMO_CONTACT.name} · ${DEMO_CONTACT.role} · ${DEMO_ACCOUNT.industry}`}
+    >
+      <span
+        className={cn(
+          "rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] transition-colors",
+          state.opportunityUpdated
+            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            : "bg-muted/40 text-muted-foreground"
+        )}
+      >
+        {state.stage}
+      </span>
+      <DemoDataBadge />
+    </PageHeader>
   );
 }
 
@@ -147,11 +139,11 @@ function Panel({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-5">
+    <section className="rounded-2xl border border-border/70 bg-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           {eyebrow && (
-            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--mkt-brand-deep)]">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-primary">
               {eyebrow}
             </p>
           )}
@@ -186,10 +178,10 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-9 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-surface)] disabled:opacity-50",
+        "inline-flex h-9 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-50",
         variant === "primary"
-          ? "bg-[var(--mkt-brand)] text-white hover:bg-[var(--mkt-brand-deep)]"
-          : "border border-[var(--mkt-line)] text-[var(--mkt-ink)] hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-brand-deep)]"
+          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+          : "border border-border/70 text-foreground hover:border-primary hover:text-primary"
       )}
     >
       {Icon && <Icon className="size-3.5" aria-hidden />}
@@ -213,14 +205,14 @@ function SignalsPanel({ reduced, onExpand }: { reduced: boolean; onExpand: () =>
             View signals
           </ActionButton>
         ) : (
-          <span className="text-[12px] tabular-nums text-[var(--mkt-muted)]">
+          <span className="text-[12px] tabular-nums text-muted-foreground">
             {DEMO_SIGNALS.length} signals
           </span>
         )
       }
     >
       {!state.signalsExpanded ? (
-        <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
+        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
           Selryn has been collecting proposal activity, stakeholder changes,
           website intent and CRM history against this opportunity.
         </p>
@@ -236,8 +228,8 @@ function SignalsPanel({ reduced, onExpand }: { reduced: boolean; onExpand: () =>
                 className={cn(
                   "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border",
                   s.tone === "risk"
-                    ? "border-[var(--mkt-warn)]/40 bg-[var(--mkt-warn)]/10 text-[var(--mkt-warn-ink)]"
-                    : "border-[var(--mkt-success)]/30 bg-[var(--mkt-success)]/10 text-[var(--mkt-success)]"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                 )}
                 aria-hidden
               >
@@ -246,11 +238,11 @@ function SignalsPanel({ reduced, onExpand }: { reduced: boolean; onExpand: () =>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="text-[13.5px] font-medium">{s.label}</p>
-                  <span className="shrink-0 text-[11.5px] tabular-nums text-[var(--mkt-muted)]">
+                  <span className="shrink-0 text-[11.5px] tabular-nums text-muted-foreground">
                     {s.at}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--mkt-muted)]">
+                <p className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground">
                   {s.detail}
                 </p>
               </div>
@@ -306,15 +298,15 @@ function AnalysisPanel({ reduced, onDone }: { reduced: boolean; onDone: () => vo
     >
       {running && (
         <div className="mt-4 flex items-center gap-2.5" aria-live="polite">
-          <Loader2 className="size-4 animate-spin text-[var(--mkt-brand)]" aria-hidden />
-          <span className="text-[13.5px] text-[var(--mkt-muted)]">
+          <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
+          <span className="text-[13.5px] text-muted-foreground">
             {ANALYSIS_BEATS[beat]}…
           </span>
         </div>
       )}
 
       {!running && !state.analysisCompleted && (
-        <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
+        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
           Six signals recorded. Run the analysis to score intent, weigh the risk
           from four days of silence, and put a number on what is exposed.
         </p>
@@ -332,7 +324,7 @@ function AnalysisPanel({ reduced, onDone }: { reduced: boolean; onDone: () => vo
               tone="risk"
             />
           </dl>
-          <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--mkt-muted)]">
+          <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
             Intent is high and the buying committee has grown — but the deal has
             been silent for four days, which is what puts{" "}
             {formatUsd(INITIAL_EXPECTED)} of expected revenue at risk.
@@ -353,14 +345,14 @@ function Metric({
   tone: "good" | "risk";
 }) {
   return (
-    <div className="rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-3 py-2.5">
-      <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
+    <div className="rounded-xl border border-border/70 bg-muted/40 px-3 py-2.5">
+      <dt className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </dt>
       <dd
         className={cn(
           "mt-1 text-[18px] font-medium tabular-nums leading-none tracking-tight",
-          tone === "risk" ? "text-[var(--mkt-warn-ink)]" : "text-[var(--mkt-success)]"
+          tone === "risk" ? "text-amber-700 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
         )}
       >
         {value}
@@ -411,28 +403,28 @@ function RecommendationPanel({
       }
     >
       {!state.recommendationGenerated ? (
-        <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
+        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
           Selryn recommends one action, not a menu of five — with the evidence
           it rests on attached.
         </p>
       ) : (
         <div className="mt-4">
-          <div className="rounded-xl border border-[var(--mkt-brand)]/30 bg-[var(--mkt-brand-wash)] p-4">
+          <div className="rounded-xl border border-primary/30 bg-accent p-4">
             <p className="text-[15px] font-medium leading-snug">
               {DEMO_RECOMMENDATION.headline}
             </p>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--mkt-muted)]">
+            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
               {DEMO_RECOMMENDATION.reason}
             </p>
 
-            <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--mkt-brand-deep)]">
+            <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.12em] text-primary">
               Supporting signals
             </p>
             <ul className="mt-1.5 grid gap-1 sm:grid-cols-2">
               {DEMO_RECOMMENDATION.supporting.map((s) => (
                 <li key={s} className="flex items-start gap-1.5 text-[12.5px] leading-snug">
                   <Check
-                    className="mt-[3px] size-3 shrink-0 text-[var(--mkt-brand)]"
+                    className="mt-[3px] size-3 shrink-0 text-primary"
                     strokeWidth={3}
                     aria-hidden
                   />
@@ -441,7 +433,7 @@ function RecommendationPanel({
               ))}
             </ul>
 
-            <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-[var(--mkt-brand)]/20 pt-3 text-[12px]">
+            <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-primary/20 pt-3 text-[12px]">
               <Inline label="Confidence" value={DEMO_RECOMMENDATION.confidence} />
               <Inline label="Deal at stake" value={formatUsd(DEMO_OPPORTUNITY.dealValue)} />
               <Inline label="Expected revenue" value={formatUsd(INITIAL_EXPECTED)} />
@@ -455,9 +447,9 @@ function RecommendationPanel({
               </ActionButton>
             </div>
           ) : (
-            <div className="mt-4 rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] p-4">
+            <div className="mt-4 rounded-xl border border-border/70 bg-muted/40 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--mkt-muted)]">
+                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                   Draft · to {DEMO_DRAFT.to}
                 </p>
                 <StatusPill
@@ -478,7 +470,7 @@ function RecommendationPanel({
                 disabled={state.actionApproved || sending}
                 rows={5}
                 aria-label="Email body"
-                className="mt-2 w-full resize-none rounded-lg border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-3 text-[13px] leading-relaxed text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] disabled:opacity-70"
+                className="mt-2 w-full resize-none rounded-lg border border-border/70 bg-card p-3 text-[13px] leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
               />
 
               {!state.actionApproved ? (
@@ -499,12 +491,12 @@ function RecommendationPanel({
                       Snooze
                     </ActionButton>
                   </div>
-                  <p className="mt-2.5 text-[11.5px] text-[var(--mkt-muted)]">
+                  <p className="mt-2.5 text-[11.5px] text-muted-foreground">
                     {DEMO_SEND_NOTE}
                   </p>
                 </>
               ) : (
-                <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-[var(--mkt-success)]">
+                <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-emerald-600 dark:text-emerald-400">
                   <Check className="size-3.5" strokeWidth={3} aria-hidden />
                   Demo message sent{sentAt ? ` at ${sentAt}` : ""} — recorded with
                   the reasoning and your approval.
@@ -521,7 +513,7 @@ function RecommendationPanel({
 function Inline({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-1.5">
-      <dt className="text-[var(--mkt-muted)]">{label}</dt>
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   );
@@ -535,18 +527,18 @@ function StatusPill({
   sentAt: string | null;
 }) {
   const map = {
-    draft: { label: "Draft", cls: "bg-[var(--mkt-surface)] text-[var(--mkt-muted)]" },
-    sending: { label: "Approved", cls: "bg-[var(--mkt-brand-wash)] text-[var(--mkt-brand-deep)]" },
+    draft: { label: "Draft", cls: "bg-card text-muted-foreground" },
+    sending: { label: "Approved", cls: "bg-accent text-primary" },
     sent: {
       label: sentAt ? `Sent · ${sentAt}` : "Sent",
-      cls: "bg-[var(--mkt-success)]/10 text-[var(--mkt-success)]",
+      cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     },
   } as const;
   const s = map[state];
   return (
     <span
       className={cn(
-        "rounded-full border border-[var(--mkt-line)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em]",
+        "rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em]",
         s.cls
       )}
     >
@@ -598,17 +590,17 @@ function ResponsePanel({
       }
     >
       {!state.buyerResponseReceived ? (
-        <p className="mt-3 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
+        <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
           Selryn keeps watching after the action goes out. A reply, a booked
           meeting or continued silence are all results worth recording.
         </p>
       ) : (
         <div className="mt-4">
-          <blockquote className="rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] p-4">
+          <blockquote className="rounded-xl border border-border/70 bg-muted/40 p-4">
             <p className="text-[14px] italic leading-relaxed">
               &ldquo;{DEMO_RESPONSE.quote}&rdquo;
             </p>
-            <footer className="mt-2 text-[12px] text-[var(--mkt-muted)]">
+            <footer className="mt-2 text-[12px] text-muted-foreground">
               {DEMO_RESPONSE.from} · {DEMO_CONTACT.role} · {DEMO_RESPONSE.at}
             </footer>
           </blockquote>
@@ -626,14 +618,14 @@ function ResponsePanel({
                 aria-hidden={i >= effects}
               >
                 <span
-                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-[var(--mkt-success)]/30 bg-[var(--mkt-success)]/10 text-[var(--mkt-success)]"
+                  className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                   aria-hidden
                 >
                   <Check className="size-3" strokeWidth={3} />
                 </span>
                 <div>
                   <p className="text-[13.5px] font-medium">{e.label}</p>
-                  <p className="text-[12.5px] text-[var(--mkt-muted)]">{e.detail}</p>
+                  <p className="text-[12.5px] text-muted-foreground">{e.detail}</p>
                 </div>
               </li>
             ))}
@@ -648,7 +640,7 @@ function ResponsePanel({
           )}
 
           {state.opportunityUpdated && (
-            <div className="mt-4 rounded-xl border border-[var(--mkt-success)]/30 bg-[var(--mkt-success)]/[0.06] p-4">
+            <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4">
               <p className="text-[13.5px] font-medium">Opportunity advanced</p>
               <dl className="mt-2 space-y-1 text-[13px]">
                 <Change
@@ -667,7 +659,7 @@ function ResponsePanel({
                   to={formatUsd(ADVANCED_EXPECTED)}
                 />
               </dl>
-              <p className="mt-2.5 text-[12.5px] text-[var(--mkt-success)]">
+              <p className="mt-2.5 text-[12.5px] text-emerald-600 dark:text-emerald-400">
                 +{formatUsd(EXPECTED_UPLIFT)} expected revenue. The deal has moved
                 forward — it has not been won.
               </p>
@@ -682,12 +674,12 @@ function ResponsePanel({
 function Change({ label, from, to }: { label: string; from: string; to: string }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2">
-      <dt className="text-[var(--mkt-muted)]">{label}</dt>
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className="flex items-center gap-1.5 tabular-nums">
-        <span className="text-[var(--mkt-muted)] line-through decoration-[var(--mkt-line)]">
+        <span className="text-muted-foreground line-through decoration-border">
           {from}
         </span>
-        <ArrowRight className="size-3 text-[var(--mkt-muted)]" aria-hidden />
+        <ArrowRight className="size-3 text-muted-foreground" aria-hidden />
         <span className="font-medium">{to}</span>
       </dd>
     </div>
@@ -711,7 +703,7 @@ function DealPanel() {
         />
         <Row label="Owner" value={DEMO_OPPORTUNITY.owner} />
       </dl>
-      <p className="mt-3 border-t border-[var(--mkt-line)] pt-2.5 text-[11.5px] leading-snug text-[var(--mkt-muted)]">
+      <p className="mt-3 border-t border-border/70 pt-2.5 text-[11.5px] leading-snug text-muted-foreground">
         Expected revenue is deal value × win probability. It is an estimate, not
         a forecast or a commitment.
       </p>
@@ -729,18 +721,18 @@ function AccountPanel() {
         <Row label="Region" value={DEMO_ACCOUNT.region} />
         <Row label="ICP fit" value={DEMO_ACCOUNT.icpFit} />
       </dl>
-      <div className="mt-4 flex items-center gap-2.5 border-t border-[var(--mkt-line)] pt-3">
-        <span className="flex size-8 items-center justify-center rounded-full bg-[var(--mkt-brand-wash)] text-[11px] font-medium text-[var(--mkt-brand-deep)]">
+      <div className="mt-4 flex items-center gap-2.5 border-t border-border/70 pt-3">
+        <span className="flex size-8 items-center justify-center rounded-full bg-accent text-[11px] font-medium text-primary">
           {DEMO_CONTACT.initials}
         </span>
         <div>
           <p className="text-[13px] font-medium">{DEMO_CONTACT.name}</p>
-          <p className="text-[11.5px] text-[var(--mkt-muted)]">
+          <p className="text-[11.5px] text-muted-foreground">
             {DEMO_CONTACT.role} · {DEMO_CONTACT.decisionRole}
           </p>
         </div>
       </div>
-      <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-snug text-[var(--mkt-muted)]">
+      <p className="mt-3 flex items-start gap-1.5 text-[11.5px] leading-snug text-muted-foreground">
         <ShieldCheck className="mt-[1px] size-3.5 shrink-0" aria-hidden />
         Fictional account. Nothing in this demo touches a real CRM or inbox.
       </p>
@@ -759,7 +751,7 @@ function Row({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-[var(--mkt-muted)]">{label}</dt>
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className={cn("tabular-nums", strong && "font-medium")}>{value}</dd>
     </div>
   );

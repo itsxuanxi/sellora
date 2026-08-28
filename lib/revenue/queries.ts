@@ -2,12 +2,10 @@ import "server-only";
 import { db } from "@/lib/db";
 import { BEHAVIOURAL_SIGNALS, SIGNAL_LABELS, type SignalType } from "@/lib/intent/config";
 import {
-  DAILY_PRIORITY_COUNT,
   LEAK_RULES,
   OPEN_STAGES,
   isOpenStage,
   type LeakType,
-  type Urgency,
 } from "@/lib/revenue/config";
 import { detectLeaks, revenueAtRisk, type DetectedLeak } from "@/lib/revenue/leaks";
 import { expectedRevenue } from "@/lib/revenue/money";
@@ -289,52 +287,6 @@ export async function getRevenueOverview(orgId: string): Promise<RevenueOverview
     currency: opps[0]?.currency ?? "USD",
     hasData: opps.length > 0,
   };
-}
-
-// ── Revenue Leak Feed (§4) ────────────────────────────────────────────────
-
-/** Opportunities with an active leak, most money at risk first. */
-export async function getLeakFeed(orgId: string, take = 25): Promise<EnrichedOpportunity[]> {
-  const opps = await loadEnrichedOpportunities(orgId);
-  return opps
-    .filter((o) => o.primaryLeak !== null)
-    .sort((a, b) => b.atRisk - a.atRisk)
-    .slice(0, take);
-}
-
-// ── Today's Revenue Opportunities (§6) ────────────────────────────────────
-
-/**
- * The morning list. Ranked by urgency first, then expected value — a
- * $9k deal that dies today outranks a $40k deal that can wait a week.
- */
-export async function getTodaysPriorities(
-  orgId: string,
-  take = DAILY_PRIORITY_COUNT
-): Promise<EnrichedOpportunity[]> {
-  const opps = await loadEnrichedOpportunities(orgId, { stages: [...OPEN_STAGES] });
-  return opps
-    .filter((o) => o.nextAction.actionType !== "wait")
-    .sort((a, b) => priorityWeight(b) - priorityWeight(a))
-    .slice(0, take);
-}
-
-/**
- * Blends urgency into expected value rather than bucketing by it.
- *
- * Strict urgency-first ordering ranked a $765 deal above a $13,440 one
- * purely because one was flagged "today" and the other "this week" — which
- * inverts the whole premise that attention should follow expected revenue
- * (§17). Urgency now tilts the ranking instead of overriding it.
- */
-function priorityWeight(o: EnrichedOpportunity): number {
-  const multiplier: Record<Urgency, number> = {
-    now: 1.6,
-    today: 1.25,
-    this_week: 1,
-    monitor: 0.4,
-  };
-  return o.expectedValue * multiplier[o.nextAction.urgency as Urgency];
 }
 
 // ── Recovery queue (§8) ───────────────────────────────────────────────────
