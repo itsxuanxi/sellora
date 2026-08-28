@@ -134,8 +134,14 @@ export function planOf(org: Organization): PlanDef {
   const planId = resolvePlanId(org.plan);
   const plan = PLANS[planId];
 
-  // Expired/canceled subscriptions fall back to free limits.
-  if (planId !== "free" && org.planStatus === "canceled") {
+  // A cancel-at-period-end subscription keeps paid access through the date
+  // Stripe already charged for. The deletion webhook clears the plan when
+  // that date arrives; this time check is a safe fallback if it is delayed.
+  if (
+    planId !== "free" &&
+    org.planStatus === "canceled" &&
+    (!org.planRenewsAt || org.planRenewsAt <= new Date())
+  ) {
     return PLANS.free;
   }
 

@@ -100,8 +100,9 @@ Users can also store their own OpenAI/Resend keys per-workspace in
   week-over-week reply-rate movements, best-performing campaign).
 - **Settings** — profile, company/sender identity (used in AI prompts and the
   email `From:`), API keys.
-- **Billing** — real subscriptions (Free / Pro $19.99 / Max $39.99, monthly or
-  yearly) with Stripe Checkout, webhook-synced state, cancel-at-period-end,
+- **Billing** — real Starter and Growth subscriptions, monthly or yearly,
+  with Stripe-hosted debit/credit card Checkout, webhook-synced state,
+  customer billing portal, cancel-at-period-end,
   live usage meters, and plan limits enforced on prospects, campaigns, and
   monthly email volume. First-time OTP users get a one-step onboarding
   (name + workspace).

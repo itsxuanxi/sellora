@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
  * Configure the endpoint in Stripe → Developers → Webhooks pointing at
  * /api/webhooks/stripe with events:
  *   checkout.session.completed, customer.subscription.updated,
- *   customer.subscription.deleted
+ *   customer.subscription.deleted, invoice.paid, invoice.payment_failed
  * and set STRIPE_WEBHOOK_SECRET.
  */
 export async function POST(req: Request) {
@@ -65,6 +65,10 @@ export async function POST(req: Request) {
         await db.organization.update({
           where: { id: orgId },
           data: {
+            plan: sub.metadata?.plan
+              ? resolvePlanId(sub.metadata.plan)
+              : undefined,
+            planInterval: sub.metadata?.interval ?? undefined,
             // "trialing" is kept distinct from "active": planOf() meters a
             // trial against TRIAL_LIMITS, so collapsing the two would hand
             // every trial the full paid allowance.
@@ -79,6 +83,36 @@ export async function POST(req: Request) {
                     : "canceled",
             planRenewsAt: renewsAt ? new Date(renewsAt * 1000) : null,
           },
+        });
+        break;
+      }
+      case "invoice.paid": {
+        const invoice = event.data.object;
+        // Stripe also creates a zero-dollar invoice at the beginning of a
+        // trial. Only a real successful charge should move the workspace from
+        // trialing to active.
+        if (invoice.amount_paid <= 0) break;
+        const customerId =
+          typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+        if (!customerId) break;
+        const periodEnd = invoice.lines.data[0]?.period?.end;
+        await db.organization.updateMany({
+          where: { stripeCustomerId: customerId },
+          data: {
+            planStatus: "active",
+            planRenewsAt: periodEnd ? new Date(periodEnd * 1000) : undefined,
+          },
+        });
+        break;
+      }
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        const customerId =
+          typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+        if (!customerId) break;
+        await db.organization.updateMany({
+          where: { stripeCustomerId: customerId },
+          data: { planStatus: "past_due" },
         });
         break;
       }

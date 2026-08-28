@@ -21,10 +21,9 @@ const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
  * Stripe Checkout (real payment); without it the plan is activated directly
  * in dev mode so the full billing loop stays testable.
  *
- * Every subscription opens on a TRIAL_DAYS free trial with no card collected,
- * which is what makes the pricing page's "14-day free trial · No credit card
- * required" a description of the flow rather than a claim about it. Stripe
- * only asks for a card when the trial ends.
+ * Every subscription opens on a TRIAL_DAYS free trial, but Checkout collects
+ * a debit or credit card up front. Stripe hosts the card form and keeps card
+ * data out of Selryn; the first charge happens when the trial ends.
  *
  * Enterprise is intentionally unreachable here: it is quoted, not bought, so
  * its CTA goes to sales and there is no self-serve path that could charge the
@@ -44,6 +43,23 @@ export async function startCheckout(
     const session = await requireSession();
     const org = session.org;
     const stripe = getStripe();
+
+    if (org.isSample) {
+      return {
+        ok: false,
+        error: "Create a real workspace before starting a paid subscription.",
+      };
+    }
+
+    if (
+      org.stripeSubscriptionId &&
+      !org.stripeSubscriptionId.startsWith("sim_")
+    ) {
+      return {
+        ok: false,
+        error: "You already have a Stripe subscription. Use Manage card & invoices instead.",
+      };
+    }
 
     if (!stripe) {
       // Dev mode: start the same trial Stripe would, clearly marked simulated,
@@ -83,6 +99,10 @@ export async function startCheckout(
     const checkout = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
+      // Stripe's `card` method accepts eligible debit and credit cards. Stripe
+      // Checkout also handles 3DS/SCA authentication without card data ever
+      // touching Selryn's servers.
+      payment_method_types: ["card"],
       line_items: [
         {
           quantity: 1,
@@ -97,18 +117,14 @@ export async function startCheckout(
           },
         },
       ],
-      // No card up front — Stripe collects one only when the trial converts.
-      payment_method_collection: "if_required",
+      // Collect a card now and charge it automatically when the trial ends.
+      payment_method_collection: "always",
       success_url: `${appUrl()}/settings?tab=billing&checkout=success`,
       cancel_url: `${appUrl()}/settings?tab=billing&checkout=canceled`,
       metadata: { orgId: org.id, plan: plan.id, interval, trial: "true" },
       subscription_data: {
         trial_period_days: TRIAL_DAYS,
-        // Required whenever payment_method_collection is "if_required": it
-        // tells Stripe what to do when the trial ends and no card was ever
-        // given. Cancelling is the only ending consistent with promising no
-        // credit card — the alternatives invoice or pause an account that
-        // never agreed to pay.
+        // Defensive fallback for cards removed during the trial.
         trial_settings: {
           end_behavior: { missing_payment_method: "cancel" },
         },
@@ -124,6 +140,34 @@ export async function startCheckout(
   return { ok: false, error: "Stripe did not return a checkout link." };
 }
 
+/** Opens Stripe's hosted portal for cards, invoices, and cancellation. */
+export async function openBillingPortal(): Promise<ActionResult> {
+  let portalUrl: string | null = null;
+  try {
+    const session = await requireSession();
+    const org = session.org;
+    const stripe = getStripe();
+
+    if (org.isSample) {
+      return { ok: false, error: "Billing is disabled in the sample workspace." };
+    }
+    if (!stripe || !org.stripeCustomerId) {
+      return { ok: false, error: "No Stripe billing account is available yet." };
+    }
+
+    const portal = await stripe.billingPortal.sessions.create({
+      customer: org.stripeCustomerId,
+      return_url: `${appUrl()}/settings?tab=billing`,
+    });
+    portalUrl = portal.url;
+  } catch (err) {
+    return actionError(err, "Could not open billing management. Please try again.");
+  }
+
+  if (portalUrl) redirect(portalUrl);
+  return { ok: false, error: "Stripe did not return a billing portal link." };
+}
+
 /** Cancels at period end on Stripe, or immediately in dev mode. */
 export async function cancelSubscription(): Promise<ActionResult> {
   try {
@@ -135,12 +179,16 @@ export async function cancelSubscription(): Promise<ActionResult> {
 
     const stripe = getStripe();
     if (stripe && !org.stripeSubscriptionId.startsWith("sim_")) {
-      await stripe.subscriptions.update(org.stripeSubscriptionId, {
+      const subscription = await stripe.subscriptions.update(org.stripeSubscriptionId, {
         cancel_at_period_end: true,
       });
+      const periodEnd = subscription.items.data[0]?.current_period_end;
       await db.organization.update({
         where: { id: org.id },
-        data: { planStatus: "canceled" },
+        data: {
+          planStatus: "canceled",
+          planRenewsAt: periodEnd ? new Date(periodEnd * 1000) : org.planRenewsAt,
+        },
       });
     } else {
       await db.organization.update({

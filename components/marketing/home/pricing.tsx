@@ -40,9 +40,9 @@ const SALES_HREF = "/request-demo";
 const DEMO_HREF = "/request-demo";
 
 export function Pricing({ startHref }: { startHref: string }) {
-  // Yearly by default: it is the cheaper option, so leading with it is the
-  // honest default rather than an upsell.
-  const [cycle, setCycle] = useState<BillingCycle>("yearly");
+  // Monthly is the least-commitment option and therefore the clearest default.
+  // Visitors can still opt into the discounted yearly plan explicitly.
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
 
   return (
     <Section id="pricing" className="border-t-0 bg-[var(--mkt-page)]">
@@ -83,7 +83,8 @@ export function Pricing({ startHref }: { startHref: string }) {
       <Reveal delay={80}>
         <p className="mt-7 max-w-3xl text-[13px] leading-relaxed text-[var(--mkt-muted)]">
           All Starter and Growth trials include {TRIAL_DAYS} days of full
-          product access. No credit card required. Rows marked{" "}
+          product access. A debit or credit card is required and is charged
+          only after the trial ends. Rows marked{" "}
           <span className="font-medium text-[var(--mkt-ink)]">Planned</span> are
           on the roadmap and not yet available.
         </p>
@@ -242,7 +243,7 @@ function PlanCard({
           </Link>
         ) : (
           <>
-            {TRIAL_DAYS}-day free trial · No credit card required
+            {TRIAL_DAYS}-day free trial · Card required
           </>
         )}
       </p>

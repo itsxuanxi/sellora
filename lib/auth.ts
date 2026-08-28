@@ -1,6 +1,6 @@
 import "server-only";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
@@ -142,11 +142,23 @@ async function loadSession(): Promise<SessionContext | null> {
 
 /** For UI that only needs to know whether someone is signed in (e.g. navbar). */
 export async function getAuthState(): Promise<{ signedIn: boolean }> {
-  if (isClerkEnabled) {
-    const { userId } = await auth();
-    return { signedIn: Boolean(userId) };
+  try {
+    if (isClerkEnabled) {
+      const { userId } = await auth();
+      return { signedIn: Boolean(userId) };
+    }
+    return { signedIn: Boolean(await getLocalSessionUser()) };
+  } catch (error) {
+    // Preserve Next.js control-flow errors used for redirects and dynamic
+    // rendering; only real authentication/backend failures degrade safely.
+    unstable_rethrow(error);
+    // Authentication status only changes the marketing CTA destination. A
+    // transient database/auth outage must not take the public homepage down;
+    // fail closed to the sign-in link and let protected routes enforce the
+    // real session normally.
+    console.error("[auth] could not resolve marketing auth state", error);
+    return { signedIn: false };
   }
-  return { signedIn: Boolean(await getLocalSessionUser()) };
 }
 
 /**

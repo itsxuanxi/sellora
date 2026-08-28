@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   cancelSubscription,
+  openBillingPortal,
   startCheckout,
 } from "@/app/(app)/settings/billing-actions";
 import {
@@ -37,6 +38,7 @@ export interface BillingState {
   planRenewsAt: string | null; // ISO
   stripeEnabled: boolean;
   simulated: boolean; // current subscription was activated without payment
+  canManageBilling: boolean;
   /** The metered ceilings for the plan in force, resolved server-side by
    *  planOf() so a trial shows trial limits rather than the paid ones.
    *  `null` means unlimited — Infinity does not survive the RSC boundary. */
@@ -96,6 +98,7 @@ export function BillingPanel({ state }: { state: BillingState }) {
   );
   const [upgrading, startUpgrade] = useTransition();
   const [canceling, startCancel] = useTransition();
+  const [managing, startManage] = useTransition();
   const [pendingPlan, setPendingPlan] = useState<PaidPlanId | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
 
@@ -138,6 +141,13 @@ export function BillingPanel({ state }: { state: BillingState }) {
     });
   }
 
+  function manageBilling() {
+    startManage(async () => {
+      const result = await openBillingPortal();
+      if (!result.ok) toast.error(result.error);
+    });
+  }
+
   return (
     <div className="space-y-4">
       {/* Current plan + usage */}
@@ -160,6 +170,8 @@ export function BillingPanel({ state }: { state: BillingState }) {
                   "font-normal",
                   state.planStatus === "canceled"
                     ? "bg-amber-50 text-amber-700"
+                    : state.planStatus === "past_due"
+                      ? "bg-rose-50 text-rose-700"
                     : trialing
                       ? "bg-violet-50 text-violet-700"
                       : "bg-emerald-50 text-emerald-700"
@@ -167,6 +179,8 @@ export function BillingPanel({ state }: { state: BillingState }) {
               >
                 {state.planStatus === "canceled"
                   ? "Ends at period"
+                  : state.planStatus === "past_due"
+                    ? "Payment issue"
                   : trialing
                     ? `${TRIAL_DAYS}-day trial`
                     : "Current plan"}
@@ -196,18 +210,30 @@ export function BillingPanel({ state }: { state: BillingState }) {
             {trialing && (
               <p className="mt-1.5 text-xs text-muted-foreground">
                 Full product access during the trial, metered at trial limits.
-                No card is charged until it ends.
+                Your card will be charged when the trial ends.
               </p>
             )}
             {state.plan !== "free" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-4 text-muted-foreground hover:text-destructive"
-                onClick={() => setCancelOpen(true)}
-              >
-                Cancel subscription
-              </Button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {state.canManageBilling && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={managing}
+                    onClick={manageBilling}
+                  >
+                    {managing ? "Opening…" : "Manage card & invoices"}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => setCancelOpen(true)}
+                >
+                  Cancel subscription
+                </Button>
+              </div>
             )}
           </div>
           <div className="space-y-3">
@@ -330,7 +356,7 @@ export function BillingPanel({ state }: { state: BillingState }) {
 
         <p className="mt-4 text-xs text-muted-foreground">
           {state.stripeEnabled
-            ? `Starter and Growth open with a ${TRIAL_DAYS}-day free trial — no card is collected until it ends. Payments are processed securely by Stripe; cancellations take effect at the end of the billing period.`
+            ? `Starter and Growth include a ${TRIAL_DAYS}-day free trial. Stripe securely accepts debit and credit cards at checkout; the first charge happens when the trial ends. Cancellations take effect at the end of the billing period.`
             : `Stripe keys aren't configured, so plans start a simulated ${TRIAL_DAYS}-day trial in dev mode without payment. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to charge real cards.`}
         </p>
       </div>

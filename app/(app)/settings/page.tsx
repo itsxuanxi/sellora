@@ -161,6 +161,11 @@ export default async function SettingsPage({
               planRenewsAt: org.planRenewsAt?.toISOString() ?? null,
               stripeEnabled: isStripeEnabled,
               simulated: Boolean(org.stripeSubscriptionId?.startsWith("sim_")),
+              canManageBilling: Boolean(
+                isStripeEnabled &&
+                  org.stripeCustomerId &&
+                  !org.stripeSubscriptionId?.startsWith("sim_")
+              ),
               limits: {
                 prospects: unlimitedAsNull(activePlan.limits.prospects),
                 campaigns: unlimitedAsNull(activePlan.limits.campaigns),
