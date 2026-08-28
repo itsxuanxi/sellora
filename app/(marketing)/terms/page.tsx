@@ -32,10 +32,10 @@ export default function TermsPage() {
         If you need terms in place before evaluating or purchasing Sellora,
         contact{" "}
         <a
-          href="mailto:hello@sellora.ai?subject=Sellora%20terms"
+          href="mailto:itsxuanxi8@icloud.com?subject=Sellora%20terms"
           className="rounded text-violet-300 underline underline-offset-4 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
         >
-          hello@sellora.ai
+          itsxuanxi8@icloud.com
         </a>{" "}
         and we will work through your requirements directly.
       </p>

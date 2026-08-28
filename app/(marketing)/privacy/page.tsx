@@ -66,10 +66,10 @@ export default function PrivacyPage() {
           <p className="mt-2">
             Write to{" "}
             <a
-              href="mailto:hello@sellora.ai"
+              href="mailto:itsxuanxi8@icloud.com"
               className="rounded text-violet-300 underline underline-offset-4 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
             >
-              hello@sellora.ai
+              itsxuanxi8@icloud.com
             </a>{" "}
             and we will answer directly.
           </p>

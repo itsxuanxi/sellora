@@ -49,7 +49,7 @@ export interface BillingState {
  * marketing pricing screen renders and lib/billing.ts charges from. There is
  * no second copy of the price here to drift out of sync with the landing page.
  */
-const SALES_HREF = "mailto:sales@sellora.ai?subject=Sellora%20Enterprise";
+const SALES_HREF = "mailto:itsxuanxi8@icloud.com?subject=Sellora%20Enterprise";
 
 const PLAN_LABEL: Record<PlanId, string> = {
   free: "Free",

@@ -14,14 +14,20 @@ import { z } from "zod";
  */
 
 /**
- * Where demo requests are emailed, and the fallback address shown on the page.
+ * The contact address shown publicly, on the request page and in the success
+ * state.
+ *
+ * Kept separate from where notifications are *delivered* (see
+ * demoNotifyEmail() in the server action): the address a visitor is invited to
+ * write to and the mailbox that receives form submissions are different
+ * decisions, and conflating them means changing one always changes the other.
  *
  * Lives here rather than beside the server action because a "use server" file
  * may only export async functions - exporting a plain const from one silently
  * invalidates *every* export in the module, which typescript does not catch
  * and only shows up when the bundler runs.
  */
-export const DEMO_INBOX = "hello@sellora.ai";
+export const DEMO_INBOX = "itsxuanxi8@icloud.com";
 
 /** Selects. `value` is stored; `label` is shown. */
 export const TEAM_SIZES = [

@@ -33,6 +33,19 @@ import {
  * nothing about it.
  */
 
+/**
+ * Where submissions are delivered.
+ *
+ * Environment-driven so the destination can be changed without a code change
+ * or a deploy - rerouting who reads incoming leads is an operational decision,
+ * not an engineering one. Falls back to the address on the page so a
+ * deployment that never sets it still delivers somewhere real rather than
+ * silently nowhere.
+ */
+function demoNotifyEmail(): string {
+  return process.env.DEMO_NOTIFY_EMAIL?.trim() || DEMO_INBOX;
+}
+
 /** Per-hour caps. Generous enough that no real person meets them. */
 const MAX_PER_EMAIL_PER_HOUR = 3;
 const MAX_PER_IP_PER_HOUR = 8;
@@ -86,7 +99,7 @@ export async function submitDemoRequest(
       return {
         ok: false,
         formError:
-          "We already have a request from you. Someone will be in touch shortly - email hello@sellora.ai if it is urgent.",
+          `We already have a request from you. Someone will be in touch shortly - email ${DEMO_INBOX} if it is urgent.`,
       };
     }
 
@@ -111,7 +124,7 @@ export async function submitDemoRequest(
     // Deliberately after the write and outside its failure path.
     try {
       const result = await sendEmail({
-        to: DEMO_INBOX,
+        to: demoNotifyEmail(),
         subject: `Demo request: ${values.company} (${values.fullName})`,
         body: formatNotification(values),
         // Replies go to the person who asked, not to the inbox itself.

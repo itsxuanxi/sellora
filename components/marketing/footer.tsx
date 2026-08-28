@@ -13,7 +13,7 @@ const LINKS = [
   { label: "Security", href: "/#how-it-works" },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
-  { label: "Contact", href: "mailto:hello@sellora.ai" },
+  { label: "Contact", href: "mailto:itsxuanxi8@icloud.com" },
 ];
 
 export function MarketingFooter() {

@@ -24,7 +24,7 @@ export function FinalCta() {
         </p>
         <div className="mt-10 flex items-center justify-center gap-3">
           <Link
-            href="mailto:hello@sellora.ai?subject=Sellora%20demo"
+            href="mailto:itsxuanxi8@icloud.com?subject=Sellora%20demo"
             className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 text-[15px] font-medium text-black transition-all hover:bg-neutral-200"
           >
             Book a Demo
