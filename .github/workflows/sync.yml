@@ -1,0 +1,51 @@
+# Drives the sync worker.
+#
+# Vercel's Hobby plan caps cron at one run per day, which is far too slow for
+# a product whose value is noticing a buying signal while it still matters.
+# GitHub Actions schedules are free and unmetered on public repositories, so
+# the real cadence lives here and vercel.json keeps a daily run as a fallback.
+#
+# The endpoint is idempotent and bounded, so an overlap between the two - or a
+# GitHub delay, which is common on the shared runners - costs nothing.
+#
+# Requires two repository secrets (Settings > Secrets and variables > Actions):
+#   APP_URL      e.g. https://sellora-mu.vercel.app
+#   CRON_SECRET  must match the value set in Vercel
+name: Sync worker
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub queues rather than guarantees this, and will
+    # skip runs under load; the worker is designed to tolerate that.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  # Never let a slow run overlap its successor into a pile-up.
+  group: sync-worker
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger sync
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "APP_URL or CRON_SECRET is not set; skipping."
+            exit 0
+          fi
+          # Fail the run on a non-2xx so a broken worker is visible in the
+          # Actions tab rather than silently doing nothing for weeks.
+          code=$(curl -sS -o /tmp/out.json -w "%{http_code}" \
+            --max-time 120 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/sync")
+          echo "status=$code"
+          cat /tmp/out.json
+          echo
+          [ "$code" = "200" ] || exit 1

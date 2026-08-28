@@ -148,6 +148,18 @@ model Account {
   outcomes             Outcome[]
   opportunities        Opportunity[]
 
+  // ── Provenance ──
+  // Which record in which external system this came from. Without it a sync
+  // has no way to recognise a record it imported before: re-running would
+  // create a duplicate every time, and renaming the record upstream would
+  // fork it into two. Null for anything created inside Selryn.
+  //
+  // The unique index tolerates nulls (Postgres does not collide NULLs), so
+  // manually created rows are unaffected by it.
+  externalId     String?
+  externalSource String? // hubspot | salesforce | csv_import
+
+  @@unique([orgId, externalSource, externalId])
   @@unique([orgId, name])
   @@index([orgId, fitScore])
   @@index([orgId, createdAt])
@@ -293,6 +305,18 @@ model Prospect {
   revenueEvents  RevenueEvent[]
   actions        Action[]
 
+  // ── Provenance ──
+  // Which record in which external system this came from. Without it a sync
+  // has no way to recognise a record it imported before: re-running would
+  // create a duplicate every time, and renaming the record upstream would
+  // fork it into two. Null for anything created inside Selryn.
+  //
+  // The unique index tolerates nulls (Postgres does not collide NULLs), so
+  // manually created rows are unaffected by it.
+  externalId     String?
+  externalSource String? // hubspot | salesforce | csv_import
+
+  @@unique([orgId, externalSource, externalId])
   @@index([orgId, stage])
   @@index([orgId, createdAt])
 }
@@ -707,6 +731,18 @@ model Opportunity {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ── Provenance ──
+  // Which record in which external system this came from. Without it a sync
+  // has no way to recognise a record it imported before: re-running would
+  // create a duplicate every time, and renaming the record upstream would
+  // fork it into two. Null for anything created inside Selryn.
+  //
+  // The unique index tolerates nulls (Postgres does not collide NULLs), so
+  // manually created rows are unaffected by it.
+  externalId     String?
+  externalSource String? // hubspot | salesforce | csv_import
+
+  @@unique([orgId, externalSource, externalId])
   @@index([orgId, stage])
   @@index([orgId, score])
   @@index([orgId, lastInteractionAt])
