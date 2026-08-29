@@ -173,3 +173,43 @@ export async function recipientsFor(kind: "daily_digest" | "risk_alerts") {
     },
   });
 }
+
+/**
+ * An escalation: one deal, raised to whoever can unblock it.
+ *
+ * Composed here beside the digest so it reads from the same enriched
+ * opportunity and cannot drift from what the screen says. Deliberately not a
+ * digest of everything — an escalation that arrives as a list is a report,
+ * and a manager reading a report does not know they have been asked for
+ * something.
+ */
+export async function composeEscalation(opts: {
+  orgId: string;
+  opportunityId: string;
+  raisedBy: string;
+  note: string;
+}): Promise<NotificationMessage | null> {
+  const [opp] = await loadEnrichedOpportunities(opts.orgId).then((all) =>
+    all.filter((o) => o.id === opts.opportunityId)
+  );
+  if (!opp) return null;
+
+  const deal = toNotifiedDeal(opp);
+
+  return {
+    kind: "escalation",
+    // One per deal per raiser per day: a second escalation on the same deal
+    // the same day is the same request, not a new one.
+    dedupeKey: `escalation:${opts.opportunityId}:${opts.raisedBy}:${localDayKey(new Date(), "UTC")}`,
+    subject: `Escalation — ${deal.company} (${formatMoney(opp.expectedValue, opp.currency)} expected)`,
+    headline: `${opts.raisedBy} has escalated ${deal.company}.`,
+    deals: [deal],
+    summary: {
+      revenueAtRisk: formatMoney(opp.atRisk, opp.currency),
+      openPipeline: formatMoney(opp.dealValue, opp.currency),
+      openCount: 1,
+    },
+    primaryUrl: deal.url,
+    primaryLabel: `Open ${deal.company}`,
+  };
+}

@@ -35,6 +35,7 @@ const LABEL: Record<string, string> = {
 const KIND: Record<string, string> = {
   daily_digest: "Daily digest",
   risk_alert: "Risk alert",
+  escalation: "Escalation",
 };
 
 export interface NotificationRow {

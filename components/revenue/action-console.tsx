@@ -28,6 +28,7 @@ import {
 
 export interface PreparedAction {
   id: string;
+  actionType: string;
   subject: string;
   body: string;
   destination: string | null;
@@ -40,12 +41,19 @@ export interface PreparedAction {
   decisionReason: string | null;
 }
 
+export interface ActionChoice {
+  actionType: string;
+  label: string;
+  recommended: boolean;
+}
+
 export function ActionConsole({
   opportunityId,
   action,
   sandbox,
   executionNote,
   canExecute,
+  choices,
 }: {
   opportunityId: string;
   /** The PROPOSED action, or the most recent decided one. */
@@ -53,6 +61,8 @@ export function ActionConsole({
   sandbox: boolean;
   executionNote: string;
   canExecute: boolean;
+  /** The recommended action first, then the always-available alternatives. */
+  choices: ActionChoice[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -60,6 +70,16 @@ export function ActionConsole({
   const [body, setBody] = useState(action?.body ?? "");
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+
+  const prepare = (actionType?: string) =>
+    startTransition(async () => {
+      const result = await prepareAction(opportunityId, actionType);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      router.refresh();
+    });
 
   const proposed = action?.status === "PROPOSED";
   const decided = action && !proposed;
@@ -85,7 +105,7 @@ export function ActionConsole({
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             {sent ? "Action executed" : "Recommendation rejected"}
           </span>
-          {action.simulated && (
+          {action.simulated && isEmail && (
             <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
               Simulated
             </span>
@@ -98,9 +118,14 @@ export function ActionConsole({
         </div>
 
         <p className="mt-2 text-[15px] font-medium">{action.summary}</p>
-        {sent && action.destination && (
+        {sent && isEmail && action.destination && (
           <p className="mt-1 text-sm text-muted-foreground">
             {action.simulated ? "Would have gone to" : "Sent to"} {action.destination}
+          </p>
+        )}
+        {sent && !isEmail && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Recorded on this opportunity. The buyer was not contacted.
           </p>
         )}
         {action.decisionReason && (
@@ -118,16 +143,7 @@ export function ActionConsole({
             size="sm"
             className="mt-4"
             disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await prepareAction(opportunityId);
-                if (!result.ok) {
-                  toast.error(result.error);
-                  return;
-                }
-                router.refresh();
-              })
-            }
+            onClick={() => prepare()}
           >
             {pending ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -159,23 +175,16 @@ export function ActionConsole({
           review and edit it before anything happens — nothing customer-facing
           is sent without your approval.
         </p>
-        <Button
-          className="mt-4"
-          disabled={pending || !canExecute}
-          onClick={() =>
-            startTransition(async () => {
-              const result = await prepareAction(opportunityId);
-              if (!result.ok) {
-                toast.error(result.error);
-                return;
-              }
-              router.refresh();
-            })
-          }
-        >
+        <Button className="mt-4" disabled={pending || !canExecute} onClick={() => prepare()}>
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Pencil className="size-3.5" />}
           Draft the action
         </Button>
+
+        <ActionPicker
+          choices={choices}
+          disabled={pending || !canExecute}
+          onPick={prepare}
+        />
         {!canExecute && (
           <p className="mt-2 text-xs text-muted-foreground">
             Your role can view recommendations but not approve them.
@@ -195,7 +204,7 @@ export function ActionConsole({
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-primary">
           Awaiting your approval
         </span>
-        {sandbox && (
+        {sandbox && isEmail && (
           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
             Simulated send
           </span>
@@ -297,9 +306,11 @@ export function ActionConsole({
                   return;
                 }
                 toast.success(
-                  result.data.simulated
-                    ? "Approved and recorded — simulated, nothing was delivered."
-                    : "Approved and sent."
+                  !isEmail
+                    ? "Approved and recorded."
+                    : result.data.simulated
+                      ? "Approved and recorded — simulated, nothing was delivered."
+                      : "Approved and sent."
                 );
                 router.refresh();
               })
@@ -318,6 +329,57 @@ export function ActionConsole({
           </Button>
         </div>
       )}
+
+      {!rejecting && (
+        <ActionPicker
+          choices={choices}
+          current={action!.actionType}
+          disabled={pending || !canExecute}
+          onPick={prepare}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * The alternatives, kept deliberately quiet.
+ *
+ * Selryn's argument is that there is one best next action, so these are a
+ * text row under the primary control rather than a grid of equal-weight
+ * cards. Choosing one replaces the proposal instead of adding to it — a
+ * queue of five drafted actions is the menu this product exists to avoid.
+ */
+function ActionPicker({
+  choices,
+  current,
+  disabled,
+  onPick,
+}: {
+  choices: ActionChoice[];
+  current?: string;
+  disabled: boolean;
+  onPick: (actionType: string) => void;
+}) {
+  const others = choices.filter((c) => c.actionType !== current);
+  if (others.length === 0) return null;
+
+  return (
+    <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
+      <span>Or:</span>
+      {others.map((choice, i) => (
+        <span key={choice.actionType} className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onPick(choice.actionType)}
+            className="underline decoration-border underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            {choice.label}
+          </button>
+          {i < others.length - 1 && <span aria-hidden>·</span>}
+        </span>
+      ))}
+    </p>
   );
 }

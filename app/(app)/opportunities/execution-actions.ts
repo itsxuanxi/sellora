@@ -7,7 +7,12 @@ import { db } from "@/lib/db";
 import { actionError, type ActionResult } from "@/lib/types";
 import { requirePermission } from "@/lib/security/rbac";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
-import { approveAndExecute, draftFor, rejectAction } from "@/lib/revenue/execution";
+import {
+  ALWAYS_AVAILABLE,
+  approveAndExecute,
+  draftFor,
+  rejectAction,
+} from "@/lib/revenue/execution";
 import { ensureRecommendation } from "@/lib/revenue/recommendations";
 import { rescoreOpportunity } from "@/lib/revenue/opportunities";
 
@@ -33,23 +38,37 @@ function revalidateRevenue(opportunityId: string) {
  * than replaced, so double-clicking "Prepare" cannot bury the edits someone
  * has already made in a second draft.
  */
-export async function prepareAction(opportunityId: string): Promise<ActionResult<string>> {
+export async function prepareAction(
+  opportunityId: string,
+  actionType?: string
+): Promise<ActionResult<string>> {
   try {
     const session = await requireSession();
     requirePermission(session.role, "action:approve");
 
     const existing = await db.action.findFirst({
       where: { orgId: session.orgId, opportunityId, executionStatus: "PROPOSED" },
-      select: { id: true },
+      select: { id: true, actionType: true },
     });
-    if (existing) return { ok: true, data: existing.id };
+    // Switching action type replaces the untouched proposal rather than
+    // stacking a second one; picking the same type again is a no-op.
+    if (existing) {
+      if (!actionType || existing.actionType === actionType) {
+        return { ok: true, data: existing.id };
+      }
+      await db.action.delete({ where: { id: existing.id } });
+    }
 
     const [opp] = await loadEnrichedOpportunities(session.orgId).then((all) =>
       all.filter((o) => o.id === opportunityId)
     );
     if (!opp) return { ok: false, error: "That opportunity is not in this workspace." };
 
-    const draft = draftFor(opp);
+    const override = ALWAYS_AVAILABLE.find((t) => t === actionType);
+    if (actionType && !override) {
+      return { ok: false, error: "That is not an action Selryn can prepare." };
+    }
+    const draft = draftFor(opp, override);
     if (draft.blocked) return { ok: false, error: draft.blocked };
 
     // Attribution: link the draft to the recommendation it came from, so the
@@ -113,6 +132,8 @@ export async function approveAction(
       body: parsed.body,
       orgIsSample: session.org.isSample,
       resendApiKey: settings?.resendApiKey,
+      userName: session.name,
+      orgName: session.org.name,
     });
 
     // Acting is evidence: the deal has been touched, so the silence clock and

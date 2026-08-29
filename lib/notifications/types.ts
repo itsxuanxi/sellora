@@ -7,7 +7,7 @@
  * is — the composition in `digest.ts` must never learn about Slack blocks.
  */
 
-export type NotificationKind = "daily_digest" | "risk_alert";
+export type NotificationKind = "daily_digest" | "risk_alert" | "escalation";
 export type NotificationChannel = "email" | "slack" | "teams";
 
 /** One deal, as a notification talks about it. */

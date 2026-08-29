@@ -292,7 +292,11 @@ export type ActionType =
   | "escalate_founder"
   | "reengage"
   | "wait"
-  | "close_lost";
+  | "close_lost"
+  // Internal moves. They reach nobody outside the company, which is why they
+  // are the only actions Selryn can complete without a send.
+  | "task"
+  | "escalate_manager";
 
 export const ACTION_LABELS: Record<ActionType, string> = {
   follow_up: "Send a follow-up",
@@ -306,6 +310,8 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   reengage: "Re-engage a cold prospect",
   wait: "Wait — no action needed",
   close_lost: "Close as lost",
+  task: "Create a follow-up task",
+  escalate_manager: "Escalate to a manager",
 };
 
 export type Urgency = "now" | "today" | "this_week" | "monitor";

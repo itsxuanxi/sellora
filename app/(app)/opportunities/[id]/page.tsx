@@ -25,7 +25,7 @@ import { loadOpportunityTimeline, summarizeLoop } from "@/lib/revenue/timeline";
 import { parseSupportingSignals } from "@/lib/revenue/loop";
 import { RecommendationActions } from "@/components/revenue/recommendation-actions";
 import { ActionConsole } from "@/components/revenue/action-console";
-import { draftFor, executionSummary } from "@/lib/revenue/execution";
+import { ALWAYS_AVAILABLE, draftFor, executionSummary } from "@/lib/revenue/execution";
 import { isSimulated } from "@/lib/sandbox";
 import { can } from "@/lib/security/rbac";
 import type { OpportunityStage } from "@/lib/revenue/config";
@@ -365,11 +365,32 @@ export default async function OpportunityDetailPage({
             opportunityId={enriched.id}
             sandbox={sandboxSend}
             canExecute={can(session.role, "action:execute")}
-            executionNote={executionSummary(draftFor(enriched), sandboxSend)}
+            executionNote={executionSummary(
+              draftFor(
+                enriched,
+                (pendingAction?.actionType as ActionType | undefined) ?? undefined
+              ),
+              sandboxSend
+            )}
+            choices={[
+              {
+                actionType: enriched.nextAction.actionType,
+                label: ACTION_LABELS[enriched.nextAction.actionType as ActionType],
+                recommended: true,
+              },
+              ...ALWAYS_AVAILABLE.filter(
+                (t) => t !== enriched.nextAction.actionType
+              ).map((t) => ({
+                actionType: t,
+                label: ACTION_LABELS[t],
+                recommended: false,
+              })),
+            ]}
             action={
               pendingAction
                 ? {
                     id: pendingAction.id,
+                    actionType: pendingAction.actionType,
                     subject:
                       pendingAction.sentSubject ?? pendingAction.draftSubject ?? "",
                     body: pendingAction.content ?? pendingAction.draftBody ?? "",

@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { draftFor, executionSummary } from "@/lib/revenue/execution";
+import {
+  ALWAYS_AVAILABLE,
+  draftFor,
+  executionSummary,
+} from "@/lib/revenue/execution";
 import type { EnrichedOpportunity } from "@/lib/revenue/queries";
 
 /**
@@ -98,4 +102,63 @@ test("the approval note names the destination, and says when it is simulated", (
 test("a blocked draft explains itself instead of offering to send", () => {
   const draft = draftFor(opportunity({ contact: null }));
   assert.equal(executionSummary(draft, false), draft.blocked);
+});
+
+// ── The internal actions ───────────────────────────────────────────────────
+
+test("a follow-up task reaches nobody and says so", () => {
+  const draft = draftFor(opportunity(), "task");
+  assert.equal(draft.channel, "manual");
+  assert.equal(draft.blocked, null);
+
+  const note = executionSummary(draft, false);
+  assert.match(note, /follow-up task/i);
+  assert.match(note, /next step/i);
+  // The whole point of a task is that the buyer is not contacted.
+  assert.match(note, /Nothing is sent to the buyer/i);
+});
+
+test("an escalation goes to managers, never to the buyer", () => {
+  const draft = draftFor(opportunity(), "escalate_manager");
+  assert.equal(draft.channel, "internal");
+
+  const real = executionSummary(draft, false);
+  assert.match(real, /owners and admins/i);
+  assert.match(real, /buyer is not contacted/i);
+
+  // And a sandbox must be distinguishable from the real thing at a glance.
+  assert.match(executionSummary(draft, true), /Simulated/i);
+});
+
+test("an internal action is draftable even with no contact email", () => {
+  // A task and an escalation are about the deal, not the person, so a
+  // missing address must not block them the way it blocks an email.
+  for (const type of ["task", "escalate_manager"] as const) {
+    const draft = draftFor(opportunity({ contact: null }), type);
+    assert.equal(draft.blocked, null, `${type} should not be blocked`);
+  }
+});
+
+test("the alternatives offered are only the ones that always apply", () => {
+  assert.deepEqual(ALWAYS_AVAILABLE, ["follow_up", "call", "task", "escalate_manager"]);
+  // Every one must be draftable without extra context.
+  for (const type of ALWAYS_AVAILABLE) {
+    const draft = draftFor(opportunity(), type);
+    assert.ok(draft.body.length > 0, `${type} produced no body`);
+    assert.ok(draft.summary.length > 0, `${type} produced no summary`);
+  }
+});
+
+test("an internal action's destination is not the buyer's address", () => {
+  // Storing the contact email against a task would put a person in the
+  // ledger who was never contacted.
+  const task = draftFor(opportunity(), "task");
+  assert.equal(task.destination, null);
+
+  const escalation = draftFor(opportunity(), "escalate_manager");
+  assert.equal(escalation.destination, "Workspace owners and admins");
+
+  // An email still records where it went.
+  const email = draftFor(opportunity(), "follow_up");
+  assert.equal(email.destination, "maya@cloudmint.io");
 });
