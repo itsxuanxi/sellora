@@ -316,12 +316,8 @@ function HubspotControls() {
 function PlannedChannels() {
   const planned = [
     {
-      name: "Slack",
-      body: "OAuth install, a channel picker, and the same digest and risk alerts posted as messages with a link back into Selryn.",
-    },
-    {
       name: "Microsoft Teams",
-      body: "Notification bot via Microsoft Graph — not the retiring Office 365 connectors — matching Slack feature for feature.",
+      body: "Notification bot via Microsoft Graph — not the retiring Office 365 connectors — matching Slack feature for feature. It will reuse the same notification service and message shape Slack already uses.",
     },
   ];
 

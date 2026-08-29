@@ -6,6 +6,7 @@ import {
   recipientsFor,
 } from "@/lib/notifications/digest";
 import { deliverNotification, type DeliveryOutcome } from "@/lib/notifications/send";
+import { readConfig, SLACK_PROVIDER } from "@/lib/integrations/slack/oauth";
 
 /**
  * Deciding who hears from Selryn, and when.
@@ -82,6 +83,7 @@ export function digestIsDue(
 export interface SchedulerReport {
   digestsConsidered: number;
   digestsSent: number;
+  slackPosts: number;
   alertsSent: number;
   duplicates: number;
   rateLimited: number;
@@ -125,6 +127,7 @@ export async function runNotificationTick(opts: {
   const report: SchedulerReport = {
     digestsConsidered: 0,
     digestsSent: 0,
+    slackPosts: 0,
     alertsSent: 0,
     duplicates: 0,
     rateLimited: 0,
@@ -173,6 +176,37 @@ export async function runNotificationTick(opts: {
     );
   }
 
+  // ── Slack: one post per workspace, not one per subscriber ──
+  //
+  // A channel is a shared surface, so the digest belongs to the workspace
+  // rather than to each person who happens to have email turned on. Posting
+  // per subscriber would put the same message in the same channel five
+  // times, which is how a useful channel becomes a muted one.
+  for (const org of await workspacesWithSlack(opts.orgId)) {
+    const message = await composeDailyDigest({
+      orgId: org.id,
+      timezone: org.timezone,
+      now,
+    });
+    if (!message) continue;
+    if (!opts.force && !digestIsDue(now, org.timezone, org.digestHour)) continue;
+    if (!opts.force && org.weekdaysOnly && isWeekend(now, org.timezone)) continue;
+
+    const outcome = await deliverNotification({
+      orgId: org.id,
+      userId: org.notifyUserId,
+      channel: "slack",
+      toAddress: "slack",
+      workspaceName: org.name,
+      orgIsSample: org.isSample,
+      message,
+      now,
+    });
+    if (outcome.status === "sent") report.slackPosts++;
+    else if (outcome.status === "duplicate") report.duplicates++;
+    else if (outcome.status === "failed") report.failures++;
+  }
+
   // ── Risk alerts ──
   for (const pref of await recipientsFor("risk_alerts")) {
     if (opts.orgId && pref.orgId !== opts.orgId) continue;
@@ -209,4 +243,49 @@ export async function runNotificationTick(opts: {
   }
 
   return report;
+}
+
+/**
+ * Workspaces with a Slack channel actually chosen.
+ *
+ * The digest's timing follows the workspace owner's preference, because a
+ * channel has no timezone of its own and someone has to decide. Orgs with no
+ * preference row at all are skipped rather than defaulted into posting.
+ */
+async function workspacesWithSlack(orgId?: string) {
+  const connections = await db.integrationConnection.findMany({
+    where: {
+      provider: SLACK_PROVIDER,
+      status: "CONNECTED",
+      ...(orgId ? { orgId } : {}),
+    },
+    select: {
+      orgId: true,
+      config: true,
+      org: { select: { id: true, name: true, isSample: true } },
+    },
+  });
+
+  const usable = [];
+  for (const connection of connections) {
+    if (!readConfig(connection.config).channelId) continue;
+
+    const pref = await db.notificationPreference.findFirst({
+      where: { orgId: connection.orgId, dailyDigest: true, unsubscribedAt: null },
+      orderBy: { createdAt: "asc" },
+      select: { userId: true, timezone: true, digestHour: true, weekdaysOnly: true },
+    });
+    if (!pref) continue;
+
+    usable.push({
+      id: connection.org.id,
+      name: connection.org.name,
+      isSample: connection.org.isSample,
+      notifyUserId: pref.userId,
+      timezone: pref.timezone,
+      digestHour: pref.digestHour,
+      weekdaysOnly: pref.weekdaysOnly,
+    });
+  }
+  return usable;
 }

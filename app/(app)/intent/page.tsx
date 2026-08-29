@@ -12,6 +12,8 @@ import { SIGNAL_LABELS, type SignalType } from "@/lib/intent/config";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { IntegrationHealthPanel } from "@/components/settings/integration-health";
+import { SlackPanel } from "@/components/settings/slack-panel";
+import { isSlackConfigured, readConfig, SLACK_PROVIDER } from "@/lib/integrations/slack/oauth";
 import { can } from "@/lib/security/rbac";
 import { integrationHealth } from "@/lib/integrations/sync-runner";
 import { isHubspotConfigured } from "@/lib/integrations/hubspot/oauth";
@@ -24,11 +26,16 @@ export default async function IntentDashboardPage() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [health, hubspotConnection, campaigns, topAccounts] = await Promise.all([
+  const [health, hubspotConnection, slackConnection, campaigns, topAccounts] =
+    await Promise.all([
     integrationHealth(session.orgId),
     db.integrationConnection.findFirst({
       where: { orgId: session.orgId, provider: "hubspot", status: "ACTIVE" },
       select: { id: true },
+    }),
+    db.integrationConnection.findUnique({
+      where: { orgId_provider: { orgId: session.orgId, provider: SLACK_PROVIDER } },
+      select: { status: true, externalAccountName: true, config: true },
     }),
     db.intentCampaign.findMany({
       where: { orgId: session.orgId },
@@ -84,6 +91,18 @@ export default async function IntentDashboardPage() {
           canManage={can(session.role, "integration:connect")}
           health={health}
           hubspotConfigured={isHubspotConfigured() && isEncryptionConfigured()}
+        />
+      </div>
+
+      <div className="mb-6">
+        <SlackPanel
+          configured={isSlackConfigured()}
+          connected={slackConnection?.status === "CONNECTED"}
+          teamName={slackConnection?.externalAccountName ?? null}
+          channelId={readConfig(slackConnection?.config).channelId ?? null}
+          channelName={readConfig(slackConnection?.config).channelName ?? null}
+          sandbox={session.org.isSample}
+          canManage={can(session.role, "integration:connect")}
         />
       </div>
 

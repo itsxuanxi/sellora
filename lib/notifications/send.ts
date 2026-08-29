@@ -6,7 +6,10 @@ import { recordAudit } from "@/lib/security/audit";
 import { renderNotificationEmail } from "@/lib/notifications/email-template";
 import { unsubscribeUrl } from "@/lib/notifications/unsubscribe";
 import { appUrl } from "@/lib/notifications/digest";
-import type { NotificationMessage } from "@/lib/notifications/types";
+import type { NotificationChannel, NotificationMessage } from "@/lib/notifications/types";
+import { renderSlackMessage } from "@/lib/notifications/slack-message";
+import { postMessage } from "@/lib/integrations/slack/client";
+import { readConfig, SLACK_PROVIDER } from "@/lib/integrations/slack/oauth";
 
 /**
  * Sending a notification, exactly once.
@@ -25,6 +28,37 @@ import type { NotificationMessage } from "@/lib/notifications/types";
  *  3. **The sandbox rule.** A sample workspace records the whole lifecycle and
  *     sends nothing.
  */
+
+/**
+ * Posts to the workspace's chosen Slack channel.
+ *
+ * Returns the same shape as an email send so the caller records delivery
+ * identically. A missing channel is a configuration state, not an error to
+ * swallow: the integration is connected but has nowhere to post, and the
+ * settings screen says so.
+ */
+async function postToSlack(
+  orgId: string,
+  message: NotificationMessage,
+  workspaceName: string
+): Promise<{ id: string; simulated: boolean; sandbox: boolean }> {
+  const connection = await db.integrationConnection.findUnique({
+    where: { orgId_provider: { orgId, provider: SLACK_PROVIDER } },
+    select: { config: true },
+  });
+  const target = readConfig(connection?.config).channelId;
+  if (!target) {
+    throw new Error("Slack is connected but no channel has been chosen yet.");
+  }
+
+  const { text, blocks } = renderSlackMessage(message, {
+    workspaceName,
+    simulated: false,
+  });
+  const posted = await postMessage({ orgId, channel: target, text, blocks });
+  // Slack's message timestamp is its identity within a channel.
+  return { id: `slack_${target}_${posted.ts}`, simulated: false, sandbox: false };
+}
 
 /** Hard ceiling per person per rolling day, across every kind. */
 export const MAX_NOTIFICATIONS_PER_DAY = 12;
@@ -47,6 +81,8 @@ export type DeliveryOutcome =
 export async function deliverNotification(opts: {
   orgId: string;
   userId: string;
+  /** Where it goes. Email is per-user; Slack is one workspace channel. */
+  channel?: NotificationChannel;
   toAddress: string;
   workspaceName: string;
   orgIsSample: boolean;
@@ -57,6 +93,7 @@ export async function deliverNotification(opts: {
   const now = opts.now ?? new Date();
   const sandbox = isSimulated({ orgIsSample: opts.orgIsSample });
 
+  const channel: NotificationChannel = opts.channel ?? "email";
   const dayAgo = new Date(now.getTime() - 86_400_000);
   const recent = await db.notification.count({
     where: { orgId: opts.orgId, userId: opts.userId, createdAt: { gte: dayAgo } },
@@ -72,8 +109,10 @@ export async function deliverNotification(opts: {
         orgId: opts.orgId,
         userId: opts.userId,
         kind: opts.message.kind,
-        channel: "email",
-        dedupeKey: opts.message.dedupeKey,
+        channel,
+        // Scoped per channel, so the same digest can reach both an inbox and
+        // a Slack channel without either suppressing the other.
+        dedupeKey: `${channel}:${opts.message.dedupeKey}`,
         toAddress: opts.toAddress,
         subject: opts.message.subject,
         payload: JSON.stringify(opts.message),
@@ -99,13 +138,15 @@ export async function deliverNotification(opts: {
   try {
     const result = sandbox
       ? { id: simulatedId(), simulated: true, sandbox: true }
-      : await sendEmail({
-          to: opts.toAddress,
-          subject: opts.message.subject,
-          body: text,
-          html,
-          orgApiKey: opts.resendApiKey,
-        });
+      : channel === "slack"
+        ? await postToSlack(opts.orgId, opts.message, opts.workspaceName)
+        : await sendEmail({
+            to: opts.toAddress,
+            subject: opts.message.subject,
+            body: text,
+            html,
+            orgApiKey: opts.resendApiKey,
+          });
 
     await db.notification.update({
       where: { id: notification.id },
