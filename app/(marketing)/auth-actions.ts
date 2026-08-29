@@ -236,7 +236,9 @@ export async function verifyOtp(
  * A visitor who already holds a sandbox session keeps it, so a refresh or a
  * second click does not throw away the work they have done in the tour.
  */
-export async function signInToDemo(): Promise<ActionResult> {
+export async function signInToDemo(
+  opts: { guided?: boolean } = {}
+): Promise<ActionResult> {
   if (isClerkEnabled) return { ok: false, error: "Demo mode is disabled." };
   try {
     const existing = await getLocalSessionUser();
@@ -245,9 +247,12 @@ export async function signInToDemo(): Promise<ActionResult> {
       await createSession(sandbox.id);
     }
   } catch (err) {
+    // Returned, not thrown: the caller renders the reason and offers a retry.
+    // `redirect` below throws its own control-flow signal, so it must stay
+    // outside this try or a successful entry would be reported as a failure.
     return actionError(err, "Could not open the sandbox workspace.");
   }
-  redirect("/dashboard");
+  redirect(opts.guided ? "/dashboard?tour=start" : "/dashboard");
 }
 
 export async function signOut(): Promise<void> {

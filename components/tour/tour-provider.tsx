@@ -2,7 +2,6 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -10,6 +9,7 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
+import { prefersReducedMotion } from "@/lib/motion";
 import {
   TOUR_STEPS,
   TOTAL_TOUR_STEPS,
@@ -30,7 +30,10 @@ import {
 const STORAGE_KEY = "selryn-tour-v2";
 
 interface TourState {
-  status: "idle" | "running" | "finished";
+  // "completed" and "skipped" are kept apart because only one of them has
+  // earned a result screen. Collapsing them would congratulate someone who
+  // clicked Skip on the first step.
+  status: "idle" | "running" | "completed" | "skipped";
   index: number;
 }
 
@@ -41,7 +44,9 @@ type Action =
   | { type: "advance" }
   | { type: "back" }
   | { type: "goTo"; index: number }
-  | { type: "finish" }
+  | { type: "complete" }
+  | { type: "skip" }
+  | { type: "dismiss" }
   | { type: "hydrate"; state: TourState };
 
 function reducer(state: TourState, action: Action): TourState {
@@ -50,14 +55,18 @@ function reducer(state: TourState, action: Action): TourState {
       return { status: "running", index: 0 };
     case "advance":
       return state.index >= TOTAL_TOUR_STEPS - 1
-        ? { status: "finished", index: state.index }
+        ? { status: "completed", index: state.index }
         : { ...state, index: state.index + 1 };
     case "back":
       return { ...state, index: Math.max(0, state.index - 1) };
     case "goTo":
       return { ...state, index: Math.min(Math.max(0, action.index), TOTAL_TOUR_STEPS - 1) };
-    case "finish":
-      return { ...state, status: "finished" };
+    case "complete":
+      return { ...state, status: "completed" };
+    case "skip":
+      return { ...state, status: "skipped" };
+    case "dismiss":
+      return { ...state, status: "skipped" };
     case "hydrate":
       return action.state;
   }
@@ -68,12 +77,18 @@ export interface TourContextValue {
   index: number;
   total: number;
   running: boolean;
+  /** The story was finished — show the result screen. */
+  completed: boolean;
+  /** The visitor asked for less motion; scrolls jump rather than glide. */
+  reduced: boolean;
   /** True once sessionStorage has been read — gate UI on this. */
   hydrated: boolean;
   start: () => void;
   advance: () => void;
   back: () => void;
-  finish: () => void;
+  complete: () => void;
+  skip: () => void;
+  dismiss: () => void;
 }
 
 const TourContext = createContext<TourContextValue | null>(null);
@@ -88,7 +103,10 @@ export function TourProvider({
 }) {
   const [state, dispatch] = useReducer(reducer, INITIAL);
   const [hydrated, setHydrated] = useState(false);
+  const [reduced, setReduced] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => setReduced(prefersReducedMotion()), []);
 
   useEffect(() => {
     try {
@@ -116,6 +134,7 @@ export function TourProvider({
   }, [hydrated, autoStart, state.status]);
 
   const running = hydrated && state.status === "running";
+  const completed = hydrated && state.status === "completed";
   const rawStep = running ? (TOUR_STEPS[state.index] ?? null) : null;
 
   // If the visitor wanders off the step's route — a back button, a nav click,
@@ -138,13 +157,17 @@ export function TourProvider({
       index: state.index,
       total: TOTAL_TOUR_STEPS,
       running,
+      completed,
+      reduced,
       hydrated,
       start: () => dispatch({ type: "start" }),
       advance: () => dispatch({ type: "advance" }),
       back: () => dispatch({ type: "back" }),
-      finish: () => dispatch({ type: "finish" }),
+      complete: () => dispatch({ type: "complete" }),
+      skip: () => dispatch({ type: "skip" }),
+      dismiss: () => dispatch({ type: "dismiss" }),
     }),
-    [step, state.index, running, hydrated]
+    [step, state.index, running, completed, reduced, hydrated]
   );
 
   return <TourContext.Provider value={value}>{children}</TourContext.Provider>;
@@ -161,24 +184,43 @@ export function useOptionalTour(): TourContextValue | null {
   return useContext(TourContext);
 }
 
-/** Finds a step's target element, or null while the page is still settling. */
-export function useTourTarget(target: string | undefined, deps: unknown[] = []) {
+/**
+ * Finds a step's target element, or null while the page is still settling.
+ *
+ * Polled on a timer rather than watched with a MutationObserver.
+ *
+ * The target arrives asynchronously — a client-side navigation streams the
+ * opportunity page in after the step has already changed — and an observer
+ * that misses the mutation leaves the step permanently unanchored, which
+ * looks like the tour pointing at nothing.
+ *
+ * A timer rather than requestAnimationFrame because rAF does not run while
+ * the document is hidden: a tour that was mid-step when the tab was
+ * backgrounded would come back with nothing anchored and never recover.
+ */
+export function useTourTarget(target: string | undefined) {
   const [el, setEl] = useState<HTMLElement | null>(null);
 
-  const find = useCallback(() => {
-    if (!target) return setEl(null);
-    setEl(document.querySelector<HTMLElement>(`[data-tour="${target}"]`));
-  }, [target]);
-
   useEffect(() => {
-    find();
-    // Server components stream in, so the element may not exist on the first
-    // pass. Watch until it does rather than guessing at a delay.
-    const observer = new MutationObserver(find);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [find, ...deps]);
+    if (!target) {
+      setEl(null);
+      return;
+    }
+
+    let current: HTMLElement | null = null;
+
+    const tick = () => {
+      const found = document.querySelector<HTMLElement>(`[data-tour="${target}"]`);
+      if (found !== current) {
+        current = found;
+        setEl(found);
+      }
+    };
+
+    tick();
+    const timer = window.setInterval(tick, 120);
+    return () => window.clearInterval(timer);
+  }, [target]);
 
   return el;
 }

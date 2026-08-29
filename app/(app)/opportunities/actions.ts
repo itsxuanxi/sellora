@@ -6,6 +6,22 @@ import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { actionError, type ActionResult } from "@/lib/types";
 import { OPPORTUNITY_STAGES, isOpenStage } from "@/lib/revenue/config";
+import { RESPONSE_LABELS } from "@/lib/revenue/loop";
+import { upsertSignal } from "@/lib/intent/signals";
+
+/**
+ * How a recorded buyer reaction enters the evidence the scorer reads.
+ *
+ * Only reactions with a faithful equivalent are mapped. "Meeting booked" has
+ * no signal type — `meeting_attended` would claim a meeting happened — so it
+ * is recorded in the ledger and left out of the evidence rather than
+ * overstated.
+ */
+const RESPONSE_SIGNAL: Record<string, string | undefined> = {
+  replied: "email_replied",
+  proposal_viewed: "proposal_opened",
+  stakeholder_added: "multi_stakeholder",
+};
 import { rescoreAllOpportunities, rescoreOpportunity, syncOpportunitiesFromAccounts } from "@/lib/revenue/opportunities";
 import {
   approveAction,
@@ -436,6 +452,37 @@ export async function logResponse(
       responseType: parsed.responseType,
       detail: parsed.detail ?? null,
     });
+
+    // The loop only closes if a buyer's reply changes what Selryn believes.
+    //
+    // Scoring reads evidence — emails, meetings, signals — and never Response
+    // rows, so until now recording "they replied" left the score, the win
+    // probability and the leak exactly where they were. The deal still looked
+    // silent to the engine while the ledger said the buyer had answered.
+    //
+    // Emitting the equivalent signal puts the reply into the substrate the
+    // scorer actually reads, and rescoring then moves the numbers for the
+    // real reason rather than because a demo said so.
+    const signalType = RESPONSE_SIGNAL[parsed.responseType];
+    if (signalType) {
+      const opportunity = await db.opportunity.findFirst({
+        where: { id: parsed.opportunityId, orgId: session.orgId },
+        select: { accountId: true },
+      });
+      if (opportunity) {
+        await upsertSignal(session.orgId, opportunity.accountId, {
+          signalType,
+          title: RESPONSE_LABELS[parsed.responseType] ?? "Buyer responded",
+          description: parsed.detail ?? null,
+          sourceKey: "selryn_loop",
+          occurredAt: new Date(),
+          confidence: "high",
+          contactId: parsed.contactId ?? null,
+          opportunityId: parsed.opportunityId,
+        });
+      }
+    }
+    await rescoreOpportunity(session.orgId, parsed.opportunityId);
 
     revalidateRevenue(parsed.opportunityId);
     return { ok: true, data: undefined };

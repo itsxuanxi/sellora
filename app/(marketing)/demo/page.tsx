@@ -1,88 +1,95 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Clock, Database, MailX, ShieldCheck } from "lucide-react";
-import { SandboxEntryButton } from "@/components/marketing/sandbox-entry";
+import { SandboxEntry } from "@/components/marketing/sandbox-entry";
 
 export const metadata: Metadata = {
   title: "Try Selryn",
   description:
-    "A private sandbox workspace running the real product, filled with sample data. No sign-up, no CRM connection, nothing sent.",
+    "Follow one deal from revenue risk to the next meeting, in a private sandbox running the real product. No sign-up, nothing sent.",
 };
 
 /**
- * The sandbox front door.
+ * The demo's front door.
  *
- * There is no separate demo product behind this button. It provisions a
- * private workspace, fills it with the sample dataset and drops the visitor
- * into the actual application — same pages, same scoring, same actions. What
- * differs is only that outbound effects are simulated, which this page says
- * plainly before anyone clicks.
+ * One promise, one button. There is no separate demo product behind it: the
+ * CTA provisions a private workspace, fills it with the sample dataset and
+ * drops the visitor into the actual application with the guided story
+ * running. The four stages below are the shape of that story, not a feature
+ * list — which is why they are numbered and stated in one line each.
  */
 
-const RULES = [
+const STAGES = [
   {
-    icon: Database,
-    title: "Real product, sample data",
-    body: "Every screen, score and action is the product itself — not a mockup. The workspace is fictional: Acme Labs, and nine invented companies.",
+    n: "01",
+    phase: "Detect",
+    body: "Find the signal that puts revenue at risk.",
   },
   {
-    icon: MailX,
-    title: "Nothing is sent",
-    body: "Approving a follow-up records the action, the draft and the outcome exactly as it would for a customer, but no email leaves the building and no CRM is written.",
+    n: "02",
+    phase: "Decide",
+    body: "Understand why the opportunity needs attention.",
   },
   {
-    icon: ShieldCheck,
-    title: "Yours alone",
-    body: "You get your own workspace, not a shared one. Anything you approve, dismiss or edit is yours, and it is deleted after seven days.",
+    n: "03",
+    phase: "Act",
+    body: "Review and approve the next best action.",
+  },
+  {
+    n: "04",
+    phase: "Learn",
+    body: "See the buyer response and the revenue impact.",
   },
 ];
 
 export default function DemoPage() {
   return (
-    <div className="mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-24">
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
-          Sandbox
-        </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-          <Clock className="size-3" aria-hidden />
-          No sign-up
-        </span>
+    <section className="relative isolate overflow-hidden px-5 pb-24 pt-20 md:px-8 md:pb-28 md:pt-28">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] bg-[radial-gradient(ellipse_50%_100%_at_50%_0%,rgba(103,87,229,0.09),transparent_70%)]"
+        aria-hidden
+      />
+
+      <div className="mx-auto max-w-3xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          3 minutes · No sign-up · Sample data
+        </p>
+
+        <h1 className="mt-7 text-balance text-[2.75rem] font-medium leading-[1.04] tracking-[-0.02em] sm:text-[3.4rem] lg:text-[3.9rem]">
+          Follow one deal from revenue risk
+          <span className="text-primary"> to the next meeting.</span>
+        </h1>
+
+        <p className="mt-7 max-w-2xl text-pretty text-[17px] leading-[1.65] text-muted-foreground">
+          See how Selryn detects a cooling opportunity, explains what changed,
+          recommends the next best action, and measures the revenue outcome.
+        </p>
+
+        <div className="mt-10">
+          <SandboxEntry />
+        </div>
+
+        <p className="mt-6 text-[13.5px] leading-relaxed text-muted-foreground">
+          You get your own workspace of invented companies. Every action works
+          and is recorded, but nothing leaves the building — no email is sent
+          and no CRM is written. It is deleted after seven days.
+        </p>
       </div>
 
-      <h1 className="mt-5 max-w-3xl text-balance text-4xl font-medium leading-[1.08] tracking-tight sm:text-5xl md:text-[3.4rem]">
-        Use the real product, on data that cannot bite.
-      </h1>
-      <p className="mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-muted-foreground">
-        Selryn ranks your pipeline by expected revenue, finds the deals leaking
-        money, recommends one action per deal and records what the buyer did
-        about it. The sandbox runs all of that — on a workspace of invented
-        companies, with every send simulated.
-      </p>
-
-      <div className="mt-9">
-        <SandboxEntryButton />
-      </div>
-
-      <p className="mt-5 text-[13px] text-muted-foreground">
-        Takes a few seconds to build. No credit card, no CRM connection.
-      </p>
-
-      <ol className="mt-16 grid gap-5 md:grid-cols-3">
-        {RULES.map((r) => (
-          <li key={r.title} className="rounded-2xl border border-border/70 bg-card p-6">
-            <r.icon className="size-5 text-primary" aria-hidden />
-            <h2 className="mt-4 text-[16px] font-medium leading-snug tracking-tight">
-              {r.title}
+      <ol className="mx-auto mt-20 grid max-w-5xl gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-2 lg:grid-cols-4">
+        {STAGES.map((s) => (
+          <li key={s.n} className="bg-card p-6">
+            <span className="font-mono text-[13px] text-primary">{s.n}</span>
+            <h2 className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground">
+              {s.phase}
             </h2>
             <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-              {r.body}
+              {s.body}
             </p>
           </li>
         ))}
       </ol>
 
-      <p className="mt-12 text-[13px] text-muted-foreground">
+      <p className="mx-auto mt-12 max-w-3xl text-[13.5px] text-muted-foreground">
         Prefer to talk to someone?{" "}
         <Link
           href="/request-demo"
@@ -92,6 +99,6 @@ export default function DemoPage() {
         </Link>
         .
       </p>
-    </div>
+    </section>
   );
 }

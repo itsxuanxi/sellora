@@ -38,11 +38,38 @@ test("route matching handles both exact and prefix routes", () => {
 });
 
 test("a visitor who wanders lands on a step for the page they are on", () => {
-  const i = firstStepOnRoute("/analytics");
-  assert.ok(stepMatchesRoute(TOUR_STEPS[i], "/analytics"));
+  for (const route of ["/dashboard", "/opportunities/anything"]) {
+    const i = firstStepOnRoute(route);
+    assert.ok(
+      stepMatchesRoute(TOUR_STEPS[i], route),
+      `no step resolves for ${route}`
+    );
+  }
+});
 
-  const j = firstStepOnRoute("/opportunities/anything");
-  assert.ok(stepMatchesRoute(TOUR_STEPS[j], "/opportunities/anything"));
+test("the story runs dashboard first, then stays on the opportunity", () => {
+  // The order is the argument: find the deal, then work it. A step that
+  // sent the visitor back to the dashboard mid-story would break the thread.
+  const routes = TOUR_STEPS.map((s) => s.route);
+  assert.equal(routes[0], "/dashboard");
+  assert.ok(routes.slice(1).every((r) => r === "/opportunities/"));
+});
+
+test("the four phases appear in order", () => {
+  const seen: string[] = [];
+  for (const step of TOUR_STEPS) {
+    if (seen[seen.length - 1] !== step.phase) seen.push(step.phase);
+  }
+  assert.deepEqual(seen, ["Detect", "Decide", "Act", "Learn"]);
+});
+
+test("the tour states no figure the scoring engine computes", () => {
+  // Scores, probabilities and expected revenue are engine output and drift
+  // when a weight changes. Only the deal value — an input — may be quoted.
+  const prose = TOUR_STEPS.map((s) => `${s.title} ${s.body} ${s.instruction}`).join(" ");
+  const amounts = prose.match(/\$[\d,]+/g) ?? [];
+  assert.deepEqual([...new Set(amounts)], ["$42,000"]);
+  assert.equal(/\d+\s?%/.test(prose), false, "a percentage is quoted in tour copy");
 });
 
 test("an unknown route falls back to the first step rather than crashing", () => {

@@ -73,7 +73,7 @@ const prospects = [
   { name: "Yuki Nakamura", company: "Flowdeck", website: "https://flowdeck.jp", industry: "Productivity", position: "CEO", email: "yuki@flowdeck.jp", linkedin: "https://linkedin.com/in/yukinakamura", country: "Japan", companySize: "11-50", stage: "CONTACTED" },
   { name: "Isabella Rossi", company: "Meridian Labs", website: "https://meridianlabs.ai", industry: "AI / Machine Learning", position: "Head of Product", email: "isabella@meridianlabs.ai", linkedin: "https://linkedin.com/in/isabellarossi", country: "Italy", companySize: "11-50", stage: "LOST" },
   { name: "Tom Eriksen", company: "Signalhouse", website: "https://signalhouse.io", industry: "Data & Analytics", position: "Co-founder", email: "tom@signalhouse.io", linkedin: "https://linkedin.com/in/tomeriksen", country: "Denmark", companySize: "1-10", stage: "NEW_LEAD" },
-  { name: "Priya Sharma", company: "Cloudmint", website: "https://cloudmint.io", industry: "Fintech", position: "Director of Ops", email: "priya@cloudmint.io", linkedin: "https://linkedin.com/in/priyasharma", country: "Singapore", companySize: "51-200", stage: "INTERESTED" },
+  { name: "Maya Chen", company: "Cloudmint", website: "https://cloudmint.io", industry: "Fintech", position: "VP Finance", email: "maya@cloudmint.io", linkedin: "https://linkedin.com/in/mayachen", country: "United States", companySize: "51-200", stage: "PROPOSAL" },
 ] as const;
 
 /**
@@ -369,19 +369,29 @@ export async function seedSampleData(
       note: "healthy — strong intent, being worked properly",
     },
     {
-      // High intent, never replied.
-      prospectIdx: 13, // Cloudmint — Priya Sharma
-      stage: "QUALIFYING",
-      dealValue: 12_000,
-      lastInteractionDaysAgo: 6,
+      // ── The deal the guided tour follows, from risk to booked meeting. ──
+      //
+      // Deliberately the largest expected revenue in the set, so it is top of
+      // Today's priorities when the tour says "open the deal at the top" —
+      // and it earns that position from the real ranking rather than being
+      // pinned there. Its numbers are whatever computeOpportunityScore makes
+      // of these signals: this scenario chooses the evidence, never the score.
+      prospectIdx: 13, // Cloudmint — Maya Chen, VP Finance
+      stage: "PROPOSAL",
+      dealValue: 42_000,
+      // Four days of silence after a proposal that was opened twice is the
+      // leak the tour opens on.
+      lastInteractionDaysAgo: 4,
       lastInteractionKind: "email_opened",
+      nextStepDaysFromNow: null,
       signals: [
-        { type: "pricing_page_viewed", title: "Pricing page viewed", evidence: "2 visits in 3 days", daysAgo: 2, confidence: "high" },
-        { type: "repeat_site_visit", title: "Returned to the site", evidence: "4th visit this month", daysAgo: 3, confidence: "high" },
-        { type: "demo_page_viewed", title: "Demo page viewed", daysAgo: 4, confidence: "medium" },
-        { type: "funding_round", title: "Raised a Series A", evidence: "$12M announced", daysAgo: 20, confidence: "high" },
+        { type: "meeting_attended", title: "Product demo completed", evidence: "45 minutes with the evaluation team", daysAgo: 8, confidence: "high" },
+        { type: "demo_page_viewed", title: "Proposal sent", evidence: "Growth Plan, 12-month term", daysAgo: 7, confidence: "high" },
+        { type: "proposal_opened", title: "Proposal opened twice", evidence: "Second open lasted 6 minutes on pricing", daysAgo: 6, confidence: "high" },
+        { type: "multi_stakeholder", title: "Maya Chen joined the evaluation", evidence: "VP Finance — economic buyer for this purchase", daysAgo: 5, confidence: "high" },
+        { type: "pricing_page_viewed", title: "Security page viewed", evidence: "Viewed the day after joining the evaluation", daysAgo: 4, confidence: "high" },
       ],
-      note: "high intent, no response",
+      note: "the guided tour's deal — proposal opened, then silence",
     },
     {
       // Meeting completed, nothing scheduled after it.

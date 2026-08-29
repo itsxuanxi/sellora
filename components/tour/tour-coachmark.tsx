@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useTour, useTourTarget } from "@/components/tour/tour-provider";
@@ -25,47 +25,103 @@ interface Rect {
 const PAD = 6;
 
 export function TourCoachmark() {
-  const { step, index, total, running, advance, back, finish } = useTour();
-  const target = useTourTarget(step?.target, [step?.id]);
+  const { step, index, total, running, reduced, advance, back, complete, skip } = useTour();
+  const target = useTourTarget(step?.target);
   const [rect, setRect] = useState<Rect | null>(null);
   const [mounted, setMounted] = useState(false);
+  // The card's real height. Assuming one is how the card ends up sitting on
+  // top of the thing it is pointing at: step copy varies by several lines.
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [cardHeight, setCardHeight] = useState(0);
 
   useEffect(() => setMounted(true), []);
 
-  // Track the target through scrolls, resizes and content changes.
+  // Track the target by polling its box.
+  //
+  // Listening for scroll and resize is the obvious implementation and it is
+  // not reliable enough here: the highlight has to follow the element through
+  // scrollIntoView, streamed content that shifts layout, and dialogs opening
+  // underneath it — and a single missed event leaves the ring drawn around
+  // where the target used to be, which looks exactly like the tour pointing
+  // at the wrong thing. Reading one rect per frame and only setting state
+  // when it actually moves costs little and cannot miss.
   useEffect(() => {
-    if (!target) return setRect(null);
-
-    const measure = () => {
-      const r = target.getBoundingClientRect();
-      // A zero-size box means the element is in the DOM but not shown — the
-      // sidebar is `hidden lg:flex`, so its nav links measure 0×0 on a phone.
-      // Highlighting that would draw a ring around nothing and strand the
-      // visitor on a step with no way forward.
-      if (r.width === 0 || r.height === 0) return setRect(null);
-      setRect({
-        top: r.top - PAD,
-        left: r.left - PAD,
-        width: r.width + PAD * 2,
-        height: r.height + PAD * 2,
-      });
-    };
-
-    measure();
-    if (target.getBoundingClientRect().height > 0) {
-      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (!target) {
+      setRect(null);
+      return;
     }
 
-    window.addEventListener("scroll", measure, true);
-    window.addEventListener("resize", measure);
-    const observer = new ResizeObserver(measure);
-    observer.observe(target);
+    let frame = 0;
+    let last = "";
+
+    const tick = () => {
+      const r = target.getBoundingClientRect();
+      // A zero-size box means the element is in the DOM but not shown — the
+      // sidebar is `hidden lg:flex`, so its nav links measure 0x0 on a phone.
+      // Highlighting that would draw a ring around nothing and strand the
+      // visitor on a step with no way forward.
+      const next =
+        r.width === 0 || r.height === 0
+          ? null
+          : {
+              top: r.top - PAD,
+              left: r.left - PAD,
+              width: r.width + PAD * 2,
+              height: r.height + PAD * 2,
+            };
+      const key = next ? `${next.top}|${next.left}|${next.width}|${next.height}` : "none";
+      if (key !== last) {
+        last = key;
+        setRect(next);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+
+    tick();
+    frame = requestAnimationFrame(tick);
+    // rAF stops while the document is hidden, so a timer carries the
+    // measurement across a backgrounded tab and the highlight is correct the
+    // moment the visitor comes back.
+    const timer = window.setInterval(tick, 250);
     return () => {
-      window.removeEventListener("scroll", measure, true);
-      window.removeEventListener("resize", measure);
-      observer.disconnect();
+      cancelAnimationFrame(frame);
+      window.clearInterval(timer);
     };
   }, [target]);
+
+  // Bring the target on screen when the step changes.
+  //
+  // A single scrollIntoView is not enough here. On a fresh navigation the
+  // element exists before the content below it has finished laying out, so
+  // one call lands on a position that is then pushed away; and a smooth
+  // scroll can be superseded by the next render. This retries a few times and
+  // stops as soon as the target is actually visible, which is the only
+  // condition that matters.
+  useEffect(() => {
+    if (!target) return;
+    let tries = 0;
+    let timer: number | undefined;
+
+    const onScreen = () => {
+      const r = target.getBoundingClientRect();
+      return r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight;
+    };
+
+    const attempt = () => {
+      if (onScreen() || tries >= 6) return;
+      tries += 1;
+      target.scrollIntoView({
+        block: "center",
+        behavior: reduced || tries > 1 ? "auto" : "smooth",
+      });
+      timer = window.setTimeout(attempt, 250);
+    };
+
+    attempt();
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [target, step?.id, reduced]);
 
   // On a "click" step, the real interaction is what advances the tour. The
   // listener is passive and capture-phase: it observes the click on its way
@@ -77,20 +133,30 @@ export function TourCoachmark() {
     return () => target.removeEventListener("click", onClick, { capture: true });
   }, [target, step?.advance, step?.id, advance]);
 
+  useEffect(() => {
+    if (!cardRef.current) return;
+    const measure = () => setCardHeight(cardRef.current?.offsetHeight ?? 0);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, [step?.id, mounted, running]);
+
   if (!mounted || !running || !step) return null;
 
   // With no visible target the step becomes a plain card: centred, and
   // advanced by a button rather than by an interaction the visitor cannot see.
   const unanchored = rect === null;
-  const below = (step.placement ?? "bottom") === "bottom";
-  const cardTop = rect
-    ? below
-      ? rect.top + rect.height + 12
-      : Math.max(12, rect.top - 12 - 260)
-    : Math.max(12, window.innerHeight / 2 - 160);
+  const placed = rect
+    ? placeCard(rect, cardHeight, step.placement ?? "bottom")
+    : {
+        anchorY: Math.max(12, viewport().height / 2 - 160),
+        above: false,
+        maxHeight: viewport().height - 24,
+      };
   const cardLeft = rect
-    ? Math.min(Math.max(12, rect.left), Math.max(12, window.innerWidth - 372))
-    : Math.max(12, window.innerWidth / 2 - 180);
+    ? Math.min(Math.max(12, rect.left), Math.max(12, viewport().width - 372))
+    : Math.max(12, viewport().width / 2 - 180);
 
   return createPortal(
     <div className="pointer-events-none fixed inset-0 z-[60]">
@@ -133,27 +199,37 @@ export function TourCoachmark() {
       )}
 
       <div
+        ref={cardRef}
         role="dialog"
         aria-label={step.title}
-        className="pointer-events-auto fixed w-[360px] max-w-[calc(100vw-24px)] rounded-2xl border border-border/70 bg-card p-5 shadow-xl transition-all duration-300 ease-out"
-        style={{ top: cardTop, left: cardLeft }}
+        className="pointer-events-auto fixed left-0 top-0 w-[360px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-2xl border border-border/70 bg-card p-5 shadow-xl transition-transform duration-300 ease-out"
+        style={{
+          transform: `translate3d(${Math.round(cardLeft)}px, ${Math.round(placed.anchorY)}px, 0)${
+            placed.above ? " translateY(-100%)" : ""
+          }`,
+          maxHeight: placed.maxHeight,
+        }}
       >
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-primary">
-            {step.eyebrow}
+            {step.phase}
           </span>
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] tabular-nums text-muted-foreground">
             Step {index + 1} of {total}
           </span>
         </div>
 
-        <div className="mt-2 flex gap-1" aria-hidden>
+        <div className="mt-3 flex items-center gap-1.5" aria-hidden>
           {Array.from({ length: total }).map((_, i) => (
             <span
               key={i}
               className={cn(
-                "h-0.5 flex-1 rounded-full transition-colors",
-                i <= index ? "bg-primary" : "bg-muted"
+                "rounded-full transition-all duration-200",
+                i === index
+                  ? "h-1.5 w-5 bg-primary"
+                  : i < index
+                    ? "size-1.5 bg-primary/50"
+                    : "size-1.5 bg-muted"
               )}
             />
           ))}
@@ -185,7 +261,7 @@ export function TourCoachmark() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={finish}
+              onClick={skip}
               className="rounded-full px-2 py-1 text-[12px] text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground"
             >
               {index === total - 1 ? "Close" : "Skip tour"}
@@ -196,7 +272,7 @@ export function TourCoachmark() {
             {(step.advance === "read" || unanchored) && (
               <button
                 type="button"
-                onClick={index === total - 1 ? finish : advance}
+                onClick={index === total - 1 ? complete : advance}
                 className="rounded-full bg-primary px-3.5 py-1.5 text-[12px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 {index === total - 1 ? "Finish" : "Next"}
@@ -208,6 +284,60 @@ export function TourCoachmark() {
     </div>,
     document.body
   );
+}
+
+function viewport() {
+  return {
+    width: typeof window === "undefined" ? 1280 : window.innerWidth,
+    height: typeof window === "undefined" ? 800 : window.innerHeight,
+  };
+}
+
+/**
+ * Where the card goes, and how tall it may be.
+ *
+ * Two rules the tour must never break: the card cannot cover the element it
+ * is pointing at, and it cannot run off the screen. Position alone cannot
+ * guarantee both — the targets here include whole page sections, and when a
+ * tall target leaves too little room on either side, any position that avoids
+ * the overlap runs off the viewport instead.
+ *
+ * So the card is bounded as well as placed: it takes the roomier gap and is
+ * capped to that gap's height, scrolling internally if the copy needs more.
+ * A slightly scrollable card is a much smaller failure than one sitting on
+ * top of the thing the step is about.
+ */
+function placeCard(
+  rect: Rect,
+  cardHeight: number,
+  placement: "top" | "bottom"
+): { anchorY: number; above: boolean; maxHeight: number } {
+  const GAP = 12;
+  const { height } = viewport();
+  const wanted = cardHeight || 260;
+
+  // Gaps are measured against the part of the target actually on screen. A
+  // target taller than the viewport has no off-screen gap to place into, and
+  // measuring against its full height would compute a negative one.
+  const visibleTop = Math.max(0, rect.top);
+  const visibleBottom = Math.min(height, rect.top + rect.height);
+  const below = Math.max(0, height - visibleBottom - GAP * 2);
+  const above = Math.max(0, visibleTop - GAP * 2);
+
+  const preferBelow = placement === "bottom";
+  const fitsPreferred = preferBelow ? below >= wanted : above >= wanted;
+  const fitsOther = preferBelow ? above >= wanted : below >= wanted;
+  const useBelow = fitsPreferred ? preferBelow : fitsOther ? !preferBelow : below >= above;
+
+  return {
+    // The edge of the gap the card is pinned to. When placed above, the card
+    // is shifted up by its own height in CSS rather than by a measured value:
+    // the measurement lags a render behind the content, and being seven
+    // pixels stale is enough to overlap the thing the step is pointing at.
+    anchorY: useBelow ? visibleBottom + GAP : visibleTop - GAP,
+    above: !useBelow,
+    maxHeight: Math.max(160, useBelow ? below : above),
+  };
 }
 
 function Mask({ style }: { style: React.CSSProperties }) {

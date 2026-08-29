@@ -74,7 +74,7 @@ export function SampleDataBar({
               className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 px-3 py-1.5 text-[12px] font-medium text-amber-900 transition-colors hover:bg-amber-500/10 dark:text-amber-200"
             >
               <Compass className="size-3" aria-hidden />
-              Guided tour
+              Restart demo
             </button>
           )}
           {sandbox && (

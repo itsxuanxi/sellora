@@ -280,15 +280,19 @@ export default async function OpportunityDetailPage({
               data-tour="action-controls"
               className="mt-4 flex flex-wrap items-center gap-2"
             >
-              <RecommendationActions
-                recommendationId={openRec?.id ?? null}
-                opportunityId={enriched.id}
-              />
-              <LoopControls
-                opportunityId={enriched.id}
-                recommendationId={openRec?.id ?? null}
-                contactId={enriched.contact?.id ?? null}
-              />
+              <span data-tour="approve-action" className="inline-flex items-center gap-1.5">
+                <RecommendationActions
+                  recommendationId={openRec?.id ?? null}
+                  opportunityId={enriched.id}
+                />
+              </span>
+              <span data-tour="loop-controls" className="inline-flex items-center gap-1.5">
+                <LoopControls
+                  opportunityId={enriched.id}
+                  recommendationId={openRec?.id ?? null}
+                  contactId={enriched.contact?.id ?? null}
+                />
+              </span>
               {enriched.contact && (
                 <Button asChild variant="outline" size="sm">
                   <a href={`mailto:${enriched.contact.email}`}>
@@ -358,14 +362,20 @@ export default async function OpportunityDetailPage({
                  another, which left the reader to join them by eye. Merged,
                  the sequence that actually matters — advice, what the rep did,
                  how the customer reacted — reads as adjacent rows. ── */}
-          <Section title="Deal timeline" tour="deal-timeline">
-            <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 p-3">
-              <LoopStrip stages={loopStages} />
+          <Section title="Deal timeline">
+            {/* The tour anchors here rather than on the whole section: the
+                timeline runs to a couple of thousand pixels, and a highlight
+                taller than the screen leaves the coach card nowhere to go
+                that is not on top of it. */}
+            <div data-tour="signal-timeline">
+              <div className="mb-4 rounded-xl border border-border/60 bg-muted/30 p-3">
+                <LoopStrip stages={loopStages} />
+              </div>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Selryn&apos;s read on the signals:{" "}
+                {interpretSignals(timelineSignals, enriched.score)}
+              </p>
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">
-              Selryn&apos;s read on the signals:{" "}
-              {interpretSignals(timelineSignals, enriched.score)}
-            </p>
             <LoopTimeline events={timeline} />
           </Section>
 
@@ -435,24 +445,29 @@ export default async function OpportunityDetailPage({
 
         {/* ── Right rail ── */}
         <div className="space-y-6">
-          <Section title="Opportunity score" tour="opportunity-score">
-            <div className="flex items-start justify-between gap-3">
-              <OpportunityScore
-                score={enriched.score}
-                band={enriched.scoreBand}
-                size="lg"
-              />
-              <ConfidenceNote confidence={enriched.confidence} />
-            </div>
-
-            {enriched.whyNow.length > 0 && (
-              <div className="mt-4 border-t border-border/60 pt-4">
-                <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Why this score
-                </div>
-                <WhyNow reasons={enriched.whyNow} />
+          <Section title="Opportunity score">
+            {/* The tour anchors on the score and its reasons rather than the
+                whole panel: with the full breakdown the section is as tall as
+                the viewport, which leaves the coach card no gap to sit in. */}
+            <div data-tour="score-summary">
+              <div className="flex items-start justify-between gap-3">
+                <OpportunityScore
+                  score={enriched.score}
+                  band={enriched.scoreBand}
+                  size="lg"
+                />
+                <ConfidenceNote confidence={enriched.confidence} />
               </div>
-            )}
+
+              {enriched.whyNow.length > 0 && (
+                <div className="mt-4 border-t border-border/60 pt-4">
+                  <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Why this score
+                  </div>
+                  <WhyNow reasons={enriched.whyNow} />
+                </div>
+              )}
+            </div>
 
             {snapshot && (
               <div className="mt-5 border-t border-border/60 pt-4">

@@ -1,15 +1,19 @@
 /**
- * The guided tour, as data.
+ * The guided story, as data.
  *
- * Every step points at a real control in the real application by its
- * `data-tour` attribute. There is no scripted mock behind any of them: the
- * step that says "act on it" highlights the actual button that writes to the
- * ledger, and the tour advances because the write happened.
+ * One deal — Cloudmint — from a revenue leak to a booked next meeting, told
+ * through the real application. Every step points at a real control by its
+ * `data-tour` attribute; the components carry the attribute and know nothing
+ * else about the tour.
  *
- * That is the difference from the tour this replaces, which drove a parallel
- * set of fixture components. Keeping targets as strings here means the tour
- * knows nothing about the components it points at, and the components know
- * nothing about the tour beyond one attribute.
+ * The copy deliberately does not quote scores, probabilities or amounts.
+ * Those are computed by the scoring engine from the seeded evidence, and a
+ * tour that hardcoded them would drift the first time a weight changed and
+ * then confidently contradict the screen it is pointing at. It names what to
+ * look at; the product supplies the numbers.
+ *
+ * The one figure that is safe to state is the deal value, because that is an
+ * input to the engine rather than an output of it.
  */
 
 export interface TourStep {
@@ -18,14 +22,15 @@ export interface TourStep {
   route: string;
   /** `data-tour` value of the element to highlight. */
   target: string;
-  eyebrow: string;
+  /** DETECT | DECIDE | ACT | LEARN — the phase this step belongs to. */
+  phase: "Detect" | "Decide" | "Act" | "Learn";
   title: string;
   body: string;
   /** What the visitor is asked to do. */
   instruction: string;
   /**
    * "click" means the highlighted control must really be used — there is no
-   * Continue button. "read" advances on Next.
+   * Continue button. "read" advances on Continue.
    */
   advance: "click" | "read";
   placement?: "top" | "bottom";
@@ -33,24 +38,35 @@ export interface TourStep {
 
 export const TOUR_STEPS: TourStep[] = [
   {
-    id: "priorities",
+    id: "find",
     route: "/dashboard",
     target: "priority-row-1",
-    eyebrow: "Detect",
-    title: "Start where the next hour is worth most",
-    body: "Every open deal, sorted by expected revenue — deal value multiplied by win probability. The arithmetic is a column, so the ranking can be checked rather than trusted.",
-    instruction: "Open the deal at the top.",
+    phase: "Detect",
+    title: "Start with the revenue that needs attention",
+    body: "Every open deal, ranked by expected revenue — deal value multiplied by win probability. Cloudmint is a $42,000 deal with strong buying intent that has gone quiet, which is why it is at the top.",
+    instruction: "Open the Cloudmint opportunity.",
     advance: "click",
     placement: "bottom",
   },
   {
-    id: "score",
+    id: "signals",
     route: "/opportunities/",
-    target: "opportunity-score",
-    eyebrow: "Detect",
-    title: "The score shows its work",
-    body: "Customer fit, engagement and buying signals each contribute points, and every line says which rule fired. Nothing here is a black box you have to take on faith.",
-    instruction: "Have a look, then continue.",
+    target: "signal-timeline",
+    phase: "Detect",
+    title: "See what changed",
+    body: "The demo, the proposal, the two opens, the VP Finance joining the evaluation, the security page view — and then nothing for four days. Selryn reads them together rather than one at a time.",
+    instruction: "Look at the signals on this deal, then continue.",
+    advance: "read",
+    placement: "bottom",
+  },
+  {
+    id: "risk",
+    route: "/opportunities/",
+    target: "score-summary",
+    phase: "Decide",
+    title: "Turn activity into a decision",
+    body: "Customer fit, engagement and buying signals each contribute points, and every line says which rule fired. The silence after a proposal that was opened twice is what puts this deal's expected revenue at risk.",
+    instruction: "Read why the score is what it is, then continue.",
     advance: "read",
     placement: "bottom",
   },
@@ -58,54 +74,54 @@ export const TOUR_STEPS: TourStep[] = [
     id: "recommendation",
     route: "/opportunities/",
     target: "next-action",
-    eyebrow: "Decide",
-    title: "One action, with the evidence attached",
-    body: "Selryn picks a single next step from the stage, the silence and the signals — and shows the reasoning, so you can disagree with it on the merits.",
-    instruction: "Read the recommendation, then continue.",
+    phase: "Decide",
+    title: "Know what to do next",
+    body: "One action, chosen from the stage, the silence and the signals — with the evidence that led to it and how confident Selryn is. Maya viewed the security page after joining the evaluation, and nobody has followed up.",
+    instruction: "Read the recommendation and its evidence, then continue.",
     advance: "read",
     placement: "bottom",
   },
   {
-    id: "act",
+    id: "control",
     route: "/opportunities/",
     target: "action-controls",
-    eyebrow: "Act",
-    title: "Acting really writes",
-    body: "These buttons are the product's own. In this sandbox they update the ledger for real — what they will not do is send anything to the invented person on the other end.",
-    instruction: "Click “Mark done”.",
+    phase: "Act",
+    title: "Keep the human in control",
+    body: "Selryn recommends; a person decides. Nothing customer-facing leaves without approval, and in this sandbox nothing leaves at all — no email is sent and no CRM is written, whatever you click.",
+    instruction: "These are the real controls. Continue when you are ready to use them.",
+    advance: "read",
+    placement: "top",
+  },
+  {
+    id: "approve",
+    route: "/opportunities/",
+    target: "approve-action",
+    phase: "Act",
+    title: "Approve the next best action",
+    body: "The recommendation, the reasoning behind it and your decision are recorded together — which is what lets Selryn later report whether its advice was worth taking.",
+    instruction: "Click “Mark done” to approve the follow-up.",
     advance: "click",
     placement: "top",
   },
   {
-    id: "recorded",
+    id: "response",
     route: "/opportunities/",
-    target: "deal-timeline",
-    eyebrow: "Learn",
-    title: "Your decision is on the record",
-    body: "The action you just took joined this deal's chain: advice given, what was done about it, how the buyer reacted, what the deal did next. Selryn then recomputes the next action from the new state — which sometimes means different advice and sometimes the same advice, because the situation itself has not changed.",
-    instruction: "Look at the timeline, then continue.",
-    advance: "read",
-    placement: "bottom",
-  },
-  {
-    id: "to-analytics",
-    route: "/opportunities/",
-    target: "nav-analytics",
-    eyebrow: "Learn",
-    title: "Where it all adds up",
-    body: "Actions, buyer responses and outcomes are recorded together, so the product can report what its advice was actually worth.",
-    instruction: "Open Analytics.",
+    target: "loop-controls",
+    phase: "Learn",
+    title: "See what happened next",
+    body: "Maya replied: “Wednesday works. Please include our security lead and procurement manager.” Recording that reply is not bookkeeping — it becomes evidence the scoring engine reads, so the deal stops looking silent.",
+    instruction: "Click “Log response”, choose Replied, and save.",
     advance: "click",
-    placement: "bottom",
+    placement: "top",
   },
   {
-    id: "impact",
-    route: "/analytics",
-    target: "impact",
-    eyebrow: "Learn",
-    title: "The loop closes here",
-    body: "Recommendation → action → response → outcome, counted honestly. The sample data includes the actions that went nowhere, because a dataset where every recommendation worked would teach you something false.",
-    instruction: "That's the tour.",
+    id: "outcome",
+    route: "/opportunities/",
+    target: "score-summary",
+    phase: "Learn",
+    title: "Connect the action to revenue",
+    body: "The reply re-scored the deal: the leak closed, win probability rose and expected revenue rose with it. Move the stage forward and the figures move again — because the evidence changed, not because a demo said so. The deal has advanced. It has not been won.",
+    instruction: "That is the loop, closed.",
     advance: "read",
     placement: "bottom",
   },
