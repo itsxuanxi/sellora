@@ -16,10 +16,15 @@ import { prefersReducedMotion } from "@/lib/motion";
  *    the single effect below, so pauses cannot stack up duplicate timers.
  *  - Pause/resume is seamless. Unspent time is banked on interruption rather
  *    than discarded, so returning to a half-elapsed stage does not restart it.
- *  - Four independent pause reasons are tracked separately (hover, page
- *    visibility, viewport, reduced motion). An earlier version shared one
- *    boolean and the reasons fought — moving the mouse away resumed playback
- *    in a background tab.
+ *  - Independent pause reasons are tracked separately (page visibility,
+ *    viewport, keyboard focus, manual pick, reduced motion). An earlier
+ *    version shared one boolean and the reasons fought — dropping one
+ *    resumed playback in a background tab.
+ *  - Hovering does NOT pause. It reads as the demo breaking: the pointer
+ *    rests over the panel for the ordinary reason that the panel is the
+ *    thing being looked at, and freezing then is indistinguishable from a
+ *    stall. Deliberate interactions still hold it — clicking a tab, or
+ *    tabbing in from the keyboard.
  *  - Autoplay is off entirely under prefers-reduced-motion; manual switching
  *    still works.
  */
@@ -37,15 +42,13 @@ export interface AutoRotate {
   /** Arrow/Home/End handling for an ARIA tablist. */
   onKeyDown: (e: React.KeyboardEvent) => void;
   /**
-   * Spread onto the element that should pause on hover, and on keyboard
-   * focus. Focus is qualified by :focus-visible so a mouse click - which
-   * already triggers the manual hold - does not additionally freeze the
-   * carousel, while a keyboard user tabbing in never has content move under
-   * them mid-read.
+   * Spread onto the element that should hold while a keyboard user is
+   * reading it. Focus is qualified by :focus-visible so a mouse click —
+   * which already triggers the manual hold — does not additionally freeze
+   * the carousel, while a keyboard user tabbing in never has content move
+   * under them mid-read. There is no mouse-hover pause.
    */
-  hoverProps: {
-    onMouseEnter: () => void;
-    onMouseLeave: () => void;
+  interactionProps: {
     onFocus: (e: React.FocusEvent) => void;
     onBlur: (e: React.FocusEvent) => void;
   };
@@ -57,11 +60,16 @@ export interface AutoRotate {
    *  pick. Drives the tab progress line. */
   paused: boolean;
   /**
-   * True when the *content* of the active stage should hold — hover, hidden
-   * tab, off-screen. Deliberately excludes the manual hold: picking a tab is
-   * a request to watch that scenario, so freezing its steps for ten seconds
-   * is the opposite of what the visitor asked for. Only the carousel stands
-   * down; the steps play straight through from the first one.
+   * True when the *content* of the active stage should hold — that is, when
+   * nobody can see it: the tab is hidden, or the section is scrolled off
+   * screen. Freezing then costs nothing and saves work.
+   *
+   * Deliberately excludes every "the visitor is here" reason. Hover, keyboard
+   * focus and a manual tab pick all mean someone is looking at this panel, and
+   * stopping a half-drawn scenario under their cursor reads as the demo
+   * breaking rather than politely waiting. Those reasons hold the *carousel*
+   * instead: the current scenario finishes drawing and then stays put for as
+   * long as the visitor wants it.
    */
   contentPaused: boolean;
   reduced: boolean;
@@ -90,7 +98,6 @@ export function useAutoRotate(
   }, []);
 
   // Separate reasons, combined at the end. Never collapse these into one.
-  const [hoverPaused, setHoverPaused] = useState(false);
   const [pagePaused, setPagePaused] = useState(false);
   const [offScreen, setOffScreen] = useState(true);
   const [reduced, setReduced] = useState(false);
@@ -109,8 +116,11 @@ export function useAutoRotate(
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const contentPaused = hoverPaused || focusPaused || pagePaused || offScreen;
-  const paused = contentPaused || manualHold;
+  // Only the "nobody is watching" reasons freeze the content.
+  const contentPaused = pagePaused || offScreen;
+  // Everything freezes the carousel, including the reasons that mean the
+  // visitor is deliberately looking at this one panel.
+  const paused = contentPaused || focusPaused || manualHold;
 
   useEffect(() => {
     setReduced(prefersReducedMotion());
@@ -270,11 +280,7 @@ export function useAutoRotate(
     active,
     goTo,
     onKeyDown,
-    // No focus-based pause: clicking a tab focuses it, so pausing on focus
-    // would freeze the carousel the first time anyone interacted with it.
-    hoverProps: {
-      onMouseEnter: () => setHoverPaused(true),
-      onMouseLeave: () => setHoverPaused(false),
+    interactionProps: {
       onFocus: (e: React.FocusEvent) => {
         // :focus-visible is the browser's own judgement about whether focus
         // arrived from the keyboard. Matching on it avoids the failure the

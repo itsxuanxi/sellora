@@ -91,7 +91,7 @@ export function Scenarios() {
         {/* ── Left rail: tabs + timeline · Right: product surface ── */}
         <div
           ref={rotate.containerRef}
-          {...rotate.hoverProps}
+          {...rotate.interactionProps}
           className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10"
         >
           <div className="min-w-0">

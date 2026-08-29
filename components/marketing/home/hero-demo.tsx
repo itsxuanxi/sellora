@@ -56,7 +56,7 @@ export function HeroDemo() {
   });
 
   return (
-    <div ref={rotate.containerRef} {...rotate.hoverProps} className="w-full">
+    <div ref={rotate.containerRef} {...rotate.interactionProps} className="w-full">
       <TabStrip
         rotate={rotate}
         labels={LABELS}
