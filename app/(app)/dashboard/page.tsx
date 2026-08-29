@@ -114,7 +114,7 @@ export default async function TodayPage() {
             label: "Revenue at risk",
             value: formatMoney(overview.revenueAtRisk, overview.currency),
             tone: overview.revenueAtRisk > 0 ? "critical" : "neutral",
-            href: "/recover",
+            href: "/opportunities?filter=needs-attention",
           },
           {
             label: "Open pipeline",

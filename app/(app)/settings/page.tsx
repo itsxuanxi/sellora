@@ -1,4 +1,5 @@
-import { CheckCircle2, XCircle } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { BillingPanel } from "@/components/settings/billing-panel";
 import { NotificationsForm } from "@/components/settings/notifications-form";
@@ -15,7 +16,7 @@ import { db } from "@/lib/db";
 
 export const metadata = { title: "Settings" };
 
-const TAB_VALUES = ["profile", "company", "notifications", "api-keys", "billing"];
+const TAB_VALUES = ["profile", "company", "notifications", "api-keys", "billing", "workspace"];
 
 export default async function SettingsPage({
   searchParams,
@@ -94,6 +95,7 @@ export default async function SettingsPage({
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
+          <TabsTrigger value="workspace">Workspace</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -179,7 +181,72 @@ export default async function SettingsPage({
             }}
           />
         </TabsContent>
+        <TabsContent value="workspace">
+          <WorkspaceTools />
+        </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+/**
+ * The tools that used to own a permanent nav slot.
+ *
+ * None of them is part of the daily loop, and a rail entry is a claim that
+ * something is. They are configuration and reference, so they live in
+ * Settings — still one click away, no longer competing with Today.
+ */
+function WorkspaceTools() {
+  const tools = [
+    {
+      href: "/icp",
+      title: "Ideal customer profile",
+      body: "What Selryn scores customer fit against. Without it, fit is scored neutrally.",
+    },
+    {
+      href: "/accounts",
+      title: "Accounts",
+      body: "Every company in the workspace, with its research brief and score.",
+    },
+    {
+      href: "/prospects",
+      title: "Contacts",
+      body: "The people attached to those accounts.",
+    },
+    {
+      href: "/intent",
+      title: "Intent campaigns",
+      body: "Import companies and signals from a CSV, and group prospects into campaigns.",
+    },
+    {
+      href: "/agent",
+      title: "Agent queue",
+      body: "Autonomous actions awaiting review. Still being built out.",
+    },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-5">
+      <h2 className="text-sm font-semibold">Workspace tools</h2>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Configuration and reference, kept out of the daily navigation.
+      </p>
+      <ul className="mt-4 divide-y divide-border/60">
+        {tools.map((tool) => (
+          <li key={tool.href}>
+            <Link
+              href={tool.href}
+              className="flex items-baseline gap-3 py-3 transition-colors hover:text-primary"
+            >
+              <span className="font-medium">{tool.title}</span>
+              <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                {tool.body}
+              </span>
+              <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

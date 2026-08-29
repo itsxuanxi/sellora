@@ -4,19 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  Bot,
   Briefcase,
-  Building2,
-  CalendarCheck,
+  CheckSquare,
   LayoutDashboard,
-  LifeBuoy,
-  Mail,
   Plug,
-  Radio,
   Settings,
-  Sparkles,
-  Target,
-  Users,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
@@ -31,39 +23,26 @@ import { cn } from "@/lib/utils";
  * will see the moment they sign in.
  */
 
-export interface NavItem {
-  name: string;
-  href: string;
+import { NAV_DESTINATIONS, type NavDestination } from "@/lib/nav";
+
+export interface NavItem extends NavDestination {
   icon: typeof LayoutDashboard;
-  /** Not built yet. Shown, disabled, and labelled Planned — never faked. */
-  planned?: boolean;
 }
 
-/**
- * Navigation follows the revenue loop (§13): the primary group is the path a
- * user walks every morning — see what is leaking, work the queue, act.
- * Everything that supports that loop rather than driving it sits below the
- * divider, so the sidebar reads as one system instead of a feature list.
- */
-export const primaryNav: NavItem[] = [
-  { name: "Today", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Opportunities", href: "/opportunities", icon: Briefcase },
-  { name: "Recover", href: "/recover", icon: LifeBuoy },
-  { name: "Signals", href: "/signals", icon: Radio },
-  { name: "Conversations", href: "/campaigns", icon: Mail },
-  { name: "Meetings", href: "#", icon: CalendarCheck, planned: true },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-];
+const ICONS: Record<string, typeof LayoutDashboard> = {
+  Today: LayoutDashboard,
+  Deals: Briefcase,
+  Actions: CheckSquare,
+  Impact: BarChart3,
+  Integrations: Plug,
+  Settings,
+};
 
-export const workspaceNav: NavItem[] = [
-  { name: "Accounts", href: "/accounts", icon: Building2 },
-  { name: "Contacts", href: "/prospects", icon: Users },
-  { name: "Integrations", href: "/intent", icon: Plug },
-  { name: "ICP", href: "/icp", icon: Target },
-  { name: "Agent", href: "/agent", icon: Bot },
-  { name: "AI Insights", href: "/insights", icon: Sparkles },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
+/** The rendered navigation. Order and destinations come from lib/nav.ts. */
+export const primaryNav: NavItem[] = NAV_DESTINATIONS.map((d) => ({
+  ...d,
+  icon: ICONS[d.name] ?? LayoutDashboard,
+}));
 
 /** How a surface answers "where does this item go, and is it live here?" */
 export type NavResolver = (item: NavItem) => {
@@ -86,9 +65,8 @@ function NavLink({
   resolve: NavResolver;
 }) {
   const resolved = resolve(item);
-  const disabled = item.planned || resolved.disabled;
 
-  if (disabled) {
+  if (resolved.disabled) {
     return (
       <span
         aria-disabled
@@ -96,11 +74,6 @@ function NavLink({
       >
         <item.icon className="size-4" />
         {item.name}
-        {item.planned && (
-          <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
-            Planned
-          </span>
-        )}
       </span>
     );
   }
@@ -138,21 +111,6 @@ export function SidebarNav({
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4">
       {primaryNav.map((item) => (
-        <NavLink
-          key={item.name}
-          item={item}
-          onNavigate={onNavigate}
-          pathname={pathname}
-          resolve={resolve}
-        />
-      ))}
-
-      <div className="my-3 border-t border-border/60" />
-      <span className="px-3 pb-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70">
-        Workspace
-      </span>
-
-      {workspaceNav.map((item) => (
         <NavLink
           key={item.name}
           item={item}

@@ -57,7 +57,7 @@ export async function setSlackChannel(
       },
     });
 
-    revalidatePath("/intent");
+    revalidatePath("/integrations");
     return { ok: true, data: undefined };
   } catch (e) {
     return actionError(e, "Could not save the channel.");
@@ -95,7 +95,7 @@ export async function sendSlackTest(): Promise<ActionResult<string>> {
       message: { ...message, dedupeKey: `slack-test:${Date.now()}` },
     });
 
-    revalidatePath("/intent");
+    revalidatePath("/integrations");
     switch (outcome.status) {
       case "sent":
         return {
@@ -131,7 +131,7 @@ export async function disconnectSlack(): Promise<ActionResult<string>> {
       targetId: "slack",
     });
 
-    revalidatePath("/intent");
+    revalidatePath("/integrations");
     return { ok: true, data: "Slack disconnected." };
   } catch (e) {
     return actionError(e, "Could not disconnect Slack.");

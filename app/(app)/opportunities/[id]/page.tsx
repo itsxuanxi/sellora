@@ -32,7 +32,7 @@ import type { OpportunityStage } from "@/lib/revenue/config";
 import { StagePill } from "@/app/(app)/opportunities/page";
 import { OpportunityControls } from "@/components/revenue/opportunity-controls";
 
-export const metadata = { title: "Opportunity" };
+export const metadata = { title: "Deal" };
 
 /**
  * Opportunity Intelligence (§11) — one unified profile answering: who are
@@ -174,7 +174,7 @@ export default async function OpportunityDetailPage({
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
-        Opportunities
+        Deals
       </Link>
 
       <PageHeader

@@ -11,13 +11,11 @@ function revalidateEverything() {
   for (const path of [
     "/dashboard",
     "/opportunities",
-    "/recover",
-    "/signals",
-    "/analytics",
+    "/actions",
+    "/impact",
     "/accounts",
     "/prospects",
-    "/campaigns",
-    "/insights",
+    "/actions",
     "/agent",
     "/settings",
   ]) {

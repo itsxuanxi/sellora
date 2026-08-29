@@ -56,7 +56,7 @@ export async function resyncHubspot(): Promise<ActionResult<string>> {
       });
     }
 
-    revalidatePath("/intent");
+    revalidatePath("/integrations");
     return { ok: true, data: "Sync queued — it runs within the hour." };
   } catch (e) {
     return actionError(e, "Could not queue a sync.");
@@ -87,7 +87,7 @@ export async function disconnectHubspot(): Promise<ActionResult<string>> {
       metadata: { keptSyncedRecords: true },
     });
 
-    revalidatePath("/intent");
+    revalidatePath("/integrations");
     return {
       ok: true,
       data: "HubSpot disconnected. Records already synced are kept.",

@@ -46,9 +46,9 @@ import {
 function revalidateRevenue(opportunityId?: string) {
   revalidatePath("/dashboard");
   revalidatePath("/opportunities");
-  revalidatePath("/recover");
-  revalidatePath("/signals");
-  revalidatePath("/analytics");
+  revalidatePath("/actions");
+  revalidatePath("/impact");
+  revalidatePath("/impact");
   if (opportunityId) revalidatePath(`/opportunities/${opportunityId}`);
 }
 

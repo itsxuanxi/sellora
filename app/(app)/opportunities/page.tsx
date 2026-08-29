@@ -1,28 +1,41 @@
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
-import { Briefcase } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
-import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
 import { requireSession } from "@/lib/auth";
+import { isHubspotConfigured } from "@/lib/integrations/hubspot/oauth";
+import { isEncryptionConfigured } from "@/lib/security/crypto";
+import { Button } from "@/components/ui/button";
 import { OPEN_STAGES, STAGE_LABELS, type OpportunityStage } from "@/lib/revenue/config";
 import { formatMoney, formatMoneyCompact } from "@/lib/revenue/money";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
-import { OpportunityScore } from "@/components/revenue/score";
 import { RefreshIntelligenceButton } from "@/components/revenue/recommendation-actions";
 import { refreshRevenueIntelligence } from "@/app/(app)/opportunities/actions";
 
-export const metadata = { title: "Opportunities" };
+export const metadata = { title: "Deals" };
 
-type Filter = "all" | "open" | "high-intent" | "at-risk" | "closed";
+type Filter =
+  | "all"
+  | "needs-attention"
+  | "high-intent"
+  | "stalled"
+  | "recently-advanced"
+  | "won"
+  | "lost";
 
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: "open", label: "Open" },
-  { key: "high-intent", label: "High intent" },
-  { key: "at-risk", label: "At risk" },
-  { key: "closed", label: "Closed" },
   { key: "all", label: "All" },
+  { key: "needs-attention", label: "Needs attention" },
+  { key: "high-intent", label: "High intent" },
+  { key: "stalled", label: "Stalled" },
+  { key: "recently-advanced", label: "Recently advanced" },
+  { key: "won", label: "Won" },
+  { key: "lost", label: "Lost" },
 ];
+
+/** A deal with no contact for this long is stalled rather than merely quiet. */
+const STALLED_DAYS = 14;
+/** How recently a deal must have moved to count as recently advanced. */
+const ADVANCED_WITHIN_DAYS = 14;
 
 /**
  * Every opportunity, ranked by expected revenue rather than by date or
@@ -36,22 +49,37 @@ export default async function OpportunitiesPage({
 }) {
   const session = await requireSession();
   const { filter: rawFilter } = await searchParams;
-  const filter = (FILTERS.find((f) => f.key === rawFilter)?.key ?? "open") as Filter;
+  const filter = (FILTERS.find((f) => f.key === rawFilter)?.key ?? "all") as Filter;
 
   const all = await loadEnrichedOpportunities(session.orgId);
+  const hubspotReady = isHubspotConfigured() && isEncryptionConfigured();
+
+  const advancedSince = Date.now() - ADVANCED_WITHIN_DAYS * 86_400_000;
 
   const filtered = all
     .filter((o) => {
       const open = (OPEN_STAGES as string[]).includes(o.stage);
       switch (filter) {
-        case "open":
-          return open;
+        case "needs-attention":
+          return open && o.primaryLeak !== null;
         case "high-intent":
           return open && (o.score ?? 0) >= 70;
-        case "at-risk":
-          return open && o.primaryLeak !== null;
-        case "closed":
-          return !open;
+        case "stalled":
+          // Quiet for a fortnight, or never contacted at all.
+          return (
+            open && (o.daysSinceContact === null || o.daysSinceContact >= STALLED_DAYS)
+          );
+        case "recently-advanced":
+          return (
+            open &&
+            o.lastInteractionAt !== null &&
+            o.lastInteractionAt.getTime() >= advancedSince &&
+            o.primaryLeak === null
+          );
+        case "won":
+          return o.stage === "WON";
+        case "lost":
+          return o.stage === "LOST";
         default:
           return true;
       }
@@ -65,23 +93,14 @@ export default async function OpportunitiesPage({
   return (
     <>
       <PageHeader
-        title="Opportunities"
-        description="Every open deal, ranked by expected revenue — deal value × likelihood of closing."
+        title="Deals"
+        description="Every deal, ranked by expected revenue — deal value × likelihood of closing."
       >
         <RefreshIntelligenceButton action={refreshRevenueIntelligence} />
       </PageHeader>
 
       {all.length === 0 ? (
-        <EmptyState
-          icon={Briefcase}
-          title="No opportunities yet"
-          description="Selryn creates an opportunity for each account that has contacts, estimates its value from your ICP, and starts scoring it against buying signals."
-        >
-          <RefreshIntelligenceButton
-            action={refreshRevenueIntelligence}
-            label="Build opportunities from my accounts"
-          />
-        </EmptyState>
+        <PipelineOnboarding hubspotReady={hubspotReady} sandbox={session.org.isSample} />
       ) : (
         <>
           <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -117,16 +136,17 @@ export default async function OpportunitiesPage({
             </p>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-border/70 bg-card">
-              <table className="w-full min-w-[820px] text-sm">
+              <table className="w-full min-w-[1040px] text-sm">
                 <thead>
                   <tr className="border-b border-border/70 text-left">
                     <Th>Opportunity</Th>
                     <Th>Stage</Th>
                     <Th align="right">Deal value</Th>
-                    <Th align="right">Likelihood</Th>
+                    <Th align="right">Win prob.</Th>
                     <Th align="right">Expected</Th>
-                    <Th align="right">Score</Th>
-                    <Th>Status</Th>
+                    <Th align="right">At risk</Th>
+                    <Th>Why it matters</Th>
+                    <Th>Next best action</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -161,21 +181,29 @@ export default async function OpportunitiesPage({
                       <td className="px-4 py-3 text-right font-semibold tabular-nums">
                         {formatMoneyCompact(opp.expectedValue, opp.currency)}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <OpportunityScore score={opp.score} band={opp.scoreBand} />
-                      </td>
-                      <td className="px-4 py-3">
-                        {opp.primaryLeak ? (
-                          <span className="text-xs font-medium text-rose-600 dark:text-rose-400">
-                            {opp.primaryLeak.category}
-                          </span>
-                        ) : opp.lastInteractionAt ? (
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(opp.lastInteractionAt, { addSuffix: true })}
+                      {/* Revenue at risk, not the score: a number in money is
+                          the thing a rep can act on, and the score is already
+                          explained in full on the deal itself. */}
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {opp.atRisk > 0 ? (
+                          <span className="font-medium text-rose-600 dark:text-rose-400">
+                            {formatMoneyCompact(opp.atRisk, opp.currency)}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">No contact yet</span>
+                          <span className="text-muted-foreground">&mdash;</span>
                         )}
+                      </td>
+                      <td className="max-w-[260px] px-4 py-3">
+                        <span className="line-clamp-2 text-[13px] leading-snug text-muted-foreground">
+                          {opp.primaryLeak?.summary ??
+                            opp.whyNow[0]?.replace(/^[+−-]\s*/, "") ??
+                            "Steady engagement."}
+                        </span>
+                      </td>
+                      <td className="max-w-[240px] px-4 py-3">
+                        <span className="line-clamp-2 text-[13px] leading-snug">
+                          {opp.nextAction.headline}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -253,5 +281,128 @@ export function StagePill({ stage }: { stage: string }) {
     >
       {STAGE_LABELS[stage as OpportunityStage] ?? stage}
     </span>
+  );
+}
+
+/**
+ * The first screen of an empty workspace.
+ *
+ * It used to be a single "Build opportunities from my accounts" button, which
+ * was both the wrong default and the wrong promise: an account is a company
+ * that exists, not a deal someone is working, and turning every one of them
+ * into an opportunity produces a pipeline of noise that the ranking then has
+ * to sort. Three deliberate paths instead, each stating what it actually does.
+ */
+function PipelineOnboarding({
+  hubspotReady,
+  sandbox,
+}: {
+  hubspotReady: boolean;
+  sandbox: boolean;
+}) {
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card p-8 md:p-10">
+      <h2 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl">
+        Bring in your pipeline
+      </h2>
+      <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+        Connect your sales data or explore Selryn with a ready-made pipeline.
+      </p>
+
+      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+        <OnboardingOption
+          title="Connect HubSpot"
+          body="Sync companies, contacts, deals and activity. Selryn reads them; HubSpot stays the system of record."
+          // Never offered as live when the deployment cannot complete the
+          // OAuth exchange — a connect button that 503s is worse than a label.
+          status={
+            sandbox ? "unavailable" : hubspotReady ? "ready" : "setup-required"
+          }
+          statusLabel={
+            sandbox
+              ? "Real workspace only"
+              : hubspotReady
+                ? undefined
+                : "Setup required"
+          }
+          href="/api/integrations/hubspot/connect"
+          cta="Connect HubSpot"
+          note={
+            sandbox
+              ? "Sandbox workspaces cannot hold a real CRM credential."
+              : hubspotReady
+                ? undefined
+                : "This deployment has no HubSpot credentials configured yet."
+          }
+        />
+
+        <OnboardingOption
+          title="Import a CSV"
+          // Deliberately not "upload your pipeline": the importer takes
+          // companies and the signals against them, and opportunities are
+          // created from those on purpose rather than automatically.
+          body="Upload companies and the buying signals you already have, and start scoring them immediately."
+          status="ready"
+          href="/intent"
+          cta="Import data"
+        />
+
+        <OnboardingOption
+          title="Explore with sample data"
+          body="Load a fictional workspace and walk the whole loop — signals, risk, a recommended action, approval and the revenue outcome."
+          status="ready"
+          href="/settings"
+          cta="Load sample data"
+          note="Nothing is ever sent to the invented companies, and you can clear it in one click."
+        />
+      </div>
+    </section>
+  );
+}
+
+function OnboardingOption({
+  title,
+  body,
+  status,
+  statusLabel,
+  href,
+  cta,
+  note,
+}: {
+  title: string;
+  body: string;
+  status: "ready" | "setup-required" | "unavailable";
+  statusLabel?: string;
+  href: string;
+  cta: string;
+  note?: string;
+}) {
+  const ready = status === "ready";
+  return (
+    <div className="flex flex-col rounded-xl border border-border/70 bg-background p-5">
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="text-[15px] font-semibold">{title}</h3>
+        {statusLabel && (
+          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            {statusLabel}
+          </span>
+        )}
+      </div>
+      <p className="mt-2 flex-1 text-[13.5px] leading-relaxed text-muted-foreground">
+        {body}
+      </p>
+      {note && <p className="mt-2 text-xs text-muted-foreground">{note}</p>}
+      <div className="mt-4">
+        {ready ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={href}>{cta}</Link>
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" disabled>
+            {cta}
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
