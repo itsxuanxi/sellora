@@ -1057,6 +1057,21 @@ model Action {
   content    String? // what was actually sent/said, when we have it
   summary    String // one line for the timeline
 
+  // ── The draft, kept beside what was sent ──
+  // Storing both is what makes `humanEdited` a measurement rather than a
+  // claim, and it is the raw material the learning layer needs to ask which
+  // drafts people trust enough to send unchanged.
+  draftSubject   String?
+  draftBody      String?
+  sentSubject    String?
+  /// Where it went — an address, a channel name, a CRM object.
+  destination    String?
+  /// True when the sandbox suppressed the real send. See lib/sandbox.ts.
+  simulated      Boolean @default(false)
+  /// Why a human rejected or overrode the recommendation. The most valuable
+  /// feedback in the product, and the easiest to throw away.
+  decisionReason String?
+
   // ── The approval chain (§6: nothing customer-facing goes out unreviewed) ──
   proposedAt DateTime  @default(now())
   approvedAt DateTime?

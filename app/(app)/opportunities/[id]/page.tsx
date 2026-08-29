@@ -24,6 +24,10 @@ import { LoopControls } from "@/components/revenue/loop-controls";
 import { loadOpportunityTimeline, summarizeLoop } from "@/lib/revenue/timeline";
 import { parseSupportingSignals } from "@/lib/revenue/loop";
 import { RecommendationActions } from "@/components/revenue/recommendation-actions";
+import { ActionConsole } from "@/components/revenue/action-console";
+import { draftFor, executionSummary } from "@/lib/revenue/execution";
+import { isSimulated } from "@/lib/sandbox";
+import { can } from "@/lib/security/rbac";
 import type { OpportunityStage } from "@/lib/revenue/config";
 import { StagePill } from "@/app/(app)/opportunities/page";
 import { OpportunityControls } from "@/components/revenue/opportunity-controls";
@@ -90,7 +94,33 @@ export default async function OpportunityDetailPage({
     }),
   ]);
 
+
   const openRec = recommendations.find((r) => r.status === "OPEN") ?? null;
+
+  // The action the console is about: one awaiting approval, or the decision
+  // already taken on the *currently open* recommendation.
+  //
+  // Scoping the second case to `openRec` matters. A worked opportunity has a
+  // history of executed actions, and showing the newest of those would report
+  // last month's case study as the state of today's recommendation — the
+  // console would look finished before anyone had done anything. Past actions
+  // belong in the timeline below, which is where they are.
+  const pendingAction =
+    (await db.action.findFirst({
+      where: { orgId: session.orgId, opportunityId: id, executionStatus: "PROPOSED" },
+      orderBy: { proposedAt: "desc" },
+    })) ??
+    (openRec
+      ? await db.action.findFirst({
+          where: {
+            orgId: session.orgId,
+            opportunityId: id,
+            recommendationId: openRec.id,
+            executionStatus: { in: ["EXECUTED", "REJECTED"] },
+          },
+          orderBy: { updatedAt: "desc" },
+        })
+      : null);
   const action = enriched.nextAction;
 
   const timelineSignals = signals.map((s) => ({
@@ -108,6 +138,22 @@ export default async function OpportunityDetailPage({
   }));
 
   const summary = buildSummary(enriched, timelineSignals.length);
+
+  // Either a sandbox workspace or a sample contact suppresses the real send.
+  // The second half is what stops a real customer who loaded sample data from
+  // emailing a person who does not exist.
+  const contactIsSample = enriched.contact
+    ? (
+        await db.prospect.findUnique({
+          where: { id: enriched.contact.id },
+          select: { isSample: true },
+        })
+      )?.isSample ?? false
+    : false;
+  const sandboxSend = isSimulated({
+    orgIsSample: session.org.isSample,
+    recordIsSample: contactIsSample,
+  });
 
   // The unified chain. Loaded after `enriched` so a missing opportunity has
   // already short-circuited above.
@@ -199,7 +245,7 @@ export default async function OpportunityDetailPage({
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           {/* ── Recommended Next Action (§7) ── */}
           <section
             data-tour="next-action"
@@ -309,6 +355,36 @@ export default async function OpportunityDetailPage({
               </p>
             )}
           </section>
+
+          {/* ── Human-controlled execution ── */}
+          <ActionConsole
+            // useState seeds once. Without a key tied to the action, preparing
+            // a draft re-renders the server component but leaves the editor
+            // holding the empty strings it mounted with.
+            key={pendingAction?.id ?? "none"}
+            opportunityId={enriched.id}
+            sandbox={sandboxSend}
+            canExecute={can(session.role, "action:execute")}
+            executionNote={executionSummary(draftFor(enriched), sandboxSend)}
+            action={
+              pendingAction
+                ? {
+                    id: pendingAction.id,
+                    subject:
+                      pendingAction.sentSubject ?? pendingAction.draftSubject ?? "",
+                    body: pendingAction.content ?? pendingAction.draftBody ?? "",
+                    destination: pendingAction.destination,
+                    channel: pendingAction.channel,
+                    summary: pendingAction.summary,
+                    status: pendingAction.executionStatus,
+                    simulated: pendingAction.simulated,
+                    humanEdited: pendingAction.humanEdited,
+                    sentAt: pendingAction.executedAt?.toISOString() ?? null,
+                    decisionReason: pendingAction.decisionReason,
+                  }
+                : null
+            }
+          />
 
           {/* ── AI summary (§11) ── */}
           <Section title="Summary">
@@ -444,7 +520,7 @@ export default async function OpportunityDetailPage({
         </div>
 
         {/* ── Right rail ── */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Section title="Opportunity score">
             {/* The tour anchors on the score and its reasons rather than the
                 whole panel: with the full breakdown the section is as tall as
