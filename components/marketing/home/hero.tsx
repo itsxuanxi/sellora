@@ -72,17 +72,19 @@ export function Hero() {
 
           {/* Each clause is true of the product as built: recommendations
               carry their evidence, nothing customer-facing sends without a
-              person, and no model is trained on customer data. */}
-          <p className="mt-8 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
-            Evidence behind every recommendation
-            <span className="mx-2.5 text-[var(--mkt-line)]" aria-hidden>
+              person, and no model is trained on customer data.
+
+              Set in the same monospace caps as the product's own field labels.
+              A hero's last line is where a company usually puts its proof —
+              customer counts, logos, funding. Selryn has none of those yet, so
+              it states what it guarantees instead. That is a smaller claim,
+              and it has the advantage of being true. */}
+          <p className="mt-9 font-mono text-[10.5px] uppercase leading-relaxed tracking-[0.12em] text-[var(--mkt-muted)]">
+            Evidence on every action
+            <span className="mx-2 text-[var(--mkt-line)]" aria-hidden>
               ·
             </span>
             Nothing sends without approval
-            <span className="mx-2.5 text-[var(--mkt-line)]" aria-hidden>
-              ·
-            </span>
-            Your data stays yours
           </p>
         </div>
 

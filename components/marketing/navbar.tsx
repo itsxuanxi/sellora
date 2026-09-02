@@ -5,19 +5,26 @@ import { MobileNavMenu } from "@/components/marketing/home/mobile-nav-menu";
 import { NavDemoCta } from "@/components/marketing/demo-cta";
 import { getAuthState, isClerkEnabled } from "@/lib/auth";
 
-// Three screens, so three destinations. Anchors must match section ids that
-// still exist after the consolidation.
+/**
+ * Destinations on the left, calls to action on the right.
+ *
+ * "Try Selryn" used to appear in both halves — twice in one bar, four words
+ * apart. It is an action, so it lives with the other actions.
+ */
 const LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#pricing", label: "Pricing" },
-  { href: "/demo", label: "Try Selryn" },
 ];
 
 /**
- * The mobile sheet has no CTA button of its own, so it gets Book a demo as a
- * list entry. Desktop must not: it already renders NavDemoCta beside these.
+ * The mobile sheet has no CTA buttons of its own, so both actions become list
+ * entries there. Desktop must not repeat them: it renders them as buttons.
  */
-const MOBILE_LINKS = [...LINKS, { href: "/request-demo", label: "Book a demo" }];
+const MOBILE_LINKS = [
+  ...LINKS,
+  { href: "/demo", label: "Try Selryn" },
+  { href: "/request-demo", label: "Book a demo" },
+];
 
 export async function MarketingNavbar() {
   const { signedIn } = await getAuthState();

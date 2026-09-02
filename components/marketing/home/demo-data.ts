@@ -771,6 +771,47 @@ export const HERO_SCENARIOS: HeroScenario[] = [
   },
 ];
 
+/**
+ * The status line above each panel.
+ *
+ * Counted from the scenario's own steps rather than typed, so a panel cannot
+ * claim to be reading six signals while showing four. The label names the
+ * mechanism; the count on the right is the check on it.
+ */
+export function scenarioStatus(scenario: HeroScenario): {
+  label: string;
+  count: string;
+} {
+  const signals = scenario.steps.filter((s) => s.action === "signal").length;
+  const ranked = scenario.steps.find((s) => s.action === "rank");
+
+  switch (scenario.id) {
+    case "detection":
+      return {
+        label: "Signal detection · one open deal",
+        count: `${signals} of ${signals} signals`,
+      };
+    case "priority":
+      return {
+        label: "Ranked by expected revenue",
+        count:
+          ranked && ranked.action === "rank"
+            ? `${ranked.payload.order.length} of ${DEMO_DEALS.length} deals`
+            : `${DEMO_DEALS.length} deals`,
+      };
+    case "action":
+      return {
+        label: "Next best action · evidence attached",
+        count: "1 of 1 action",
+      };
+    default:
+      return {
+        label: "Outcome ledger · action to revenue",
+        count: `${scenario.steps.length} of ${scenario.steps.length} events`,
+      };
+  }
+}
+
 /** Per-scenario step delays, for the sequence clock. */
 export function scenarioDelays(scenario: HeroScenario): number[] {
   return scenario.steps.map((s) => s.delay);

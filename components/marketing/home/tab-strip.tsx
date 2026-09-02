@@ -105,9 +105,13 @@ export function TabStrip({
                   : "shrink-0",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]",
               size === "lg" ? "px-3.5 py-2.5" : size === "xl" ? "px-5 py-3.5" : "px-3 py-2",
+              // Every tab is a visible box, not just the selected one. With a
+              // transparent border the unselected tabs dissolved into the page
+              // and the row read as loose text rather than a control — which
+              // is also why it was not obvious they could be clicked.
               selected
-                ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand-wash)]"
-                : "border-transparent bg-[var(--mkt-surface-2)] hover:bg-[color-mix(in_srgb,var(--mkt-surface)_70%,var(--mkt-surface-2))]"
+                ? "border-[var(--mkt-brand)] bg-[var(--mkt-surface)] shadow-[0_1px_2px_rgba(28,31,29,0.04)]"
+                : "border-[var(--mkt-line)] bg-[var(--mkt-surface-2)]/60 hover:border-[var(--mkt-brand)]/40 hover:bg-[var(--mkt-surface)]"
             )}
           >
             <span

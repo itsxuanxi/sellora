@@ -10,6 +10,7 @@ import {
   HERO_SCENARIOS,
   HERO_STAGE_DURATION_MS,
   scenarioDelays,
+  scenarioStatus,
 } from "@/components/marketing/home/demo-data";
 
 /**
@@ -78,7 +79,7 @@ export function HeroDemo() {
         // clip the recommendation card there.
         className="h-[648px] overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)]/95 shadow-[var(--mkt-shadow-panel)] backdrop-blur-sm sm:h-[580px]"
         render={(id, i, selected) => (
-          <PanelChrome label={HERO_SCENARIOS[i].panelLabel} live={selected}>
+          <PanelChrome status={scenarioStatus(HERO_SCENARIOS[i])} live={selected}>
             <DemoStage
               scenario={HERO_SCENARIOS[i]}
               // Inactive panels hold their full height but stay blank, so the
@@ -97,27 +98,25 @@ export function HeroDemo() {
 // ── Shared chrome ──────────────────────────────────────────────────────────
 
 function PanelChrome({
-  label,
+  status,
   live,
   children,
 }: {
-  label: string;
+  status: { label: string; count: string };
   live?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-3">
-        <span className="flex gap-1.5" aria-hidden>
-          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
-          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
-          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
-        </span>
-        <span className="truncate text-[12.5px] font-medium tracking-[0.03em] text-[var(--mkt-ink)]">
-          {label}
-        </span>
+      {/* A status bar, not window chrome.
+          This used to be three grey circles imitating a macOS title bar —
+          decoration that took the most valuable strip of the panel and said
+          nothing. It now states what the panel is doing and how much of it is
+          done, which is the one thing a reader glancing at a product shot
+          wants to know. */}
+      <div className="flex items-center gap-3 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-2.5">
         {live && (
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[10.5px] uppercase tracking-[0.1em] text-[var(--mkt-success)]">
+          <span className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-success)]">
             <span className="relative flex size-1.5" aria-hidden>
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--mkt-success)]/60 motion-reduce:hidden" />
               <span className="relative inline-flex size-1.5 rounded-full bg-[var(--mkt-success)]" />
@@ -125,6 +124,16 @@ function PanelChrome({
             Live
           </span>
         )}
+        <span className="truncate font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
+          {/* The mechanism only. The panel label named the subject —
+              "Signal monitor · Cloudmint" — which the row directly beneath
+              already states in full, so carrying it here made the bar read
+              as the same sentence twice. */}
+          {status.label}
+        </span>
+        <span className="ml-auto shrink-0 font-mono text-[10px] tabular-nums tracking-[0.06em] text-[var(--mkt-ink)]">
+          {status.count}
+        </span>
       </div>
 
       {/* min-h-0 lets the step list shrink inside the fixed-height panel

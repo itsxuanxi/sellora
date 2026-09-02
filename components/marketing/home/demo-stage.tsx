@@ -64,7 +64,7 @@ export function DemoStage({
 
   return (
     <div className="flex h-full flex-col">
-      <StageHeader scenario={scenario} live={live} />
+      <StageHeader scenario={scenario} />
 
       {/* overflow-hidden is a guard, not the layout: a step list that outgrows
           its track would otherwise paint straight over the footer beneath it
@@ -104,7 +104,7 @@ export function DemoStage({
   );
 }
 
-function StageHeader({ scenario, live }: { scenario: HeroScenario; live: boolean }) {
+function StageHeader({ scenario }: { scenario: HeroScenario }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--mkt-line)] pb-3">
       <div className="flex items-center gap-2.5">
@@ -122,18 +122,8 @@ function StageHeader({ scenario, live }: { scenario: HeroScenario; live: boolean
           </>
         )}
       </div>
-      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
-        <span
-          className={cn(
-            "size-1.5 rounded-full bg-[var(--mkt-success)]",
-            // The pulse is the only ambient motion in the panel, and it stops
-            // on inactive tabs so four of them never animate at once.
-            live && "motion-safe:animate-[ping-ring_2s_ease-out_infinite]"
-          )}
-          aria-hidden
-        />
-        Live
-      </span>
+      {/* No second Live badge: the panel's status bar above already carries
+          one, and two of them a centimetre apart read as a rendering bug. */}
     </div>
   );
 }
