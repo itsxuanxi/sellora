@@ -11,9 +11,17 @@ import { HeroDemo } from "@/components/marketing/home/hero-demo";
  * which is how a hero stops being a claim and becomes a summary of a
  * brochure. What is left has room to breathe.
  *
- * The demo is the evidence for the headline, so it takes the larger column.
- * On mobile the copy and the two buttons come first, the demo follows, and
- * the viewport-height constraint is dropped so nothing is crammed.
+ * The demo is the evidence for the headline, so it takes the larger column —
+ * and from `lg` up it runs past the right edge of the viewport rather than
+ * stopping at a centred container. A product surface that is visibly wider
+ * than the window reads as a screenshot of something larger, cropped; the
+ * same panel boxed inside a container reads as an illustration sized to fit
+ * the marketing page. The crop is the claim.
+ *
+ * Implementation: above `lg` the grid drops the section's symmetric padding
+ * and takes a left inset equal to what a centred 1320px container would have
+ * had, with none on the right. So the copy column still lines up with the nav
+ * and the footer, and only the panel breaks the margin.
  *
  * min-w-0 on both grid columns is load-bearing: grid items default to
  * min-width:auto, so the demo's nowrap tab row would otherwise stretch the
@@ -21,7 +29,10 @@ import { HeroDemo } from "@/components/marketing/home/hero-demo";
  */
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden border-b border-[var(--mkt-line)] px-5 pb-20 pt-24 md:px-8 md:pb-24 md:pt-28 lg:flex lg:min-h-[calc(100svh-4rem)] lg:items-center lg:py-24">
+    <section
+      id="product"
+      className="relative isolate overflow-hidden border-b border-[var(--mkt-line)] pb-20 pt-28 md:pb-24 md:pt-32 lg:flex lg:min-h-[calc(100svh-6.5rem)] lg:items-center lg:py-24"
+    >
       {/* Two very low-opacity washes, for depth only — never a glow. The page
           should read as paper with light on it, not as a gradient. */}
       <div
@@ -33,14 +44,29 @@ export function Hero() {
         aria-hidden
       />
 
-      <div className="relative mx-auto grid w-full max-w-[1320px] items-center gap-14 lg:grid-cols-[minmax(0,40fr)_minmax(0,60fr)] lg:gap-16">
+      <div className="relative mx-auto grid w-full max-w-[1320px] items-center gap-14 px-5 md:px-8 lg:mx-0 lg:max-w-none lg:grid-cols-[minmax(0,40fr)_minmax(0,60fr)] lg:gap-14 lg:pl-[max(2rem,calc((100vw-1320px)/2))] lg:pr-0 xl:gap-16">
         {/* ── The claim ── */}
         <div className="min-w-0 max-w-[540px]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--mkt-brand-deep)]">
+          {/* The slot a funded company fills with an investor badge. Selryn has
+              no investor to name, so it names the one thing a visitor can act
+              on in the next ten seconds instead — and unlike a logo, it is a
+              link that goes somewhere. */}
+          <Link
+            href="/demo"
+            className="group inline-flex items-center gap-2 rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface)] py-1 pl-1 pr-3 text-[13px] text-[var(--mkt-muted)] shadow-[var(--mkt-shadow-card)] transition-colors hover:border-[var(--mkt-brand)]/40 hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]"
+          >
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--mkt-brand-wash)] px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-brand-deep)]">
+              Early access
+            </span>
+            Run the guided demo on a live deal
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+
+          <p className="mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--mkt-brand-deep)]">
             AI revenue intelligence for B2B sales
           </p>
 
-          <h1 className="mt-6 text-balance text-[2.75rem] font-medium leading-[1.04] tracking-[-0.02em] text-[var(--mkt-ink)] sm:text-[3.25rem] lg:text-[3.6rem] xl:text-[4rem]">
+          <h1 className="mt-3.5 text-balance text-[2.4rem] font-medium leading-[1.03] tracking-[-0.028em] text-[var(--mkt-ink)] sm:text-[3.2rem] sm:leading-[1.01] sm:tracking-[-0.032em] lg:text-[3.5rem] xl:text-[3.9rem]">
             Know which deals need attention
             <span className="text-[var(--mkt-brand-deep)]">
               {" "}
@@ -48,13 +74,13 @@ export function Hero() {
             </span>
           </h1>
 
-          <p className="mt-7 max-w-[30rem] text-pretty text-[17px] leading-[1.65] text-[var(--mkt-muted)]">
+          <p className="mt-7 max-w-[30rem] text-pretty text-[17px] leading-[1.6] text-[var(--mkt-muted)]">
             Selryn turns CRM activity and buyer signals into prioritized revenue
             opportunities, explainable next actions, and measurable pipeline
             outcomes. Your team always keeps the final call.
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center gap-3">
+          <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link
               href="/request-demo"
               className="group inline-flex h-[52px] items-center gap-2 rounded-full bg-[var(--mkt-ink)] px-7 text-[15px] font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-black"
@@ -79,13 +105,24 @@ export function Hero() {
               customer counts, logos, funding. Selryn has none of those yet, so
               it states what it guarantees instead. That is a smaller claim,
               and it has the advantage of being true. */}
-          <p className="mt-9 font-mono text-[10.5px] uppercase leading-relaxed tracking-[0.12em] text-[var(--mkt-muted)]">
-            Evidence on every action
-            <span className="mx-2 text-[var(--mkt-line)]" aria-hidden>
-              ·
-            </span>
-            Nothing sends without approval
-          </p>
+          <ul className="mt-10 flex flex-col items-start gap-y-2 border-t border-[var(--mkt-line)] pt-6 font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--mkt-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+            {[
+              "Evidence on every action",
+              "Nothing sends without approval",
+              "Never trained on your data",
+            ].map((claim, i) => (
+              <li key={claim} className="flex items-center gap-3">
+                {/* Stacked on a phone, so the interpuncts would sit at the
+                    start of lines two and three looking like stray bullets. */}
+                {i > 0 && (
+                  <span className="hidden text-[var(--mkt-line)] sm:inline" aria-hidden>
+                    ·
+                  </span>
+                )}
+                {claim}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* ── The evidence ── */}

@@ -77,7 +77,12 @@ export function HeroDemo() {
         // taller on narrow screens on purpose: the same copy wraps to many
         // more lines at 375px, and a height tuned for the desktop panel would
         // clip the recommendation card there.
-        className="h-[648px] overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)]/95 shadow-[var(--mkt-shadow-panel)] backdrop-blur-sm sm:h-[580px]"
+        //
+        // The two heights are measured, not guessed. The binding case is the
+        // recommendation panel at the moment the approval control is awaiting
+        // and the approved card has not yet replaced it — both are laid out,
+        // and that is the tallest anything gets.
+        className="h-[780px] overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] shadow-[var(--mkt-shadow-panel)] sm:h-[700px]"
         render={(id, i, selected) => (
           <PanelChrome status={scenarioStatus(HERO_SCENARIOS[i])} live={selected}>
             <DemoStage
@@ -114,7 +119,7 @@ function PanelChrome({
           nothing. It now states what the panel is doing and how much of it is
           done, which is the one thing a reader glancing at a product shot
           wants to know. */}
-      <div className="flex items-center gap-3 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-2.5">
+      <div className="flex items-center gap-3 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-3">
         {live && (
           <span className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-success)]">
             <span className="relative flex size-1.5" aria-hidden>

@@ -12,6 +12,10 @@ import { getAuthState, isClerkEnabled } from "@/lib/auth";
  * apart. It is an action, so it lives with the other actions.
  */
 const LINKS = [
+  // Every entry is an anchor that exists on the page. A nav padded out with
+  // Docs / Careers / Blog looks like a bigger company right up until a visitor
+  // clicks one, which is the moment the whole page stops being credible.
+  { href: "/#product", label: "Product" },
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#pricing", label: "Pricing" },
 ];
@@ -35,7 +39,7 @@ export async function MarketingNavbar() {
     <NavShell>
       <Logo />
 
-      <div className="hidden items-center gap-8 md:flex">
+      <div className="hidden items-center gap-7 md:flex">
         {LINKS.map((link) => (
           <Link
             key={link.href}

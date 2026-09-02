@@ -158,6 +158,91 @@ test("hero scenarios cover the full loop across the set", () => {
   }
 });
 
+test("every rail row resolves on a step the scenario actually has", () => {
+  // `after` is an index into the step list. One off the end and the row never
+  // resolves, which shows up as a permanently dashed placeholder in the panel
+  // rather than as an error anywhere.
+  for (const scenario of HERO_SCENARIOS) {
+    for (const field of scenario.rail.fields) {
+      assert.ok(
+        field.after >= 0 && field.after <= scenario.steps.length,
+        `${scenario.id}/${field.key} resolves after step ${field.after} of ${scenario.steps.length}`
+      );
+    }
+    assert.ok(
+      scenario.rail.meter.after <= scenario.steps.length,
+      `${scenario.id} meter never fills`
+    );
+    assert.ok(
+      scenario.rail.meter.value >= 0 && scenario.rail.meter.value <= 100,
+      `${scenario.id} meter is not a percentage`
+    );
+  }
+});
+
+test("a rail opens with something already in it", () => {
+  // A rail whose every row starts blank reads as a loading skeleton, which is
+  // the opposite of the impression the record column exists to give.
+  for (const scenario of HERO_SCENARIOS) {
+    const atRest = scenario.rail.fields.filter((f) => f.after === 0);
+    assert.ok(
+      atRest.length >= 1,
+      `${scenario.id}'s rail is entirely empty before the first step lands`
+    );
+  }
+});
+
+test("rail rows are distinct machine field names", () => {
+  for (const scenario of HERO_SCENARIOS) {
+    const keys = scenario.rail.fields.map((f) => f.key);
+    assert.equal(new Set(keys).size, keys.length, `${scenario.id} repeats a rail key`);
+    for (const key of keys) {
+      assert.match(
+        key,
+        /^[a-z][a-z0-9_]*$/,
+        `${scenario.id}/${key} is not a field name the product would store`
+      );
+    }
+  }
+});
+
+test("the rail never restates the header it sits beside", () => {
+  // Account, owner, stage and deal value are already on screen a centimetre
+  // away. Repeating them is how a record rail turns into a caption.
+  for (const scenario of HERO_SCENARIOS) {
+    const header = [
+      scenario.subject.company,
+      scenario.subject.owner,
+      scenario.subject.stage,
+    ]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase());
+
+    for (const field of scenario.rail.fields) {
+      assert.ok(
+        !header.includes(field.value.toLowerCase()),
+        `${scenario.id}/${field.key} repeats the header value "${field.value}"`
+      );
+    }
+  }
+});
+
+test("the priority rail's share figure is the arithmetic, not a round number", () => {
+  // "Top 3 share · 50%" is a claim about the sample pipeline, so it has to
+  // follow from the same three deals the table above it ranks.
+  const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
+  const expected = DEMO_DEALS.reduce((sum, d) => sum + d.expected, 0);
+  const open = DEMO_DEALS.reduce((sum, d) => sum + d.dealValue, 0);
+  assert.equal(priority.rail.meter.value, Math.round((expected / open) * 100));
+});
+
+test("the outcome rail agrees with the outcome scenario's own steps", () => {
+  const outcome = HERO_SCENARIOS.find((s) => s.id === "outcome")!;
+  const score = outcome.steps.find((s) => s.action === "score");
+  assert.ok(score && score.action === "score");
+  assert.equal(outcome.rail.meter.value, score.payload.to);
+});
+
 test("nothing claims a recommendation caused a win", () => {
   const prose = [
     ...HERO_SCENARIOS.flatMap((s) => [s.closing, ...s.steps.map((x) => JSON.stringify(x.payload))]),

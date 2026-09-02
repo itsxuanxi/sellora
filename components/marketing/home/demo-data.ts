@@ -444,15 +444,78 @@ export type DemoStep =
   | ResponseStep
   | OutcomeStep;
 
+/**
+ * The record rail — the structured half of a panel.
+ *
+ * The step list on the left is Selryn *working*; the rail is the record that
+ * work is being written into. Without it a panel is a feed of sentences, which
+ * is what a process diagram looks like, not what software looks like. Software
+ * has a right-hand side where fields resolve one by one and a completeness
+ * figure at the bottom.
+ *
+ * Every row names a real field with a machine key, because that is how the
+ * product actually stores it, and a reader can tell the difference between a
+ * field and a bullet point at a glance.
+ */
+export interface RailField {
+  /** Machine key, rendered in the product's own monospace field style. */
+  key: string;
+  value: string;
+  /**
+   * Steps that must have landed before this row resolves. 0 means the row is
+   * part of the record from the first frame — the account, the owner, the
+   * amount — so the rail is never an empty box waiting to be filled.
+   */
+  after: number;
+  tone?: "good" | "risk" | "pending";
+}
+
+/** The completeness figure under the fields. Fills once `after` steps land. */
+export interface RailMeter {
+  label: string;
+  /** 0–100. */
+  value: number;
+  note: string;
+  after: number;
+  tone?: "good" | "risk";
+}
+
+export interface ScenarioRail {
+  label: string;
+  /** Right-hand count in the rail header, e.g. "7 of 8". Derived below. */
+  fields: RailField[];
+  meter: RailMeter;
+}
+
 export interface HeroScenario {
   id: string;
   tabLabel: string;
   panelLabel: string;
   /** The deal this scenario is about, shown in the stage header. */
-  subject: { company: string; dealValue: number; stage: string };
+  subject: {
+    company: string;
+    dealValue: number;
+    stage: string;
+    /** Named owner, so the header reads as somebody's record rather than a demo. */
+    owner?: string;
+    /** Right-hand figure when there is no single deal value to show. */
+    amountLabel?: string;
+  };
   steps: DemoStep[];
+  /** The structured record the steps are writing into. */
+  rail: ScenarioRail;
   /** The closing line, shown once every step has landed. */
   closing: string;
+}
+
+/** "5 of 8 fields" for the rail header — counted, never typed. */
+export function railProgress(
+  rail: ScenarioRail,
+  revealed: number
+): { resolved: number; total: number; label: string } {
+  const total = rail.fields.length;
+  const resolved = rail.fields.filter((f) => revealed >= f.after).length;
+  return { resolved, total, label: `${resolved} of ${total}` };
 }
 
 /** Ranked list used by the priority scenario. Derived, never hand-typed. */
@@ -476,7 +539,12 @@ export const HERO_SCENARIOS: HeroScenario[] = [
     id: "detection",
     tabLabel: "Detect signals",
     panelLabel: "Signal monitor · Cloudmint",
-    subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
+    subject: {
+      company: "Cloudmint",
+      dealValue: 42_000,
+      stage: "Evaluation",
+      owner: "Dana Whitfield",
+    },
     steps: [
       {
         id: "s1",
@@ -571,13 +639,48 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         },
       },
     ],
+    rail: {
+      label: "Deal record",
+      // Not one row repeats the header — account, owner, stage and deal value
+      // are already stated a centimetre above, and listing them again is how a
+      // record rail turns into a caption.
+      //
+      // The first two are CRM facts, true before Selryn has done anything, so
+      // the rail opens as a record with things in it. A rail whose every row
+      // starts blank reads as a loading skeleton rather than a file being
+      // worked on, which is the opposite of the impression it exists to give.
+      fields: [
+        { key: "close_date", value: "Mar 28", after: 0 },
+        { key: "contract_term", value: "12 months", after: 0 },
+        { key: "proposal_opens", value: "2 in 24h", after: 1, tone: "good" },
+        { key: "champion", value: "Maya Ortiz · VP Fin", after: 2, tone: "good" },
+        { key: "buying_committee", value: "3 contacts", after: 2, tone: "good" },
+        { key: "signals_read", value: "6 of 6", after: 6, tone: "good" },
+        { key: "last_reply", value: "4 days ago", after: 6, tone: "risk" },
+      ],
+      meter: {
+        label: "Intent score",
+        value: 87,
+        note: "Up from 64 — six signals, weighted by stage",
+        after: 8,
+        tone: "good",
+      },
+    },
     closing: "6 signals on this deal, read together rather than one by one",
   },
   {
     id: "priority",
     tabLabel: "Prioritize revenue",
     panelLabel: "Prioritized pipeline",
-    subject: { company: "All open opportunities", dealValue: 0, stage: "Ranking" },
+    subject: {
+      company: "All open opportunities",
+      dealValue: 0,
+      stage: "Ranking",
+      owner: "Revenue team",
+      // The three ranked deals add to $137,000 of open value. Stated rather
+      // than left blank so the header carries a figure like the others.
+      amountLabel: "$137,000 open",
+    },
     steps: [
       {
         id: "p1",
@@ -629,13 +732,37 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         },
       },
     ],
+    rail: {
+      label: "Ranking run",
+      fields: [
+        { key: "opportunities", value: "248 open", after: 0 },
+        { key: "ranked_today", value: "14", after: 0 },
+        { key: "method", value: "value x win %", after: 3 },
+        { key: "top_account", value: "Cloudmint", after: 4, tone: "good" },
+        { key: "top_expected", value: "$28,560", after: 5, tone: "good" },
+        { key: "largest_deal", value: "Brightcart", after: 4 },
+      ],
+      meter: {
+        label: "Top 3 share",
+        value: 50,
+        // 68,210 of 137,000 — asserted in the demo-data test, not eyeballed.
+        note: "$68.2K expected across $137K of open value",
+        after: 4,
+        tone: "good",
+      },
+    },
     closing: "Brightcart is the bigger deal. Cloudmint is the better hour.",
   },
   {
     id: "action",
     tabLabel: "Recommend action",
     panelLabel: "Recommended action · Cloudmint",
-    subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
+    subject: {
+      company: "Cloudmint",
+      dealValue: 42_000,
+      stage: "Evaluation",
+      owner: "Dana Whitfield",
+    },
     steps: [
       {
         id: "a1",
@@ -663,7 +790,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         status: "Generating next best action",
         payload: {
           headline: "Send a security follow-up to the VP Finance",
-          why: "The new stakeholder is the one who has not been addressed, and security is what stalls deals at this stage.",
+          why: "The new stakeholder has not been addressed, and security is what stalls deals at this stage.",
           evidence: [
             "VP Finance joined 9 minutes ago",
             "Proposal opened twice, no reply",
@@ -672,7 +799,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
           atStake: 28_560,
           draft: {
             subject: "Security review before we go further",
-            body: "Hi Maya — noticed security may be the next step in your evaluation. I can bring our security lead into a short review this week. Would Tuesday or Wednesday suit?",
+            body: "Hi Maya — security looks like the next step in your evaluation. I can bring our security lead into a short review this week. Tuesday or Wednesday?",
           },
         },
       },
@@ -684,7 +811,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         payload: {
           label: "Awaiting human approval",
           state: "awaiting",
-          note: "Nothing customer-facing sends without a person",
+          note: "Nothing sends without a person",
         },
       },
       {
@@ -695,13 +822,37 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         payload: { label: "Approved and scheduled", state: "approved" },
       },
     ],
+    rail: {
+      label: "Why this action",
+      fields: [
+        { key: "days_in_stage", value: "31", after: 0 },
+        { key: "stakeholder_gap", value: "VP Finance", after: 3, tone: "risk" },
+        { key: "engagement", value: "Proposal opened 2x", after: 2, tone: "good" },
+        { key: "silence", value: "4 days, no outbound", after: 1, tone: "risk" },
+        { key: "stage_pattern", value: "Security stalls here", after: 3 },
+        { key: "at_stake", value: "$28,560", after: 3, tone: "good" },
+        { key: "approval", value: "human required", after: 4, tone: "pending" },
+      ],
+      meter: {
+        label: "Confidence",
+        value: 82,
+        note: "Weighed across six signals on this deal",
+        after: 3,
+        tone: "good",
+      },
+    },
     closing: "One action, with the evidence behind it — never a list of five",
   },
   {
     id: "outcome",
     tabLabel: "Measure outcome",
     panelLabel: "Revenue outcome · Cloudmint",
-    subject: { company: "Cloudmint", dealValue: 42_000, stage: "Evaluation" },
+    subject: {
+      company: "Cloudmint",
+      dealValue: 42_000,
+      stage: "Evaluation",
+      owner: "Dana Whitfield",
+    },
     steps: [
       {
         id: "o1",
@@ -767,6 +918,25 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         },
       },
     ],
+    rail: {
+      label: "Revenue ledger",
+      fields: [
+        { key: "approved_by", value: "Dana W. · 09:12", after: 0, tone: "good" },
+        { key: "follow_up", value: "sent 09:14", after: 1, tone: "good" },
+        { key: "reply", value: "41 min later", after: 2, tone: "good" },
+        { key: "meeting", value: "tomorrow 14:00", after: 3, tone: "good" },
+        { key: "stage", value: "Security review", after: 4, tone: "good" },
+        { key: "win_probability", value: "68% → 71%", after: 5, tone: "good" },
+        { key: "expected_revenue", value: "$29,820", after: 6, tone: "good" },
+      ],
+      meter: {
+        label: "Win probability",
+        value: 71,
+        note: "Three points on a stage move Selryn can point at",
+        after: 5,
+        tone: "good",
+      },
+    },
     closing: "Signal → Recommendation → Action → Response → Revenue outcome",
   },
 ];
