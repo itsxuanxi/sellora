@@ -44,9 +44,9 @@ export async function POST(req: Request) {
           data: {
             plan: resolvePlanId(plan),
             planInterval: interval ?? "month",
-            // Checkout opens on a trial (see startCheckout), so the org is
-            // trialing until Stripe reports the first successful charge.
-            planStatus: session.metadata?.trial === "true" ? "trialing" : "active",
+            // Checkout no longer opens on a trial — evaluation happens on the
+            // Free plan — so a completed session is a paying subscription.
+            planStatus: "active",
             stripeCustomerId:
               typeof session.customer === "string" ? session.customer : undefined,
             stripeSubscriptionId:
@@ -69,18 +69,17 @@ export async function POST(req: Request) {
               ? resolvePlanId(sub.metadata.plan)
               : undefined,
             planInterval: sub.metadata?.interval ?? undefined,
-            // "trialing" is kept distinct from "active": planOf() meters a
-            // trial against TRIAL_LIMITS, so collapsing the two would hand
-            // every trial the full paid allowance.
+            // Stripe can still report "trialing" for a subscription created
+            // under the old card-required trial. Those orgs entered a card and
+            // will be charged, and there are no trial-specific limits left to
+            // meter them against, so they read as active.
             planStatus: sub.cancel_at_period_end
               ? "canceled"
-              : sub.status === "trialing"
-                ? "trialing"
-                : sub.status === "active"
-                  ? "active"
-                  : sub.status === "past_due"
-                    ? "past_due"
-                    : "canceled",
+              : sub.status === "trialing" || sub.status === "active"
+                ? "active"
+                : sub.status === "past_due"
+                  ? "past_due"
+                  : "canceled",
             planRenewsAt: renewsAt ? new Date(renewsAt * 1000) : null,
           },
         });
@@ -88,9 +87,9 @@ export async function POST(req: Request) {
       }
       case "invoice.paid": {
         const invoice = event.data.object;
-        // Stripe also creates a zero-dollar invoice at the beginning of a
-        // trial. Only a real successful charge should move the workspace from
-        // trialing to active.
+        // Stripe issues zero-dollar invoices for prorations and full-discount
+        // periods. Only a real successful charge should confirm a workspace as
+        // paying.
         if (invoice.amount_paid <= 0) break;
         const customerId =
           typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;

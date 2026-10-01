@@ -6,8 +6,12 @@ import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reveal, Section } from "@/components/marketing/section";
 import {
+  FREE_PLAN,
+  allowanceLabel,
+  capacityLabel,
+  METRIC_DEFINITIONS,
   PLAN_TIERS,
-  TRIAL_DAYS,
+  UNIVERSAL_CAPACITY,
   UNIVERSAL_FEATURES,
   YEARLY_SAVING_PERCENT,
   displayPrice,
@@ -33,9 +37,9 @@ import {
  * the toggle fades the numbers without moving a single row beneath them.
  */
 
-// Enterprise buyers land on the same form: it asks the questions a
-// sales conversation would open with anyway, and the page still offers
-// email as the fallback.
+// Quoted-tier buyers land on the same form: it asks the questions a sales
+// conversation would open with anyway, and the page still offers email as the
+// fallback.
 const SALES_HREF = "/request-demo";
 const DEMO_HREF = "/request-demo";
 
@@ -51,12 +55,21 @@ export function Pricing({ startHref }: { startHref: string }) {
           Pricing
         </p>
         <h2 className="mt-4 max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-[var(--mkt-ink)] sm:text-4xl md:text-[2.7rem]">
-          Plans that grow with your pipeline.
+          Simple pricing that scales with your pipeline, not your headcount.
         </h2>
         <p className="mt-5 max-w-2xl text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
-          Start with the workflows you need today. Expand as Selryn covers
-          more of your revenue operation.
+          Every plan includes your whole team and every data source you&rsquo;ve
+          got. You only pay for how many opportunities Selryn is actively
+          working.
         </p>
+      </Reveal>
+
+      {/* Seats and connections used to be two rows inside every card, where a
+          number beside "users" reads as a restriction. Stated once, above the
+          cards, the same fact reads as a promise — and three rows leave each
+          card, which is most of why the cards now scan. */}
+      <Reveal delay={50}>
+        <UniversalStrip />
       </Reveal>
 
       <Reveal delay={60}>
@@ -80,11 +93,20 @@ export function Pricing({ startHref }: { startHref: string }) {
         ))}
       </div>
 
+      {/* Below the cards, not above: above, a free plan competes with the
+          prices and talks the reader out of reading them. Below, it is the
+          safety net they reach for once they have. */}
       <Reveal delay={80}>
+        <FreeStrip startHref={startHref} />
+      </Reveal>
+
+      <Reveal delay={85}>
+        <MetricGlossary />
+      </Reveal>
+
+      <Reveal delay={88}>
         <p className="mt-7 max-w-3xl text-[13px] leading-relaxed text-[var(--mkt-muted)]">
-          All Starter and Growth trials include {TRIAL_DAYS} days of full
-          product access. A debit or credit card is required and is charged
-          only after the trial ends. Rows marked{" "}
+          Annual plans are two months free, on every plan. Rows marked{" "}
           <span className="font-medium text-[var(--mkt-ink)]">Planned</span> are
           on the roadmap and not yet available.
         </p>
@@ -157,7 +179,7 @@ function PlanCard({
   startHref: string;
 }) {
   const featured = tier.mostPopular;
-  const isEnterprise = tier.cta.kind === "sales";
+  const isQuoted = tier.cta.kind === "sales";
 
   return (
     <div
@@ -191,13 +213,26 @@ function PlanCard({
         {tier.audience}
       </p>
 
-      <ul className="mt-6 space-y-1.5 border-t border-[var(--mkt-line)] pt-5">
-        {tier.capacity.map((line) => (
-          <li key={line} className="text-[13px] font-medium text-[var(--mkt-ink)]">
-            {line}
-          </li>
-        ))}
-      </ul>
+      {/* The one number the plan is chosen on, at display size, with the
+          sentence that stops a buyer having to guess what it counts. The
+          AI-action allowance sits underneath in the same monospace micro-label
+          the product uses for field names — a spec, not a decision. */}
+      <div className="mt-6 border-t border-[var(--mkt-line)] pt-5">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="text-[30px] font-medium leading-none tracking-[-0.02em] text-[var(--mkt-ink)]">
+            {capacityLabel(tier.limits.opportunities)}
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-muted)]">
+            {tier.headline.label}
+          </span>
+        </div>
+        <p className="mt-2.5 text-[12.5px] leading-snug text-[var(--mkt-muted)]">
+          {tier.headline.detail}
+        </p>
+        <p className="mt-3 font-mono text-[10px] uppercase leading-relaxed tracking-[0.1em] text-[var(--mkt-muted)]">
+          {allowanceLabel(tier.limits.aiActions)}
+        </p>
+      </div>
 
       <ul className="mt-5 flex-1 space-y-3">
         {tier.features.map((feature) => (
@@ -221,7 +256,7 @@ function PlanCard({
       {/* flex-1 on the feature list above absorbs the slack, which pins this
           CTA to the same height in every card however many rows it has. */}
       <Link
-        href={isEnterprise ? SALES_HREF : startHref}
+        href={isQuoted ? SALES_HREF : startHref}
         className={cn(
           "mt-8 inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-medium transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]",
@@ -234,18 +269,7 @@ function PlanCard({
       </Link>
 
       <p className="mt-3 text-center text-[12px] text-[var(--mkt-muted)]">
-        {isEnterprise ? (
-          <Link
-            href={DEMO_HREF}
-            className="underline decoration-[var(--mkt-line)] underline-offset-4 transition-colors hover:text-[var(--mkt-brand-deep)]"
-          >
-            Book a tailored demo
-          </Link>
-        ) : (
-          <>
-            {TRIAL_DAYS}-day free trial · Card required
-          </>
-        )}
+        {tier.ctaNote}
       </p>
     </div>
   );
@@ -262,10 +286,10 @@ function PriceBlock({ tier, cycle }: { tier: PlanTier; cycle: BillingCycle }) {
 
   return (
     <div key={cycle} className="animate-price-fade">
-      <div className="mt-6 h-[18px] text-[13px] font-medium text-[var(--mkt-muted)]">
-        {price.prefix}
-      </div>
-      <div className="flex items-baseline gap-1.5">
+      {/* The "Starting at" row is gone with the published Scale price: a
+          quoted tier shows "Custom" and nothing else, so there is no floor on
+          the page for a buyer to anchor a negotiation to. */}
+      <div className="mt-6 flex items-baseline gap-1.5">
         <span className="text-4xl font-medium tracking-tight text-[var(--mkt-ink)]">
           {price.amount}
         </span>
@@ -284,6 +308,99 @@ function PriceBlock({ tier, cycle }: { tier: PlanTier; cycle: BillingCycle }) {
         )}
       </div>
     </div>
+  );
+}
+
+/* ─────────────────── what every plan includes, once ─────────────────── */
+
+/**
+ * The page's best argument, stated before any price is read.
+ *
+ * Neither seats nor data connections are metered anywhere in lib/billing.ts,
+ * so the per-plan counts the cards used to print were advertising a limit the
+ * product never enforced. Saying it once, plainly, is both more honest and a
+ * better sales line than three cards each disclosing a different cap.
+ */
+function UniversalStrip() {
+  return (
+    <div className="mt-10 rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-6 py-5 sm:px-8">
+      <p className="text-balance text-[15px] font-medium tracking-[-0.01em] text-[var(--mkt-ink)] sm:text-[16.5px]">
+        {UNIVERSAL_CAPACITY.headline}
+      </p>
+      <p className="mt-2 max-w-3xl text-pretty text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
+        {UNIVERSAL_CAPACITY.detail}
+      </p>
+    </div>
+  );
+}
+
+/* ───────────────────────────── free plan ───────────────────────────── */
+
+/**
+ * The standing free plan, replacing a 14-day card-required trial.
+ *
+ * A countdown is the wrong shape for this product. Signals accumulate, a
+ * draft is approved and sent, and a reply lands days later — so a two-week
+ * clock tends to expire just before the thing that would have convinced
+ * anyone. Nothing here starts a timer, and the upgrade prompt fires at the
+ * opportunity limit instead, when the buyer is engaged and holding evidence.
+ */
+function FreeStrip({ startHref }: { startHref: string }) {
+  return (
+    <div className="mt-6 flex flex-col gap-5 rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:px-8">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-ink)]">
+            {FREE_PLAN.name}
+          </span>
+          <span className="text-[15px] font-medium text-[var(--mkt-ink)]">
+            Try it before you pay anything.
+          </span>
+        </div>
+        <p className="mt-2.5 max-w-xl text-pretty text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
+          {FREE_PLAN.summary}
+        </p>
+      </div>
+
+      <div className="shrink-0 sm:text-right">
+        <Link
+          href={startHref}
+          className="group inline-flex h-11 items-center gap-2 rounded-full bg-[var(--mkt-ink)] px-6 text-sm font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]"
+        >
+          {FREE_PLAN.cta}
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+        <p className="mt-2.5 text-[12px] text-[var(--mkt-muted)]">
+          {FREE_PLAN.note}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────── what the words mean ──────────────────────── */
+
+/**
+ * The three terms a buyer stalls on, answered where they stall.
+ *
+ * "Closed and archived deals don't count" is the line doing the most work on
+ * this page: it is the first question anyone asks silently about a capacity
+ * number, and answering it before it is asked reads as confidence.
+ */
+function MetricGlossary() {
+  return (
+    <dl className="mt-8 grid gap-x-8 gap-y-6 border-t border-[var(--mkt-line)] pt-7 sm:grid-cols-3">
+      {METRIC_DEFINITIONS.map((metric) => (
+        <div key={metric.term}>
+          <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-ink)]">
+            {metric.term}
+          </dt>
+          <dd className="mt-2 text-[13px] leading-relaxed text-[var(--mkt-muted)]">
+            {metric.definition}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -339,7 +456,7 @@ function ClosingCta({ startHref }: { startHref: string }) {
             href={startHref}
             className="group inline-flex h-12 items-center gap-2 rounded-full bg-[#F7F8F5] px-7 text-[15px] font-medium text-[var(--mkt-dark)] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
           >
-            Start free trial
+            Start free
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link

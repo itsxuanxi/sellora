@@ -3,10 +3,11 @@ import Stripe from "stripe";
 import type { Organization } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
+  FREE_PLAN,
   PLAN_TIERS,
-  TRIAL_DAYS,
   type PaidPlanId,
   type PlanId,
+  type PlanLimitSpec,
 } from "@/lib/pricing";
 
 /**
@@ -44,39 +45,52 @@ export interface PlanDef {
  * Enforceable limits per plan. These are the counters the app actually meters:
  * `prospects` is what the pricing page calls active opportunities, and
  * `emailsPerMonth` is what it calls AI actions per month — the numbers match
- * the published ones. Seats and data connections appear on the pricing page
- * but are not metered yet (orgs are single-tenant today), so they are stated
- * there and deliberately absent here rather than faked with a limit nothing
- * checks.
+ * the published ones. Seats and data connections are not metered at all, which
+ * is why the pricing page now states them as unlimited rather than printing a
+ * per-plan count nothing here ever checked.
+ *
+ * The published figures used to be 1,000 and 10,000 opportunities. Nothing in
+ * the target market tracks that many, so the meter never fired and a Starter
+ * customer had no reason to ever become a Pro one — the pricing had no
+ * expansion path at all. The numbers below are set where a growing team
+ * actually crosses them.
+ *
+ * `emailsPerMonth` also bounds real model spend: an AI action is an OpenAI
+ * call, so a generous-sounding 30,000 was a promise that would have cost more
+ * to honour than the plan charged.
  */
-const LIMITS: Record<PlanId, PlanLimits> = {
-  // Not sold — the state an org sits in before it subscribes and after a
-  // subscription ends. Small enough to evaluate with, not to operate on.
-  free: { prospects: 25, emailsPerMonth: 50, campaigns: 1 },
-  starter: { prospects: 1000, emailsPerMonth: 5000, campaigns: 3 },
-  growth: { prospects: 10000, emailsPerMonth: 30000, campaigns: Infinity },
-  // Sized per contract; the record keeps a permissive default so a manually
-  // provisioned org is never blocked by a limit nobody agreed to.
-  enterprise: {
-    prospects: Infinity,
-    emailsPerMonth: Infinity,
-    campaigns: Infinity,
-  },
+/** `null` on a PlanLimitSpec means unlimited, which meters as Infinity. */
+const cap = (n: number | null): number => n ?? Infinity;
+
+/** Campaign ceilings are not published, so they stay local to enforcement. */
+const CAMPAIGN_LIMITS: Record<PlanId, number> = {
+  free: 1,
+  starter: 3,
+  growth: Infinity,
+  enterprise: Infinity,
 };
 
-/**
- * What a Starter or Growth trial actually grants. Full product access, capped
- * below the paid tiers so a trial cannot be run as a free production account.
- * Not advertised on the pricing page: the promise there is 14 days of full
- * access, and quoting caps would turn that into a credits conversation.
- */
-export const TRIAL_LIMITS: PlanLimits = {
-  prospects: 500,
-  emailsPerMonth: 2000,
-  campaigns: 2,
-};
+const specOf = (id: PlanId): PlanLimitSpec =>
+  id === "free"
+    ? FREE_PLAN.limits
+    : (PLAN_TIERS.find((t) => t.id === id)?.limits ?? {
+        opportunities: null,
+        aiActions: null,
+      });
 
-export { TRIAL_DAYS };
+const LIMITS: Record<PlanId, PlanLimits> = Object.fromEntries(
+  (["free", "starter", "growth", "enterprise"] as PlanId[]).map((id) => {
+    const spec = specOf(id);
+    return [
+      id,
+      {
+        prospects: cap(spec.opportunities),
+        emailsPerMonth: cap(spec.aiActions),
+        campaigns: CAMPAIGN_LIMITS[id],
+      } satisfies PlanLimits,
+    ];
+  })
+) as Record<PlanId, PlanLimits>;
 
 export const PLANS: Record<PlanId, PlanDef> = {
   free: {
@@ -127,8 +141,11 @@ export function getStripe(): Stripe | null {
 
 /**
  * The plan an org is actually operating under right now — which is not always
- * the plan it is nominally on. A canceled subscription falls back to Free, and
- * a trial keeps the plan's name and price while metering against TRIAL_LIMITS.
+ * the plan it is nominally on: a canceled subscription falls back to Free.
+ *
+ * There is no longer a trial state to resolve. Signup lands on the standing
+ * Free plan, so an org is either paying or on Free, and `planStatus` only ever
+ * distinguishes active from canceled.
  */
 export function planOf(org: Organization): PlanDef {
   const planId = resolvePlanId(org.plan);
@@ -145,10 +162,10 @@ export function planOf(org: Organization): PlanDef {
     return PLANS.free;
   }
 
-  if (org.planStatus === "trialing" && plan.selfServe) {
-    return { ...plan, limits: TRIAL_LIMITS };
-  }
-
+  // An org left on a legacy "trialing" status from the old card-required
+  // trial keeps the plan it paid for. There is nothing to downgrade it to:
+  // the trial-specific limits are gone, and a trialing org was always one
+  // that had already entered a card.
   return plan;
 }
 
@@ -190,7 +207,7 @@ export async function checkPlanLimit(
         : kind === "campaigns"
           ? "campaigns"
           : "emails this month";
-    const scope = org.planStatus === "trialing" ? `${plan.name} trial` : `${plan.name} plan`;
+    const scope = `${plan.name} plan`;
     return `You've reached the ${scope} limit of ${limit} ${noun}. Upgrade in Settings → Billing to continue.`;
   }
   return null;

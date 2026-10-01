@@ -24,7 +24,8 @@ import {
 } from "@/app/(app)/settings/billing-actions";
 import {
   PLAN_TIERS,
-  TRIAL_DAYS,
+  allowanceLabel,
+  capacityLabel,
   formatDollars,
   tierById,
   type PaidPlanId,
@@ -40,8 +41,8 @@ export interface BillingState {
   simulated: boolean; // current subscription was activated without payment
   canManageBilling: boolean;
   /** The metered ceilings for the plan in force, resolved server-side by
-   *  planOf() so a trial shows trial limits rather than the paid ones.
-   *  `null` means unlimited — Infinity does not survive the RSC boundary. */
+   *  planOf(). `null` means unlimited — Infinity does not survive the RSC
+   *  boundary. */
   limits: { prospects: number | null; campaigns: number | null; emails: number | null };
   usage: { prospects: number; campaigns: number; emailsThisMonth: number };
 }
@@ -51,13 +52,15 @@ export interface BillingState {
  * marketing pricing screen renders and lib/billing.ts charges from. There is
  * no second copy of the price here to drift out of sync with the landing page.
  */
-const SALES_HREF = "mailto:itsxuanxi8@icloud.com?subject=Selryn%20Enterprise";
+const SALES_HREF = "mailto:itsxuanxi8@icloud.com?subject=Selryn%20Scale";
 
+/** Display copy only. The keys are the persisted ids, which do not change
+ *  when a plan is renamed — see the note at the top of lib/pricing.ts. */
 const PLAN_LABEL: Record<PlanId, string> = {
   free: "Free",
   starter: "Starter",
-  growth: "Growth",
-  enterprise: "Enterprise",
+  growth: "Pro",
+  enterprise: "Scale",
 };
 
 function UsageRow({
@@ -104,7 +107,6 @@ export function BillingPanel({ state }: { state: BillingState }) {
 
   const limits = state.limits;
   const currentTier = tierById(state.plan);
-  const trialing = state.planStatus === "trialing";
 
   function upgrade(planId: PaidPlanId) {
     setPendingPlan(planId);
@@ -113,10 +115,10 @@ export function BillingPanel({ state }: { state: BillingState }) {
       // With Stripe configured the action redirects to Checkout and never
       // returns; a return value means dev mode or an error.
       if (result?.ok) {
-        toast.success(`${PLAN_LABEL[planId]} trial started`, {
+        toast.success(`${PLAN_LABEL[planId]} is active`, {
           description: result.data.simulated
             ? "Dev mode — no payment was taken. Configure Stripe keys for real checkout."
-            : `${TRIAL_DAYS} days of full access. No card charged until the trial ends.`,
+            : "Your subscription has started.",
         });
       } else if (result) {
         toast.error(result.error);
@@ -172,8 +174,6 @@ export function BillingPanel({ state }: { state: BillingState }) {
                     ? "bg-amber-50 text-amber-700"
                     : state.planStatus === "past_due"
                       ? "bg-rose-50 text-rose-700"
-                    : trialing
-                      ? "bg-violet-50 text-violet-700"
                       : "bg-emerald-50 text-emerald-700"
                 )}
               >
@@ -181,8 +181,6 @@ export function BillingPanel({ state }: { state: BillingState }) {
                   ? "Ends at period"
                   : state.planStatus === "past_due"
                     ? "Payment issue"
-                  : trialing
-                    ? `${TRIAL_DAYS}-day trial`
                     : "Current plan"}
               </Badge>
               {state.simulated && (
@@ -200,19 +198,13 @@ export function BillingPanel({ state }: { state: BillingState }) {
                       : currentTier.monthlyCents
                   )}/${state.planInterval ?? "month"} · ${
                     state.planRenewsAt
-                      ? `${trialing ? "trial ends" : "renews"} ${format(
+                      ? `renews ${format(
                           new Date(state.planRenewsAt),
                           "MMM d, yyyy"
                         )}`
                       : "active"
                   }`}
             </div>
-            {trialing && (
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                Full product access during the trial, metered at trial limits.
-                Your card will be charged when the trial ends.
-              </p>
-            )}
             {state.plan !== "free" && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {state.canManageBilling && (
@@ -307,27 +299,45 @@ export function BillingPanel({ state }: { state: BillingState }) {
                   )}
                 </div>
                 <div className="mt-2 flex items-baseline gap-1">
-                  {tier.startingAt && (
-                    <span className="text-xs text-muted-foreground">from</span>
+                  {tier.customPrice ? (
+                    <span className="text-2xl font-semibold tracking-tight">
+                      Custom
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-2xl font-semibold tracking-tight">
+                        {formatDollars(cents)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        /{interval === "year" ? "year" : "month"}
+                      </span>
+                    </>
                   )}
-                  <span className="text-2xl font-semibold tracking-tight">
-                    {formatDollars(cents)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    /{interval === "year" ? "year" : "month"}
-                  </span>
                 </div>
                 <ul className="mt-4 flex-1 space-y-1.5">
-                  {tier.capacity.map((line) => (
-                    <li key={line} className="flex items-start gap-2 text-xs">
-                      <Check className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                      <span className="text-foreground/85">{line}</span>
-                    </li>
-                  ))}
+                  <li className="flex items-start gap-2 text-xs">
+                    <Check className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                    <span className="text-foreground/85">
+                      {capacityLabel(tier.limits.opportunities)}{" "}
+                      {tier.headline.label.toLowerCase()}
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2 text-xs">
+                    <Check className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                    <span className="text-foreground/85">
+                      {allowanceLabel(tier.limits.aiActions)}
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2 text-xs">
+                    <Check className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                    <span className="text-foreground/85">
+                      Unlimited team members and data connections
+                    </span>
+                  </li>
                 </ul>
 
-                {/* Enterprise is quoted, not bought — no self-serve button
-                    that could charge the "from" figure as if it were final. */}
+                {/* Scale is quoted, not bought — no self-serve button that
+                    could charge a figure nobody agreed to. */}
                 {tier.selfServe ? (
                   <Button
                     className="mt-5 w-full"
@@ -341,7 +351,7 @@ export function BillingPanel({ state }: { state: BillingState }) {
                       : upgrading && pendingPlan === tier.id
                         ? "Starting checkout…"
                         : state.plan === "free"
-                          ? `Start ${TRIAL_DAYS}-day trial`
+                          ? `Get ${tier.name}`
                           : `Switch to ${tier.name}`}
                   </Button>
                 ) : (
@@ -356,8 +366,8 @@ export function BillingPanel({ state }: { state: BillingState }) {
 
         <p className="mt-4 text-xs text-muted-foreground">
           {state.stripeEnabled
-            ? `Starter and Growth include a ${TRIAL_DAYS}-day free trial. Stripe securely accepts debit and credit cards at checkout; the first charge happens when the trial ends. Cancellations take effect at the end of the billing period.`
-            : `Stripe keys aren't configured, so plans start a simulated ${TRIAL_DAYS}-day trial in dev mode without payment. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to charge real cards.`}
+            ? "Evaluate on the Free plan for as long as you like — no card, no time limit. Stripe securely accepts debit and credit cards at checkout and the first charge is immediate. Cancellations take effect at the end of the billing period."
+            : "Stripe keys aren't configured, so plans activate in simulated dev mode without payment. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to charge real cards."}
         </p>
       </div>
 

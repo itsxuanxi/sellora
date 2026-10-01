@@ -7,7 +7,6 @@ import {
   formatPrice,
   getStripe,
   PLANS,
-  TRIAL_DAYS,
   type BillingInterval,
 } from "@/lib/billing";
 import type { PaidPlanId } from "@/lib/pricing";
@@ -21,13 +20,14 @@ const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
  * Stripe Checkout (real payment); without it the plan is activated directly
  * in dev mode so the full billing loop stays testable.
  *
- * Every subscription opens on a TRIAL_DAYS free trial, but Checkout collects
- * a debit or credit card up front. Stripe hosts the card form and keeps card
- * data out of Selryn; the first charge happens when the trial ends.
+ * There is no trial here any more. Evaluation happens on the standing Free
+ * plan, which needs no card at all, so by the time anyone reaches this action
+ * they have already decided to pay and the first charge is immediate. Stripe
+ * hosts the card form and keeps card data out of Selryn.
  *
- * Enterprise is intentionally unreachable here: it is quoted, not bought, so
- * its CTA goes to sales and there is no self-serve path that could charge the
- * "starting at" floor as if it were the price.
+ * Scale is intentionally unreachable here: it is quoted, not bought, so its
+ * CTA goes to sales and there is no self-serve path that could charge a
+ * figure nobody agreed to.
  */
 export async function startCheckout(
   planId: PaidPlanId,
@@ -62,17 +62,19 @@ export async function startCheckout(
     }
 
     if (!stripe) {
-      // Dev mode: start the same trial Stripe would, clearly marked simulated,
-      // so trial limits and the trial UI are exercised without payment keys.
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
+      // Dev mode: activate the same subscription Stripe would, clearly marked
+      // simulated, so plan limits and the billing UI are exercised without
+      // payment keys.
+      const renewsAt = new Date();
+      if (interval === "year") renewsAt.setFullYear(renewsAt.getFullYear() + 1);
+      else renewsAt.setMonth(renewsAt.getMonth() + 1);
       await db.organization.update({
         where: { id: org.id },
         data: {
           plan: plan.id,
           planInterval: interval,
-          planStatus: "trialing",
-          planRenewsAt: trialEndsAt,
+          planStatus: "active",
+          planRenewsAt: renewsAt,
           stripeSubscriptionId: `sim_${Date.now().toString(36)}`,
         },
       });
@@ -117,17 +119,11 @@ export async function startCheckout(
           },
         },
       ],
-      // Collect a card now and charge it automatically when the trial ends.
       payment_method_collection: "always",
       success_url: `${appUrl()}/settings?tab=billing&checkout=success`,
       cancel_url: `${appUrl()}/settings?tab=billing&checkout=canceled`,
-      metadata: { orgId: org.id, plan: plan.id, interval, trial: "true" },
+      metadata: { orgId: org.id, plan: plan.id, interval },
       subscription_data: {
-        trial_period_days: TRIAL_DAYS,
-        // Defensive fallback for cards removed during the trial.
-        trial_settings: {
-          end_behavior: { missing_payment_method: "cancel" },
-        },
         metadata: { orgId: org.id, plan: plan.id, interval },
       },
     });
