@@ -161,7 +161,6 @@ export const PLAN_TIERS: PlanTier[] = [
       { label: "Revenue-at-risk alerts" },
       { label: "Automated workflows" },
       { label: "Team revenue analytics" },
-      { label: "CRM and calendar sync", planned: true },
       { label: "Priority support" },
     ],
     cta: { label: "Get Pro", kind: "signup" },

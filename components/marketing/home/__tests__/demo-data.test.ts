@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DEMO_DEALS,
+  INTEGRATION_CATALOG,
+  TRUST_POINTS,
   HERO_SCENARIOS,
   HERO_STAGE_DURATION_MS,
   HERO_STAGE_TAIL_MS,
@@ -241,6 +243,56 @@ test("the outcome rail agrees with the outcome scenario's own steps", () => {
   const score = outcome.steps.find((s) => s.action === "score");
   assert.ok(score && score.action === "score");
   assert.equal(outcome.rail.meter.value, score.payload.to);
+});
+
+test("the integration catalog names each connector once", () => {
+  const keys = INTEGRATION_CATALOG.map((i) => i.key);
+  assert.equal(new Set(keys).size, keys.length, "a connector appears twice");
+
+  const names = INTEGRATION_CATALOG.map((i) => i.name);
+  assert.equal(new Set(names).size, names.length, "two rows share a name");
+});
+
+test("the catalog records whether code exists, not whether it is switched on", () => {
+  // `built` must stay a fact about the repository. The moment someone edits it
+  // to mean "configured in production" the page starts lying in whichever
+  // direction that deployment happens to differ, which is the drift the
+  // server-side resolver exists to prevent.
+  const built = new Set(
+    INTEGRATION_CATALOG.filter((i) => i.built).map((i) => i.key)
+  );
+  for (const shipped of ["csv", "google_signin", "outbound_email", "hubspot", "slack"]) {
+    assert.ok(built.has(shipped as never), `${shipped} has a connector and is not marked built`);
+  }
+  for (const absent of ["salesforce", "pipedrive", "gmail", "calendar"]) {
+    assert.ok(!built.has(absent as never), `${absent} is marked built with no connector`);
+  }
+});
+
+test("no marketing copy claims single sign-on", () => {
+  // It was listed for months as a planned trust point. There is no SAML or SSO
+  // code anywhere in the repository, and the tier it propped up is gone.
+  const copy = [
+    ...TRUST_POINTS.map((t) => t.text),
+    ...INTEGRATION_CATALOG.map((i) => i.name),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  for (const banned of ["sso", "saml", "single sign-on"]) {
+    assert.ok(!copy.includes(banned), `marketing copy still claims "${banned}"`);
+  }
+});
+
+test("a trust point is stated once, with a status", () => {
+  const texts = TRUST_POINTS.map((t) => t.text);
+  assert.equal(new Set(texts).size, texts.length, "a trust point is repeated");
+  for (const point of TRUST_POINTS) {
+    assert.ok(
+      point.status === "available" || point.status === "planned",
+      `${point.text} has no honest status`
+    );
+  }
 });
 
 test("nothing claims a recommendation caused a win", () => {

@@ -265,35 +265,72 @@ export const SCENARIOS: Scenario[] = [
   },
 ];
 
+export type IntegrationKey =
+  | "csv"
+  | "google_signin"
+  | "outbound_email"
+  | "hubspot"
+  | "slack"
+  | "salesforce"
+  | "pipedrive"
+  | "gmail"
+  | "calendar";
+
+export type CapabilityStatus = "available" | "planned";
+
 /**
- * Integrations, with an honest status per row. Only CSV signal import, Google
- * sign-in and outbound email exist in the codebase today; the CRM and calendar
- * connectors do not, so they are marked planned rather than listed as if they
- * shipped.
+ * The integration catalog.
+ *
+ * `built` means the code exists and is tested. It is deliberately NOT the same
+ * question as whether a visitor can use it, because for an OAuth integration
+ * those come apart: HubSpot is ~1,400 lines of finished connector — OAuth with
+ * state verification, encrypted token refresh, a rate-limited client,
+ * incremental sync, webhook signature checks and a cron-driven job queue — and
+ * a customer still cannot connect it until this deployment has a HubSpot app
+ * registered and its credentials set.
+ *
+ * So the status a visitor sees is resolved per-deployment, server-side, in
+ * lib/marketing/capabilities.ts. A finished connector with no credentials
+ * reads as planned rather than offering a connection nobody can make, and it
+ * flips to available the moment the keys land — with no code change, which is
+ * the point. The old hard-coded list had HubSpot marked planned months after
+ * the connector shipped.
  */
-export const INTEGRATIONS: { name: string; status: "available" | "planned" }[] = [
-  { name: "CSV signal import", status: "available" },
-  { name: "Google sign-in", status: "available" },
-  { name: "Outbound email", status: "available" },
-  { name: "HubSpot", status: "planned" },
-  { name: "Salesforce", status: "planned" },
-  { name: "Pipedrive", status: "planned" },
-  { name: "Gmail", status: "planned" },
-  { name: "Google Calendar", status: "planned" },
+export const INTEGRATION_CATALOG: {
+  key: IntegrationKey;
+  name: string;
+  built: boolean;
+}[] = [
+  { key: "csv", name: "CSV signal import", built: true },
+  { key: "google_signin", name: "Google sign-in", built: true },
+  { key: "outbound_email", name: "Outbound email", built: true },
+  { key: "hubspot", name: "HubSpot", built: true },
+  { key: "slack", name: "Slack", built: true },
+  { key: "salesforce", name: "Salesforce", built: false },
+  { key: "pipedrive", name: "Pipedrive", built: false },
+  { key: "gmail", name: "Gmail", built: false },
+  { key: "calendar", name: "Google Calendar", built: false },
 ];
 
 /**
- * Every line checked against the codebase. Role-based access is marked
- * planned because `User.role` exists as a column but is never enforced
- * anywhere; auditability is real (AgentAction records actor and timestamp).
+ * Every line checked against the codebase.
+ *
+ * Role-based access moved from planned to available: it is no longer a column
+ * nobody reads. lib/security/rbac.ts defines five roles and a permission
+ * matrix, and requirePermission() guards 16 call sites — approval, execution
+ * and every integration connect path, in server actions and API routes alike.
+ *
+ * SSO is gone from the list rather than left as a roadmap row. No SAML or SSO
+ * code exists, and the tier it was there to prop up (Enterprise) no longer
+ * exists either — a 2-20 person buyer is not asking for it.
  */
-export const TRUST_POINTS: { text: string; status: "available" | "planned" }[] = [
+export const TRUST_POINTS: { text: string; status: CapabilityStatus }[] = [
   { text: "Human approval for customer-facing actions", status: "available" },
   { text: "Clear reasoning behind every recommendation", status: "available" },
-  { text: "Works alongside your existing CRM", status: "available" },
-  { text: "Customer data is not used to train shared models", status: "available" },
+  { text: "Role-based access across five roles", status: "available" },
   { text: "Auditable action history", status: "available" },
-  { text: "Role-based access and SSO", status: "planned" },
+  { text: "Customer data is not used to train shared models", status: "available" },
+  { text: "Works alongside your existing CRM", status: "available" },
 ];
 
 /** Outcome metrics stay unfilled until measured with real customers. */

@@ -3,6 +3,7 @@
 import { useId, useMemo } from "react";
 import { Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { IntegrationClaim } from "@/lib/marketing/capabilities";
 import { useAutoRotate } from "@/components/marketing/home/use-auto-rotate";
 import {
   sequenceDuration,
@@ -11,7 +12,6 @@ import {
 import { TabStrip } from "@/components/marketing/home/tab-strip";
 import {
   DEMO_DATA_NOTE,
-  INTEGRATIONS,
   OUTCOME_METRICS,
   SCENARIOS,
   stepDelays,
@@ -46,7 +46,13 @@ const RISK_STEPS: Record<string, number[]> = {
   convert: [],
 };
 
-export function Scenarios() {
+export function Scenarios({
+  integrations,
+}: {
+  /** Resolved server-side against this deployment's credentials — see
+   *  lib/marketing/capabilities.ts for why this is not a constant. */
+  integrations: IntegrationClaim[];
+}) {
   // Each scenario's dwell time is summed from its own steps: these run 7, 5
   // and 7 steps, and one shared constant either rushed the long ones or left
   // the short one sitting finished for seconds.
@@ -244,7 +250,7 @@ export function Scenarios() {
               Integrations
             </h3>
             <ul className="mt-4 flex flex-wrap gap-2">
-              {INTEGRATIONS.map((it) => (
+              {integrations.map((it) => (
                 <li key={it.name}>
                   <span
                     className={cn(

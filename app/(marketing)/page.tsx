@@ -2,6 +2,7 @@ import { Hero } from "@/components/marketing/home/hero";
 import { Scenarios } from "@/components/marketing/home/scenarios";
 import { Pricing } from "@/components/marketing/home/pricing";
 import { getAuthState } from "@/lib/auth";
+import { integrationClaims } from "@/lib/marketing/capabilities";
 
 /**
  * The Selryn home page — three screens, one scroll each.
@@ -24,10 +25,15 @@ export default async function HomePage() {
   const { signedIn } = await getAuthState();
   const startHref = signedIn ? "/dashboard" : "/sign-in";
 
+  // Resolved here rather than inside Scenarios: which integrations this
+  // deployment can honestly offer depends on its credentials, and Scenarios is
+  // a client component that cannot read them.
+  const integrations = integrationClaims();
+
   return (
     <>
       <Hero />
-      <Scenarios />
+      <Scenarios integrations={integrations} />
       <Pricing startHref={startHref} />
     </>
   );
