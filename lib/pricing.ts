@@ -115,8 +115,8 @@ export const PLAN_TIERS: PlanTier[] = [
   {
     id: "starter",
     name: "Starter",
-    monthlyCents: 14900,
-    yearlyCents: 149000,
+    monthlyCents: 9900,
+    yearlyCents: 99000,
     customPrice: false,
     selfServe: true,
     mostPopular: false,
@@ -273,7 +273,7 @@ export const YEARLY_SAVING_PERCENT = (() => {
   return Math.round(Math.min(...savings) * 100);
 })();
 
-/** "$149" / "$2,990" — whole dollars, no trailing ".00". */
+/** "$99" / "$2,990" — whole dollars, no trailing ".00". */
 export function formatDollars(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 0,
@@ -281,7 +281,7 @@ export function formatDollars(cents: number): string {
   })}`;
 }
 
-/** "$124.17" — always two decimals, for the yearly-to-monthly equivalent. */
+/** "$82.50" — always two decimals, for the yearly-to-monthly equivalent. */
 export function formatDollarsExact(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 2,
