@@ -69,7 +69,7 @@ export const DEMO_DEALS: DemoDeal[] = [
     probability: 37,
     priority: "Follow up",
     priorityTone: "warn",
-    signals: ["Pricing page revisited", "Security document downloaded"],
+    signals: ["Pricing page revisited", "Case studies reviewed"],
     status: "Last activity: 2 hours ago",
     readoutLabel: "Intent",
     readoutValue: "Rising",
@@ -250,7 +250,7 @@ export const SCENARIOS: Scenario[] = [
     account: "Brightcart",
     steps: [
       { label: "Pricing page revisited", note: "Second visit this week" },
-      { label: "Security document downloaded", note: "A procurement signal, not a browse" },
+      { label: "Case studies reviewed", note: "Three in one session — not a browse" },
       { label: "Second stakeholder appears", note: "New contact from the same domain" },
       { label: "Intent changes from Medium to High", note: "Score moves on evidence, not a guess" },
       { label: "Selryn recommends technical validation", note: "The usual blocker at this stage" },
@@ -579,7 +579,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
     subject: {
       company: "Cloudmint",
       dealValue: 42_000,
-      stage: "Evaluation",
+      stage: "Pricing",
       owner: "Dana Whitfield",
     },
     steps: [
@@ -602,7 +602,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         status: "Detecting signals",
         payload: {
           label: "New stakeholder joined",
-          detail: "VP Finance added to the thread",
+          detail: "Their Head of Growth joined the thread",
           at: "9 min ago",
           tone: "good",
         },
@@ -690,7 +690,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         { key: "close_date", value: "Mar 28", after: 0 },
         { key: "contract_term", value: "12 months", after: 0 },
         { key: "proposal_opens", value: "2 in 24h", after: 1, tone: "good" },
-        { key: "champion", value: "Maya Ortiz · VP Fin", after: 2, tone: "good" },
+        { key: "champion", value: "Priya Raman · Growth", after: 2, tone: "good" },
         { key: "buying_committee", value: "3 contacts", after: 2, tone: "good" },
         { key: "signals_read", value: "6 of 6", after: 6, tone: "good" },
         { key: "last_reply", value: "4 days ago", after: 6, tone: "risk" },
@@ -797,7 +797,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
     subject: {
       company: "Cloudmint",
       dealValue: 42_000,
-      stage: "Evaluation",
+      stage: "Pricing",
       owner: "Dana Whitfield",
     },
     steps: [
@@ -826,17 +826,17 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         action: "recommend",
         status: "Generating next best action",
         payload: {
-          headline: "Send a security follow-up to the VP Finance",
-          why: "The new stakeholder has not been addressed, and security is what stalls deals at this stage.",
+          headline: "Send the scope and start date to their Head of Growth",
+          why: "The new stakeholder has not been addressed, and an unanswered start date is what stalls deals at this stage.",
           evidence: [
-            "VP Finance joined 9 minutes ago",
+            "Head of Growth joined 9 minutes ago",
             "Proposal opened twice, no reply",
             "4 days of silence after the demo",
           ],
           atStake: 28_560,
           draft: {
-            subject: "Security review before we go further",
-            body: "Hi Maya — security looks like the next step in your evaluation. I can bring our security lead into a short review this week. Tuesday or Wednesday?",
+            subject: "Scope and a start date",
+            body: "Hi Priya \u2014 you\u2019ve had the proposal open a couple of times and I still haven\u2019t come back to you with a start date. I can put the scope and timing in front of you this week. Tuesday or Wednesday?",
           },
         },
       },
@@ -863,10 +863,10 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       label: "Why this action",
       fields: [
         { key: "days_in_stage", value: "31", after: 0 },
-        { key: "stakeholder_gap", value: "VP Finance", after: 3, tone: "risk" },
+        { key: "stakeholder_gap", value: "Head of Growth", after: 3, tone: "risk" },
         { key: "engagement", value: "Proposal opened 2x", after: 2, tone: "good" },
         { key: "silence", value: "4 days, no outbound", after: 1, tone: "risk" },
-        { key: "stage_pattern", value: "Security stalls here", after: 3 },
+        { key: "stage_pattern", value: "Scope stalls here", after: 3 },
         { key: "at_stake", value: "$28,560", after: 3, tone: "good" },
         { key: "approval", value: "human required", after: 4, tone: "pending" },
       ],
@@ -887,7 +887,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
     subject: {
       company: "Cloudmint",
       dealValue: 42_000,
-      stage: "Evaluation",
+      stage: "Pricing",
       owner: "Dana Whitfield",
     },
     steps: [
@@ -905,8 +905,8 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         status: "Customer replied",
         payload: {
           label: "Reply received",
-          quote: "Can we review security requirements tomorrow?",
-          who: "VP Finance",
+          quote: "Can you walk us through the scope tomorrow?",
+          who: "Head of Growth",
         },
       },
       {
@@ -923,8 +923,8 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         status: "CRM updated",
         payload: {
           label: "Deal stage moved",
-          stageFrom: "Evaluation",
-          stageTo: "Security review",
+          stageFrom: "Pricing",
+          stageTo: "Proposal",
         },
       },
       {
@@ -962,7 +962,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         { key: "follow_up", value: "sent 09:14", after: 1, tone: "good" },
         { key: "reply", value: "41 min later", after: 2, tone: "good" },
         { key: "meeting", value: "tomorrow 14:00", after: 3, tone: "good" },
-        { key: "stage", value: "Security review", after: 4, tone: "good" },
+        { key: "stage", value: "Proposal", after: 4, tone: "good" },
         { key: "win_probability", value: "68% → 71%", after: 5, tone: "good" },
         { key: "expected_revenue", value: "$29,820", after: 6, tone: "good" },
       ],
