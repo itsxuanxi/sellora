@@ -58,7 +58,11 @@ test("an outbound email is us, and proves nothing about them", () => {
 test("an email of unknown direction is treated as ours", () => {
   // The expensive direction to be wrong in: counting an email of unknown
   // provenance as a reply would clear `neverReplied` on no evidence.
-  for (const props of [{ hs_timestamp: PAST }, { hs_timestamp: PAST, hs_email_direction: "" }]) {
+  const cases: Record<string, string>[] = [
+    { hs_timestamp: PAST },
+    { hs_timestamp: PAST, hs_email_direction: "" },
+  ];
+  for (const props of cases) {
     const e = mapped("emails", obj("3", props));
     assert.equal(e.actorType, "seller");
     assert.equal(e.signal, null);
@@ -133,7 +137,8 @@ test("an engagement attached to nothing is dropped, not guessed at", () => {
 });
 
 test("an engagement with no usable timestamp is dropped", () => {
-  for (const props of [{}, { hs_timestamp: "" }, { hs_timestamp: "not-a-date" }]) {
+  const cases: Record<string, string>[] = [{}, { hs_timestamp: "" }, { hs_timestamp: "not-a-date" }];
+  for (const props of cases) {
     const r = mapEngagement("calls", obj("12", props), NOW);
     assert.equal(r.ok, false, `${JSON.stringify(props)} should not map`);
   }

@@ -29,6 +29,7 @@ import { ENGAGEMENT_SCOPES } from "@/lib/integrations/hubspot/engagements";
 const AUTH_BASE = "https://app.hubspot.com/oauth/authorize";
 const TOKEN_URL = "https://api.hubapi.com/oauth/v1/token";
 const ACCOUNT_INFO_URL = "https://api.hubapi.com/account-info/v3/details";
+const TOKEN_INFO_URL = "https://api.hubapi.com/oauth/v1/access-tokens";
 
 export const HUBSPOT_PROVIDER = "hubspot";
 export const HUBSPOT_STATE_COOKIE = "hubspot_oauth_state";
@@ -190,6 +191,38 @@ export async function fetchAccountInfo(
   return { portalId: String(json.portalId ?? ""), name: json.uiDomain ?? null };
 }
 
+/**
+ * The scopes HubSpot actually granted, read back from the token.
+ *
+ * Necessary because engagement scopes are requested as `optional_scope`, and
+ * HubSpot drops an optional scope silently when the portal cannot grant it.
+ * Recording what we asked for would therefore record a claim rather than a
+ * fact, and the first symptom would be a 403 at sync time with no way to tell
+ * a refused scope from a broken one.
+ *
+ * The token travels in the path because that is the endpoint's shape. It is
+ * never logged: the failure branch carries the status only, and callers get
+ * an empty list rather than an exception — a connection must not fail because
+ * we could not enumerate its permissions.
+ */
+export async function fetchGrantedScopes(accessToken: string): Promise<string[]> {
+  try {
+    const res = await fetch(
+      `${TOKEN_INFO_URL}/${encodeURIComponent(accessToken)}`,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    if (!res.ok) {
+      console.warn(`[hubspot] could not read granted scopes (${res.status})`);
+      return [];
+    }
+    const json = (await res.json()) as { scopes?: string[] };
+    return Array.isArray(json.scopes) ? json.scopes : [];
+  } catch {
+    console.warn("[hubspot] could not read granted scopes");
+    return [];
+  }
+}
+
 /** Persists a freshly granted grant, encrypted. */
 export async function saveConnection(opts: {
   orgId: string;
@@ -197,6 +230,8 @@ export async function saveConnection(opts: {
   portalId: string;
   portalName: string | null;
   connectedBy?: string | null;
+  /** What HubSpot granted. Empty falls back to the required set. */
+  grantedScopes?: string[];
 }) {
   const expiresAt = new Date(Date.now() + opts.tokens.expires_in * 1000);
 
@@ -206,7 +241,9 @@ export async function saveConnection(opts: {
     accessTokenEnc: encryptSecret(opts.tokens.access_token),
     refreshTokenEnc: encryptSecret(opts.tokens.refresh_token),
     expiresAt,
-    scopes: HUBSPOT_SCOPES.join(" "),
+    // What was granted, not what was asked for — the two diverge the moment
+    // an optional scope is dropped.
+    scopes: (opts.grantedScopes?.length ? opts.grantedScopes : HUBSPOT_SCOPES).join(" "),
     status: "CONNECTED",
     lastError: null,
     lastErrorAt: null,

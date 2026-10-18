@@ -6,11 +6,15 @@ import {
   HUBSPOT_STATE_COOKIE,
   exchangeCode,
   fetchAccountInfo,
+  fetchGrantedScopes,
   saveConnection,
   verifyState,
 } from "@/lib/integrations/hubspot/oauth";
 import { enqueueSync } from "@/lib/integrations/sync-runner";
-import { ENGAGEMENT_OBJECT_TYPES } from "@/lib/integrations/hubspot/engagements";
+import {
+  ENGAGEMENT_OBJECT_TYPES,
+  ENGAGEMENT_SCOPES,
+} from "@/lib/integrations/hubspot/engagements";
 import { rethrowControlFlow } from "@/lib/security/route-errors";
 
 /** Sends the user back to Integrations with a readable outcome. */
@@ -99,7 +103,20 @@ export async function GET(req: Request) {
     }
 
     const tokens = await exchangeCode(code, origin);
-    const account = await fetchAccountInfo(tokens.access_token);
+    const [account, grantedScopes] = await Promise.all([
+      fetchAccountInfo(tokens.access_token),
+      fetchGrantedScopes(tokens.access_token),
+    ]);
+
+    // Names only, never the token. Engagement scopes are optional and HubSpot
+    // drops the ones a portal cannot grant, so this line is the only record of
+    // which engagement types will sync at all — without it the first symptom
+    // is a 403 mid-backfill with nothing to attribute it to.
+    const missing = ENGAGEMENT_SCOPES.filter((sc) => !grantedScopes.includes(sc));
+    console.info(
+      `[hubspot] connected portal ${account.portalId} with ${grantedScopes.length} scopes` +
+        (missing.length ? `; engagement scopes not granted: ${missing.join(", ")}` : "")
+    );
 
     const connection = await saveConnection({
       orgId: session.orgId,
@@ -107,6 +124,7 @@ export async function GET(req: Request) {
       portalId: account.portalId,
       portalName: account.name,
       connectedBy: session.id,
+      grantedScopes,
     });
 
     // Queue the backfill rather than running it inline: a first sync of a real
