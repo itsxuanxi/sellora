@@ -11,6 +11,14 @@ import {
   type HubspotObject,
 } from "@/lib/integrations/hubspot/mappers";
 import { ingestEvents, type IngestEvent } from "@/lib/events/ingest";
+import { upsertSignal } from "@/lib/intent/signals";
+import { HubspotApiError } from "@/lib/integrations/hubspot/client";
+import {
+  ENGAGEMENT_SPECS,
+  mapEngagement,
+  type EngagementObjectType,
+  type InteractionKind,
+} from "@/lib/integrations/hubspot/engagements";
 import type { JobProgress } from "@/lib/integrations/sync-runner";
 import { expectedRevenue } from "@/lib/revenue/money";
 import { STAGE_WIN_BASELINE, type OpportunityStage } from "@/lib/revenue/config";
@@ -306,6 +314,180 @@ export async function syncDeals(
   return { processed, failed, cursor: page.paging?.next?.after ?? null };
 }
 
+/** SignalSource key for anything derived from a connected HubSpot portal. */
+export const HUBSPOT_SIGNAL_SOURCE = "hubspot_crm";
+
+/**
+ * Engagement history — the half of the data the priority engine actually
+ * reasons with.
+ *
+ * One job per engagement type rather than one job for all four, so each gets
+ * its own cursor and a portal with a million emails and six meetings does not
+ * starve the meetings. Types are independent in every way that matters: a
+ * missing scope skips one and leaves the rest working.
+ */
+export async function syncEngagements(
+  orgId: string,
+  connectionId: string,
+  objectType: EngagementObjectType,
+  cursor: string | null
+): Promise<JobProgress> {
+  const spec = ENGAGEMENT_SPECS[objectType];
+
+  let page;
+  try {
+    page = await fetchObjectPage<HubspotObject>(orgId, objectType, {
+      after: cursor ?? undefined,
+      limit: PAGE_SIZE,
+      properties: spec.properties,
+      // Without these an engagement is an orphan: the deal it belongs to is
+      // the entire reason to read it.
+      associations: ["deals", "contacts"],
+    });
+  } catch (err) {
+    // 403 means the optional scope was not granted — a configuration fact,
+    // not a failure. Returning cleanly keeps the connection healthy and lets
+    // the other three types sync; throwing would retry forever and eventually
+    // dead-letter a job that can never succeed.
+    if (err instanceof HubspotApiError && err.status === 403) {
+      console.warn(
+        `[hubspot:${objectType}] scope "${spec.scope}" not granted — skipping this type`
+      );
+      return { processed: 0, failed: 0, cursor: null };
+    }
+    throw err;
+  }
+
+  const events: IngestEvent[] = [];
+  const newest = new Map<string, { at: Date; kind: InteractionKind }>();
+  let processed = 0;
+  let failed = 0;
+
+  for (const obj of page.results) {
+    const mapped = mapEngagement(objectType, obj);
+    if (!mapped.ok) {
+      failed++;
+      continue;
+    }
+    const e = mapped.value;
+
+    const opportunity = await resolveOpportunity(orgId, e.dealIds);
+    const contact = await resolveContact(orgId, e.contactIds);
+    const accountId = opportunity?.accountId ?? contact?.accountId ?? null;
+
+    // Nothing to attach it to yet. Companies and deals sync first, so this is
+    // usually an engagement on an object outside the synced set rather than
+    // an ordering problem.
+    if (!opportunity && !accountId) {
+      failed++;
+      continue;
+    }
+
+    events.push({
+      orgId,
+      connectionId,
+      source: "hubspot",
+      sourceEventId: e.externalId,
+      eventType: e.eventType,
+      occurredAt: e.occurredAt,
+      actorType: e.actorType,
+      accountId,
+      contactId: contact?.id ?? null,
+      opportunityId: opportunity?.id ?? null,
+      normalizedProperties: {
+        objectType,
+        interactionKind: e.interactionKind,
+        title: e.title,
+      },
+    });
+
+    // Only where the engagement is itself the proof — see engagements.ts.
+    if (e.signal && accountId) {
+      await upsertSignal(orgId, accountId, {
+        signalType: e.signal.type,
+        title: e.signal.title,
+        sourceKey: HUBSPOT_SIGNAL_SOURCE,
+        occurredAt: e.occurredAt,
+        evidence: e.title,
+        contactId: contact?.id ?? null,
+        opportunityId: opportunity?.id ?? null,
+      });
+    }
+
+    if (opportunity) {
+      const prev = newest.get(opportunity.id);
+      if (!prev || e.occurredAt > prev.at) {
+        newest.set(opportunity.id, { at: e.occurredAt, kind: e.interactionKind });
+      }
+    }
+    processed++;
+  }
+
+  await ingestEvents(events);
+  await advanceLastInteraction(newest);
+
+  return { processed, failed, cursor: page.paging?.next?.after ?? null };
+}
+
+/**
+ * Moves `lastInteractionAt` forward, never backward.
+ *
+ * Load-bearing: the four engagement types are four independent jobs running
+ * in whatever order the queue drains them, and pages within a type arrive
+ * oldest-first. A plain update would let the notes job overwrite a reply from
+ * this morning with a note from March, and the deal would read as quiet when
+ * the buyer is waiting on an answer.
+ */
+async function advanceLastInteraction(
+  newest: Map<string, { at: Date; kind: InteractionKind }>
+): Promise<void> {
+  for (const [id, v] of newest) {
+    await db.opportunity.updateMany({
+      where: {
+        id,
+        OR: [{ lastInteractionAt: null }, { lastInteractionAt: { lt: v.at } }],
+      },
+      data: { lastInteractionAt: v.at, lastInteractionKind: v.kind },
+    });
+  }
+}
+
+/** First synced opportunity among a HubSpot engagement's deal associations. */
+async function resolveOpportunity(orgId: string, dealIds: string[]) {
+  for (const externalId of dealIds) {
+    const opp = await db.opportunity.findUnique({
+      where: {
+        orgId_externalSource_externalId: {
+          orgId,
+          externalSource: HUBSPOT_SOURCE,
+          externalId,
+        },
+      },
+      select: { id: true, accountId: true },
+    });
+    if (opp) return opp;
+  }
+  return null;
+}
+
+/** First synced contact among a HubSpot engagement's contact associations. */
+async function resolveContact(orgId: string, contactIds: string[]) {
+  for (const externalId of contactIds) {
+    const contact = await db.prospect.findUnique({
+      where: {
+        orgId_externalSource_externalId: {
+          orgId,
+          externalSource: HUBSPOT_SOURCE,
+          externalId,
+        },
+      },
+      select: { id: true, accountId: true },
+    });
+    if (contact) return contact;
+  }
+  return null;
+}
+
 /** Owners are small and unpaginated in practice; synced for attribution only. */
 export async function syncOwners(orgId: string): Promise<JobProgress> {
   const page = await fetchObjectPage<HubspotObject>(orgId, "owners", { limit: PAGE_SIZE });
@@ -388,6 +570,16 @@ export async function runHubspotJob(job: {
       return syncDeals(job.orgId, job.connectionId, job.cursor);
     case "owners":
       return syncOwners(job.orgId);
+    case "emails":
+    case "meetings":
+    case "calls":
+    case "notes":
+      return syncEngagements(
+        job.orgId,
+        job.connectionId,
+        job.objectType as EngagementObjectType,
+        job.cursor
+      );
     default:
       throw new Error(`Unknown HubSpot object type "${job.objectType}"`);
   }

@@ -61,6 +61,18 @@ export interface EnrichedOpportunity {
   atRisk: number;
 }
 
+/**
+ * Engagement event types that count as *us* contacting *them*.
+ *
+ * `note.logged` is deliberately absent: writing a note to yourself is not
+ * reaching out, and counting it would clear a "needs follow-up" leak the
+ * moment a rep typed a reminder to handle it later.
+ */
+const OUTBOUND_EVENT_TYPES = new Set(["email.sent", "call.placed", "meeting.held"]);
+
+/** Engagement event types that are the buyer coming back to us. */
+const INBOUND_EVENT_TYPES = new Set(["email.replied", "call.received"]);
+
 function daysSince(d: Date | null, now: Date): number | null {
   if (!d) return null;
   return Math.floor(Math.max(0, (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
@@ -89,7 +101,7 @@ export async function loadEnrichedOpportunities(
 
   const accountIds = [...new Set(opportunities.map((o) => o.accountId))];
 
-  const [signals, emails] = await Promise.all([
+  const [signals, emails, events] = await Promise.all([
     db.buyingSignal.findMany({
       where: { orgId, accountId: { in: accountIds }, expired: false },
       orderBy: { occurredAt: "desc" },
@@ -111,6 +123,20 @@ export async function loadEnrichedOpportunities(
         prospect: { select: { accountId: true } },
       },
     }),
+    // CRM engagement history. Selryn's own Email rows only cover what Selryn
+    // sent; a rep emailing from HubSpot or Gmail is invisible to them, and a
+    // deal they have been working all week would read as untouched.
+    db.revenueEvent.findMany({
+      where: {
+        orgId,
+        accountId: { in: accountIds },
+        eventType: {
+          in: [...OUTBOUND_EVENT_TYPES, ...INBOUND_EVENT_TYPES],
+        },
+      },
+      orderBy: { occurredAt: "desc" },
+      select: { accountId: true, eventType: true, occurredAt: true },
+    }),
   ]);
 
   const signalsByAccount = new Map<string, typeof signals>();
@@ -118,6 +144,14 @@ export async function loadEnrichedOpportunities(
     const list = signalsByAccount.get(s.accountId) ?? [];
     list.push(s);
     signalsByAccount.set(s.accountId, list);
+  }
+
+  const eventsByAccount = new Map<string, typeof events>();
+  for (const e of events) {
+    if (!e.accountId) continue;
+    const list = eventsByAccount.get(e.accountId) ?? [];
+    list.push(e);
+    eventsByAccount.set(e.accountId, list);
   }
 
   const emailsByAccount = new Map<string, typeof emails>();
@@ -132,12 +166,19 @@ export async function loadEnrichedOpportunities(
   return opportunities.map((opp) => {
     const accSignals = signalsByAccount.get(opp.accountId) ?? [];
     const accEmails = emailsByAccount.get(opp.accountId) ?? [];
+    const accEvents = eventsByAccount.get(opp.accountId) ?? [];
 
     const latest = (dates: (Date | null)[]) =>
       dates.filter((d): d is Date => d != null).sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
-    const lastOutboundAt = latest(accEmails.map((e) => e.sentAt));
-    const lastRepliedAt = latest(accEmails.map((e) => e.repliedAt));
+    const lastOutboundAt = latest([
+      ...accEmails.map((e) => e.sentAt),
+      ...accEvents.filter((e) => OUTBOUND_EVENT_TYPES.has(e.eventType)).map((e) => e.occurredAt),
+    ]);
+    const lastRepliedAt = latest([
+      ...accEmails.map((e) => e.repliedAt),
+      ...accEvents.filter((e) => INBOUND_EVENT_TYPES.has(e.eventType)).map((e) => e.occurredAt),
+    ]);
     const signalAt = (t: SignalType) =>
       latest(accSignals.filter((s) => s.signalType === t).map((s) => s.occurredAt));
 

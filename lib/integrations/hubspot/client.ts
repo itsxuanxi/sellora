@@ -160,13 +160,25 @@ export interface HubspotPage<T> {
 export async function fetchObjectPage<T>(
   orgId: string,
   objectType: string,
-  opts: { after?: string; limit?: number; properties?: string[]; signal?: AbortSignal } = {}
+  opts: {
+    after?: string;
+    limit?: number;
+    properties?: string[];
+    /**
+     * Object types to return associations for, e.g. ["deals", "contacts"].
+     * Engagements are useless without them — an email that is not attached to
+     * a deal cannot inform that deal's priority.
+     */
+    associations?: string[];
+    signal?: AbortSignal;
+  } = {}
 ): Promise<HubspotPage<T>> {
   return hubspotRequest<HubspotPage<T>>(orgId, `/crm/v3/objects/${objectType}`, {
     query: {
       limit: opts.limit ?? 100,
       after: opts.after,
       properties: opts.properties?.join(","),
+      associations: opts.associations?.join(","),
       archived: "false",
     },
     signal: opts.signal,

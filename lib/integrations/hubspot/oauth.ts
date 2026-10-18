@@ -6,6 +6,7 @@ import {
   randomToken,
   safeEqual,
 } from "@/lib/security/crypto";
+import { ENGAGEMENT_SCOPES } from "@/lib/integrations/hubspot/engagements";
 
 /**
  * HubSpot OAuth 2.0, authorization-code flow.
@@ -97,6 +98,13 @@ export function buildAuthorizeUrl(opts: { origin: string; orgId: string }): {
     scope: HUBSPOT_SCOPES.join(" "),
     state,
   });
+
+  // Engagement scopes go out as optional, never required. HubSpot drops an
+  // optional scope automatically when the portal cannot grant it, so a tier
+  // or app configuration that lacks one still completes consent and connects
+  // — it simply syncs less. Requesting them as required would turn a scope
+  // string we cannot fully verify into a connection that fails for everyone.
+  params.set("optional_scope", ENGAGEMENT_SCOPES.join(" "));
 
   return { url: `${AUTH_BASE}?${params.toString()}`, state };
 }

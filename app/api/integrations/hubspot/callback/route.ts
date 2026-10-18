@@ -10,6 +10,7 @@ import {
   verifyState,
 } from "@/lib/integrations/hubspot/oauth";
 import { enqueueSync } from "@/lib/integrations/sync-runner";
+import { ENGAGEMENT_OBJECT_TYPES } from "@/lib/integrations/hubspot/engagements";
 import { rethrowControlFlow } from "@/lib/security/route-errors";
 
 /** Sends the user back to Integrations with a readable outcome. */
@@ -110,7 +111,15 @@ export async function GET(req: Request) {
 
     // Queue the backfill rather than running it inline: a first sync of a real
     // portal takes minutes, and an HTTP redirect is not the place for it.
-    for (const objectType of ["owners", "companies", "contacts", "deals"]) {
+    // Engagements last: they resolve against deals and contacts, so syncing
+    // them first would orphan every row and need a second pass.
+    for (const objectType of [
+      "owners",
+      "companies",
+      "contacts",
+      "deals",
+      ...ENGAGEMENT_OBJECT_TYPES,
+    ]) {
       await enqueueSync({
         orgId: session.orgId,
         connectionId: connection.id,

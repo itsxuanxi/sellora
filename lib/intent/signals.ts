@@ -54,7 +54,13 @@ export async function upsertSignal(
   const source = await ensureSignalSource(
     input.sourceKey,
     input.sourceKey.replace(/_/g, " "),
-    input.sourceKey.startsWith("mock") ? "mock" : input.sourceKey === "csv_import" ? "csv" : "manual"
+    input.sourceKey.startsWith("mock")
+      ? "mock"
+      : input.sourceKey === "csv_import"
+        ? "csv"
+        : input.sourceKey.startsWith("hubspot")
+          ? "api"
+          : "manual"
   );
   const key = dedupeKey(input.signalType, input.title, input.occurredAt);
   const ttlDays = SIGNAL_TTL_DAYS[input.signalType as SignalType] ?? 60;
