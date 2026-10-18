@@ -58,7 +58,7 @@ export function isHubspotConfigured(): boolean {
 export class HubspotNotConfiguredError extends Error {
   constructor() {
     super(
-      "HubSpot is not configured. Set HUBSPOT_CLIENT_ID, HUBSPOT_CLIENT_SECRET and HUBSPOT_APP_ID."
+      "HubSpot is not configured. Set HUBSPOT_CLIENT_ID and HUBSPOT_CLIENT_SECRET."
     );
     this.name = "HubspotNotConfiguredError";
   }
