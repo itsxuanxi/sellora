@@ -25,15 +25,15 @@ const brandNarrow = Archivo_Narrow({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Selryn — AI Revenue Intelligence for B2B Sales",
+    default: "Selryn — Know exactly who to contact next",
     template: "%s · Selryn",
   },
   description:
-    "Find the revenue your sales team is leaving on the table. Selryn detects buying signals, identifies revenue at risk, and tells your team exactly what to do next.",
+    "Selryn finds the sales opportunities your team is about to lose, explains why they matter, and recommends the next action. Nothing reaches a customer without your approval.",
   openGraph: {
-    title: "Selryn — AI Revenue Intelligence for B2B Sales",
+    title: "Selryn — Know exactly who to contact next",
     description:
-      "Stop losing deals you should have won. Selryn finds the revenue leaking out of your pipeline and prioritizes the opportunities worth your attention.",
+      "Warm deals go quiet and nobody notices. Selryn watches the pipeline you already have, surfaces the opportunities at risk, and drafts the follow-up for you to approve.",
     siteName: "Selryn",
   },
 };

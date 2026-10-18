@@ -63,21 +63,18 @@ export function Hero() {
           </Link>
 
           <p className="mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--mkt-brand-deep)]">
-            AI revenue intelligence for B2B sales
+            For small B2B sales teams
           </p>
 
           <h1 className="mt-3.5 text-balance text-[2.4rem] font-medium leading-[1.03] tracking-[-0.028em] text-[var(--mkt-ink)] sm:text-[3.2rem] sm:leading-[1.01] sm:tracking-[-0.032em] lg:text-[3.5rem] xl:text-[3.9rem]">
-            Know which deals need attention
-            <span className="text-[var(--mkt-brand-deep)]">
-              {" "}
-              — and what to do next.
-            </span>
+            Know exactly who to
+            <span className="text-[var(--mkt-brand-deep)]"> contact next.</span>
           </h1>
 
           <p className="mt-7 max-w-[30rem] text-pretty text-[17px] leading-[1.6] text-[var(--mkt-muted)]">
-            Selryn turns CRM activity and buyer signals into prioritized revenue
-            opportunities, explainable next actions, and measurable pipeline
-            outcomes. Your team always keeps the final call.
+            Selryn finds the sales opportunities your team is about to lose,
+            explains why they matter, and recommends the next action. Nothing
+            reaches a customer without you approving it first.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -107,7 +104,7 @@ export function Hero() {
               and it has the advantage of being true. */}
           <ul className="mt-10 flex flex-col items-start gap-y-2 border-t border-[var(--mkt-line)] pt-6 font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--mkt-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
             {[
-              "Evidence on every action",
+              "A reason on every recommendation",
               "Nothing sends without approval",
               "Never trained on your data",
             ].map((claim, i) => (

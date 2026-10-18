@@ -5,36 +5,77 @@ import { isSimulated } from "@/lib/sandbox";
 import type { SessionContext } from "@/lib/auth";
 import { generateIntentBrief, type EvidenceItem } from "@/lib/intent/ai";
 
+/**
+ * Fallback decision-maker titles, used only when the workspace has not filled
+ * in its own ICP.
+ *
+ * This list used to be eleven variations of Head of Talent, which silently
+ * assumed every Selryn customer sold recruiting services. For anyone else it
+ * ranked the least relevant contact at an account first. The list below is
+ * deliberately generic — the people who sign for anything in a small company
+ * — and the real answer comes from the seller's own ICP, below.
+ */
 const DECISION_TITLE_HINTS = [
   "ceo",
   "founder",
   "president",
   "owner",
-  "head of talent",
-  "head of people",
-  "head of hr",
-  "vp people",
-  "vp talent",
-  "vp hr",
-  "director of talent",
-  "director of hr",
-  "director of people",
-  "talent acquisition",
-  "recruiting manager",
-  "hr manager",
+  "managing director",
+  "partner",
+  "chief",
+  "vp ",
+  "head of",
+  "director",
 ];
 
-/** Picks the contact most likely to own a hiring/vendor decision. Falls
- * back to the first linked contact, or null if the account has none yet. */
+/** Comma-separated ICP titles → lowercase hints. Empty list when unset. */
+export function titleHints(buyerTitles: string | null | undefined): string[] {
+  return (buyerTitles ?? "")
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Picks the contact most likely to own the buying decision at an account.
+ *
+ * Prefers the titles the seller named in their own ICP, because they know who
+ * signs for what they sell and a hard-coded list cannot. Only when no ICP has
+ * been filled in does it fall back to the generic hints above. An ICP title
+ * match outranks a generic one, so a workspace that has done the setup never
+ * loses to the fallback.
+ *
+ * Returns the first linked contact when nothing matches, or null if the
+ * account has none yet.
+ */
 export async function pickRecommendedContact(accountId: string) {
   const contacts = await db.prospect.findMany({ where: { accountId } });
   if (contacts.length === 0) return null;
+
+  const account = await db.account.findUnique({
+    where: { id: accountId },
+    select: { orgId: true },
+  });
+  const icp = account
+    ? await db.icpProfile.findUnique({
+        where: { orgId: account.orgId },
+        select: { buyerTitles: true },
+      })
+    : null;
+
+  const icpHints = titleHints(icp?.buyerTitles);
+
   const scored = contacts
-    .map((c) => ({
-      contact: c,
-      score: DECISION_TITLE_HINTS.some((hint) => c.position?.toLowerCase().includes(hint)) ? 1 : 0,
-    }))
+    .map((c) => {
+      const position = c.position?.toLowerCase() ?? "";
+      const matches = (hints: string[]) =>
+        hints.some((hint) => position.includes(hint));
+      // 2 beats 1 beats 0: a title the seller named outranks a generic one.
+      const score = matches(icpHints) ? 2 : matches(DECISION_TITLE_HINTS) ? 1 : 0;
+      return { contact: c, score };
+    })
     .sort((a, b) => b.score - a.score);
+
   return scored[0].contact;
 }
 

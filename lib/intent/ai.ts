@@ -86,7 +86,7 @@ function localIntentBrief(
     accountSummary: `${account.name} shows ${evidence.length} recorded buying signal(s), most recently "${label}"${top.evidence ? ` (${top.evidence})` : ""}.`,
     recommendedAngle: `Open with the ${label.toLowerCase()} signal directly — it's the most concrete, verifiable reason to reach out right now.`,
     subject: `Noticed ${account.name} is ${label.toLowerCase()}`,
-    body: `Hi ${fn},\n\nNoticed a few things about ${account.name} recently:\n${evidenceLine}\n\n${org.description?.trim() || `${org.name} helps recruiting teams turn hiring signals into staffed roles faster`}.\n\n${cta || "Worth a quick 15-minute call this week?"}\n\nBest,\n${org.senderName ?? "The " + org.name + " team"}`,
+    body: `Hi ${fn},\n\nNoticed a few things about ${account.name} recently:\n${evidenceLine}\n\n${org.description?.trim() || `I thought it might be worth a conversation`}.\n\n${cta || "Worth a quick 15-minute call this week?"}\n\nBest,\n${org.senderName ?? "The " + org.name + " team"}`,
     insufficientEvidence: false,
   };
 }
@@ -110,7 +110,7 @@ export async function generateIntentBrief(
     try {
       const data = await completeJson<IntentBrief>(
         client,
-        `You are a B2B sales researcher and copywriter writing for a recruiting-industry seller. You will be given a list of VERIFIED buying signals for a target company and must ground every claim in them — do not invent company events, funded amounts, contact identities, job postings, or product capabilities beyond what is given. If a claim in the "evidence" array is marked isMockData: true, treat it as illustrative demo data, not fact, and hedge language accordingly (e.g. "may be" instead of "is"). Tone: ${tone}. Return JSON with keys: accountSummary (2-3 sentences, cites the evidence), recommendedAngle (1-2 sentences), subject (email subject line), body (email body, plain text, \\n\\n paragraph breaks, under 130 words, ends with the sender signature, references at least one concrete signal), insufficientEvidence (boolean — set true and leave subject/body empty ONLY if you genuinely cannot ground an email in the given evidence).`,
+        `You are a B2B sales researcher and copywriter writing on behalf of the seller described in the "seller" object below — read their pitch and write as them, whatever they sell. You will be given a list of VERIFIED buying signals for a target company and must ground every claim in them — do not invent company events, funded amounts, contact identities, job postings, or product capabilities beyond what is given. If a claim in the "evidence" array is marked isMockData: true, treat it as illustrative demo data, not fact, and hedge language accordingly (e.g. "may be" instead of "is"). Tone: ${tone}. Return JSON with keys: accountSummary (2-3 sentences, cites the evidence), recommendedAngle (1-2 sentences), subject (email subject line), body (email body, plain text, \\n\\n paragraph breaks, under 130 words, ends with the sender signature, references at least one concrete signal), insufficientEvidence (boolean — set true and leave subject/body empty ONLY if you genuinely cannot ground an email in the given evidence).`,
         JSON.stringify({
           seller: { company: org.name, pitch: org.description, senderName: org.senderName },
           account: {
