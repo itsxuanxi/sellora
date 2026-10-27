@@ -1,51 +1,50 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 /**
- * Selryn brand system — monochrome horizontal lockup.
+ * Selryn brand system — the networked S emblem.
  *
- *   [ S emblem ] │ SELRYN
+ *   [ S emblem ]  SELRYN
  *
- * The emblem is an original geometric S: two equal-radius arcs (upper swept
- * counter-clockwise, lower swept clockwise) meeting tangentially at the
- * centre, with flat-cut terminals. Tall and narrow so it sits in proportion
- * with the condensed caps wordmark. No plate, no shield, no gradient.
+ * The emblem is a supplied raster (public/brand/selryn-mark.png, 512px,
+ * transparent) rather than the inline SVG that preceded it. Two consequences
+ * worth knowing before using it:
  *
- * Colour: pure monochrome. Everything inherits `currentColor`, so the mark is
- * near-black (#0A0A0A) on light surfaces and white on dark ones — including
- * inside the `dark` marketing shell.
+ *  - **It carries its own colour.** The old mark inherited `currentColor`, so
+ *    it inverted for free on a dark surface. This one is fixed navy and blue
+ *    and will disappear against near-black. `onDark` still switches the
+ *    wordmark, but there is no dark variant of the emblem; if a dark lockup is
+ *    ever needed, a second asset has to be supplied.
+ *  - **It has internal detail.** The constellation ring and its dots stop
+ *    resolving below roughly 24px, where the mark reads as a blue smudge. The
+ *    size tokens below are therefore a notch larger than the previous set, and
+ *    the hairline rule that used to divide emblem from wordmark is gone — a
+ *    divider beside an intricate circular badge reads as clutter rather than
+ *    structure.
  *
- * Usage rules:
- *  - Pick a size token; never scale the lockup ad hoc.
- *  - Clear space on all sides = 0.5× the emblem height.
- *  - `LogoMark` (icon-only) is for favicons, avatars, and tight spots.
+ * Usage rules, unchanged: pick a size token, never scale ad hoc; clear space
+ * on all sides is 0.5x the emblem height.
  */
 
-/** The emblem outline, shared by every rendering surface. */
-export const S_PATH =
-  "M 21.26 12.32 A 5.6 5.6 0 1 0 16 16 A 5.6 5.6 0 1 1 10.74 23.52";
-export const S_STROKE_WIDTH = 3.4;
+const MARK_SRC = "/brand/selryn-mark.png";
 
-export const BRAND = {
-  ink: "#0A0A0A",
-  paper: "#FFFFFF",
-} as const;
-
+/** Icon-only emblem, in px. */
 const MARK_SIZES = {
-  sm: "size-5",
-  md: "size-6",
-  lg: "size-8",
-  xl: "size-11",
+  sm: 24,
+  md: 28,
+  lg: 36,
+  xl: 52,
 } as const;
 
-/** emblem px height → rule height, wordmark size, gaps, tracking */
+/** emblem px height → wordmark size, gap, tracking */
 const LOCKUP = {
-  sm: { mark: 20, rule: 14, text: 13, gap: 7, tracking: "0.17em" },
-  md: { mark: 26, rule: 18, text: 17, gap: 9, tracking: "0.16em" },
-  lg: { mark: 34, rule: 24, text: 22, gap: 11, tracking: "0.15em" },
+  sm: { mark: 24, text: 13, gap: 8, tracking: "0.17em" },
+  md: { mark: 30, text: 17, gap: 9, tracking: "0.16em" },
+  lg: { mark: 40, text: 22, gap: 11, tracking: "0.15em" },
 } as const;
 
-/** Icon-only emblem. Inherits `currentColor` unless a colour class is passed. */
+/** Icon-only emblem. */
 export function LogoMark({
   size = "md",
   className,
@@ -53,30 +52,20 @@ export function LogoMark({
   size?: keyof typeof MARK_SIZES;
   className?: string;
 }) {
+  const px = MARK_SIZES[size];
   return (
-    <svg
-      viewBox="0 0 32 32"
-      xmlns="http://www.w3.org/2000/svg"
-      role="img"
-      aria-label="Selryn"
-      className={cn(
-        MARK_SIZES[size],
-        "shrink-0 text-[#0A0A0A] dark:text-white",
-        className
-      )}
-    >
-      <path
-        d={S_PATH}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={S_STROKE_WIDTH}
-        strokeLinecap="butt"
-      />
-    </svg>
+    <Image
+      src={MARK_SRC}
+      alt="Selryn"
+      width={px}
+      height={px}
+      className={cn("shrink-0", className)}
+      priority
+    />
   );
 }
 
-/** Horizontal lockup: emblem, hairline rule, condensed caps wordmark. */
+/** Horizontal lockup: emblem, then the condensed caps wordmark. */
 export function Logo({
   href = "/",
   size = "md",
@@ -85,6 +74,7 @@ export function Logo({
 }: {
   href?: string;
   size?: keyof typeof LOCKUP;
+  /** Switches the wordmark only — the emblem has no dark variant. */
   onDark?: boolean;
   className?: string;
 }) {
@@ -100,26 +90,15 @@ export function Logo({
         className
       )}
     >
-      <svg
-        viewBox="0 0 32 32"
-        xmlns="http://www.w3.org/2000/svg"
+      {/* Decorative: the link already carries the accessible name, and a second
+          "Selryn" here would have a screen reader say it twice. */}
+      <Image
+        src={MARK_SRC}
+        alt=""
         width={s.mark}
         height={s.mark}
-        aria-hidden
         className="shrink-0"
-      >
-        <path
-          d={S_PATH}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={S_STROKE_WIDTH}
-          strokeLinecap="butt"
-        />
-      </svg>
-      <span
-        aria-hidden
-        style={{ height: s.rule }}
-        className="w-px shrink-0 bg-current opacity-25"
+        priority
       />
       <span
         style={{
