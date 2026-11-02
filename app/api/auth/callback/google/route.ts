@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { provisionWorkspace } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  GOOGLE_CALLBACK_PATH,
+  googleRedirectUri,
+  resolveOAuthOrigin,
   GOOGLE_STATE_COOKIE,
   exchangeCodeForToken,
   fetchGoogleProfile,
@@ -31,7 +32,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const redirectUri = new URL(GOOGLE_CALLBACK_PATH, origin).toString();
+    // Google only ever calls back on the origin we sent, so this normally
+    // equals `origin`. It goes through the resolver anyway: the token
+    // exchange is rejected unless this is byte-identical to the redirect_uri
+    // sent with the authorization request, and the only way to guarantee
+    // that is for both to come from the same function.
+    const redirectUri = googleRedirectUri(resolveOAuthOrigin(origin));
     const accessToken = await exchangeCodeForToken(code, redirectUri);
     const profile = await fetchGoogleProfile(accessToken);
 
