@@ -79,6 +79,10 @@ model Organization {
   auditLogs     AuditLog[]
   integrations  Integration[]
 
+  // Follow-up assistant
+  followUpActions FollowUpAction[]
+  dealFollowUps   DealFollowUp[]
+
   // Notifications
   notificationPrefs NotificationPreference[]
   notifications     Notification[]
@@ -360,30 +364,38 @@ model Settings {
   emailSignature String?
   dailySendLimit Int          @default(100)
   timezone       String       @default("UTC")
-  updatedAt      DateTime     @updatedAt
+
+  // ── Follow-up timing (lib/followup/rules.ts) ──
+  // Exposed so a team selling 6-month enterprise deals and one selling
+  // month-to-month can both get a list that matches how fast they actually
+  // move, rather than arguing with a constant.
+  followUpQuoteDays Int      @default(3)
+  followUpQuietDays Int      @default(14)
+  updatedAt         DateTime @updatedAt
 }
 
 model Prospect {
-  id          String       @id @default(cuid())
-  orgId       String
-  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  name        String
-  company     String
-  website     String?
-  industry    String?
-  position    String?
-  email       String
-  linkedin    String?
-  country     String?
-  companySize String? // "1-10" | "11-50" | "51-200" | "201-1000" | "1000+"
+  id            String         @id @default(cuid())
+  orgId         String
+  org           Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name          String
+  company       String
+  website       String?
+  industry      String?
+  position      String?
+  email         String
+  linkedin      String?
+  country       String?
+  companySize   String? // "1-10" | "11-50" | "51-200" | "201-1000" | "1000+"
   // Pipeline stage doubles as prospect status:
   // NEW_LEAD | CONTACTED | INTERESTED | MEETING | PROPOSAL | WON | LOST
-  stage       String       @default("NEW_LEAD")
-  notes       String?
+  stage         String         @default("NEW_LEAD")
+  notes         String?
   /// Sample row: never a real send target. See lib/sandbox.ts.
-  isSample    Boolean      @default(false)
-  accountId   String?
-  account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  isSample      Boolean        @default(false)
+  dealFollowUps DealFollowUp[]
+  accountId     String?
+  account       Account?       @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   // AI personalization (editable before sending)
   companySummary   String?
@@ -808,6 +820,9 @@ model Opportunity {
   source   String  @default("manual") // manual | imported | derived_from_prospect
   /// Sample row: removable in one click.
   isSample Boolean @default(false)
+
+  followUpActions FollowUpAction[]
+  dealFollowUps   DealFollowUp[]
 
   // ── Economics ──
   // dealValue is the working estimate. `dealValueBasis` records where the
@@ -1455,4 +1470,93 @@ model Integration {
   updatedAt DateTime     @updatedAt
 
   @@unique([orgId, provider])
+}
+
+/// What a seller did about a follow-up Selryn surfaced.
+///
+/// Separate from `Recommendation` on purpose: that model requires
+/// `expectedValue` and `dealValue`, so recording a follow-up through it would
+/// mean inventing a forecast for every deal a seller ticks off. This layer
+/// reports facts, so its state is facts too.
+model FollowUpAction {
+  id            String       @id @default(cuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  /// quote_no_reply | followup_due | gone_quiet
+  rule  String
+  /// DONE | SNOOZED | IGNORED
+  state String
+
+  /// When a SNOOZED item comes back.
+  snoozedUntil DateTime?
+
+  /// The newest evidence timestamp at the moment this was handled.
+  ///
+  /// A handled deal reappears only when something newer than this happens —
+  /// a reply, a meeting, a stage change. Without it the rule would re-fire on
+  /// the next page load, because the facts that triggered it have not changed;
+  /// with an arbitrary cooldown instead, a deal that genuinely moved would
+  /// stay hidden. This is the only condition that means "nothing new".
+  handledAgainst DateTime?
+
+  note    String?
+  actedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([opportunityId, rule])
+  @@index([orgId, state])
+}
+
+/// A follow-up email Selryn drafted for one deal, and what became of it.
+model DealFollowUp {
+  id            String       @id @default(cuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contactId     String?
+  contact       Prospect?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  /// The rule that prompted it, and the reason as it read at the time.
+  rule     String
+  reason   String
+  /// JSON array of RevenueEvent ids the reason cited.
+  evidence String?
+
+  toAddress String
+  subject   String
+  body      String
+  /// True once a human changed the generated text — the adoption statistic
+  /// distinguishes "sent as written" from "rewritten first".
+  edited    Boolean @default(false)
+  aiSource  String?
+
+  /// DRAFT | SENT | FAILED
+  status String @default("DRAFT")
+
+  /// Claimed before the send and never cleared, so a double click or a
+  /// retried action finds the row already spoken for instead of sending twice.
+  sendClaimedAt     DateTime?
+  providerMessageId String?   @unique
+  simulated         Boolean   @default(false)
+  failureReason     String?
+
+  approvedBy String?
+  sentAt     DateTime?
+
+  /// Set when a buyer reply lands on this thread. Stops the reminders.
+  repliedAt    DateTime?
+  replyEventId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, status])
+  @@index([orgId, opportunityId])
+  @@index([orgId, sentAt])
 }

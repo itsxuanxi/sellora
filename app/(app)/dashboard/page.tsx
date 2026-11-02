@@ -1,168 +1,127 @@
 import Link from "next/link";
-import { ArrowRight, Radar, Target } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { CheckCircle2, Plug } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/revenue/money";
-import {
-  DAILY_PRIORITY_COUNT,
-  OPEN_STAGES,
-  STAGE_LABELS,
-  type OpportunityStage,
-} from "@/lib/revenue/config";
-import {
-  getRevenueOverview,
-  loadEnrichedOpportunities,
-  type EnrichedOpportunity,
-} from "@/lib/revenue/queries";
-import type { PriorityRow } from "@/lib/revenue/priority-row";
-import { PipelineSummary, PriorityTable } from "@/components/revenue/priority-table";
-import { RefreshIntelligenceButton } from "@/components/revenue/recommendation-actions";
-import { refreshRevenueIntelligence } from "@/app/(app)/opportunities/actions";
+import { getFollowUps } from "@/lib/followup/queries";
+import { TOP_FOLLOW_UPS } from "@/lib/followup/rules";
+import { FollowUpCard } from "@/components/followup/follow-up-card";
+import { FollowUpList } from "@/components/followup/follow-up-list";
 
 export const metadata = { title: "Today" };
 
 /**
- * Today's priorities — the same screen the guided demo teaches.
+ * Today's follow-ups — the workbench.
  *
- * One question, answered in one table: where is the next hour of selling time
- * worth the most? The rows are sorted by expected revenue and the arithmetic
- * behind that sort is a visible column, so the ranking can be checked rather
- * than trusted. There is no "emails sent" tile, no activity chart, no
- * engagement metric — those describe effort, and this page is about outcomes.
+ * One question: which deals need me today, and why? The page leads with three
+ * because a list of forty is a list nobody works; the rest are one click away
+ * rather than hidden. Every row carries the reason and the records behind it,
+ * and the work — draft, edit, send — happens here rather than three screens in.
+ *
+ * There is no forecast on this page. Nothing is ranked by a win probability
+ * Selryn estimated, because a seller cannot argue with a number we invented.
+ * See lib/followup/rules.ts.
  */
 export default async function TodayPage() {
   const session = await requireSession();
 
-  const [overview, opportunities, icp] = await Promise.all([
-    getRevenueOverview(session.orgId),
-    loadEnrichedOpportunities(session.orgId, { stages: [...OPEN_STAGES] }),
-    db.icpProfile.findUnique({
-      where: { orgId: session.orgId },
-      select: { completed: true },
+  const [items, connection, opportunityCount] = await Promise.all([
+    getFollowUps(session.orgId),
+    db.integrationConnection.findFirst({
+      where: { orgId: session.orgId, status: "ACTIVE" },
+      select: { provider: true, lastSyncSucceededAt: true },
     }),
+    db.opportunity.count({ where: { orgId: session.orgId } }),
   ]);
 
   const header = (
     <PageHeader
-      title="Today's priorities"
-      description="Ranked by expected revenue — deal value multiplied by win probability — not by deal size or recency."
-    >
-      <RefreshIntelligenceButton action={refreshRevenueIntelligence} />
-    </PageHeader>
+      title="Today's follow-ups"
+      description="Deals waiting on you, with the reason and the records behind it. Ranked by what is most overdue — never by a predicted win rate."
+    />
   );
 
-  if (!overview.hasData || opportunities.length === 0) {
+  // ── Nothing connected yet ──
+  if (!connection && opportunityCount === 0) {
     return (
       <>
         {header}
         <EmptyState
-          icon={Radar}
-          title="No opportunities to rank yet"
-          description="Selryn builds opportunities from your accounts and contacts, estimates what each deal is worth, then ranks them by expected revenue. Run the first analysis to see your pipeline in money terms."
+          icon={Plug}
+          title="Connect your CRM to see what needs following up"
+          description="Selryn reads your deals and their email history from HubSpot, then shows the ones that have gone quiet, missed a follow-up date, or are waiting on an answer to a quote."
         >
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <RefreshIntelligenceButton
-              action={refreshRevenueIntelligence}
-              label="Run first analysis"
-            />
-            <Link
-              href="/accounts"
-              className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Add accounts first
-            </Link>
-          </div>
+          <Button asChild>
+            <Link href="/intent">Connect HubSpot</Link>
+          </Button>
         </EmptyState>
       </>
     );
   }
 
-  const ranked = [...opportunities].sort((a, b) => b.expectedValue - a.expectedValue);
-  const rows = ranked.slice(0, DAILY_PRIORITY_COUNT).map(toRow);
+  // ── Connected, but nothing to do ──
+  if (items.length === 0) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          icon={CheckCircle2}
+          title="Nothing needs chasing today"
+          description={
+            opportunityCount === 0
+              ? "No open deals have synced yet. Once your CRM has deals with activity, the ones that go quiet will appear here."
+              : "Every open deal has been touched recently, has a future follow-up date, or is waiting on you rather than on them."
+          }
+        >
+          <Button asChild variant="ghost">
+            <Link href="/opportunities">See all deals</Link>
+          </Button>
+        </EmptyState>
+      </>
+    );
+  }
+
+  const top = items.slice(0, TOP_FOLLOW_UPS);
+  const rest = items.slice(TOP_FOLLOW_UPS);
+
+  // Dates cross the server/client boundary as strings.
+  const serialize = (i: (typeof items)[number]) => ({
+    ...i,
+    lastActivityAt: i.lastActivityAt?.toISOString() ?? null,
+    evidence: i.evidence.map((e) => ({ ...e, occurredAt: e.occurredAt.toISOString() })),
+  });
 
   return (
     <>
       {header}
 
-      {!icp?.completed && (
-        <Link
-          href="/icp"
-          className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-accent/40 px-4 py-3 transition-colors hover:bg-accent/60"
-        >
-          <div className="flex items-center gap-3">
-            <Target className="size-4 shrink-0 text-primary" />
-            <div className="text-sm">
-              <span className="font-medium">Define your ICP</span>
-              <span className="text-muted-foreground">
-                {" "}
-                — customer fit is being scored neutrally until you do
-              </span>
-            </div>
-          </div>
-          <ArrowRight className="size-4 shrink-0 text-primary" />
-        </Link>
+      <section aria-label="Start here" className="space-y-4">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+          Start here
+        </h2>
+        {top.map((item, i) => (
+          <FollowUpCard
+            key={item.opportunityId}
+            item={serialize(item)}
+            featured
+            tourAnchor={i === 0 ? "follow-up-1" : undefined}
+          />
+        ))}
+      </section>
+
+      {rest.length > 0 && (
+        <FollowUpList items={rest.map(serialize)} total={items.length} />
       )}
 
-      <PriorityTable rows={rows} />
-
-      <PipelineSummary
-        items={[
-          {
-            label: "Revenue at risk",
-            value: formatMoney(overview.revenueAtRisk, overview.currency),
-            tone: overview.revenueAtRisk > 0 ? "critical" : "neutral",
-            href: "/opportunities?filter=needs-attention",
-          },
-          {
-            label: "Open pipeline",
-            value: formatMoney(overview.totalOpenPipeline, overview.currency),
-            href: "/opportunities",
-          },
-          {
-            label: "Open opportunities",
-            value: String(overview.openCount),
-            href: "/opportunities",
-          },
-        ]}
-      />
-
-      <p className="mt-4 text-[12px] text-muted-foreground">
-        {ranked.length > DAILY_PRIORITY_COUNT
-          ? `Showing the top ${DAILY_PRIORITY_COUNT} of ${ranked.length} open opportunities.`
-          : `Showing all ${ranked.length} open opportunit${ranked.length === 1 ? "y" : "ies"}.`}{" "}
-        <Link href="/opportunities" className="text-primary hover:underline">
-          All opportunities
-        </Link>
+      <p className="mt-8 text-[12px] leading-relaxed text-muted-foreground">
+        Reasons come from your own CRM records and their email history
+        {connection?.lastSyncSucceededAt && (
+          <> · last synced {new Date(connection.lastSyncSucceededAt).toLocaleString()}</>
+        )}
+        . Deal values are shown only where your CRM holds one.
       </p>
     </>
   );
-}
-
-/**
- * One enriched opportunity, flattened into the row shape the demo also
- * produces. The "why now" line prefers the detected leak, because a deal that
- * is leaking has a more useful thing to say than its stage does.
- */
-function toRow(opp: EnrichedOpportunity): PriorityRow {
-  return {
-    id: opp.id,
-    company: opp.account.name,
-    stage: STAGE_LABELS[opp.stage as OpportunityStage] ?? opp.stage,
-    note:
-      opp.primaryLeak?.summary ??
-      opp.whyNow[0]?.replace(/^[+−-]\s*/, "") ??
-      opp.nextAction.headline,
-    dealValue: opp.dealValue,
-    winProbability: opp.winProbability,
-    expected: opp.expectedValue,
-    lastActivity: opp.lastInteractionAt
-      ? formatDistanceToNow(opp.lastInteractionAt, { addSuffix: true })
-      : "No contact yet",
-    needsAttention: opp.primaryLeak !== null,
-    currency: opp.currency,
-    href: `/opportunities/${opp.id}`,
-  };
 }

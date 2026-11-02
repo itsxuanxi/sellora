@@ -20,6 +20,8 @@ import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/revenue/money";
 import { getImpactSummary, getRevenueOverview } from "@/lib/revenue/queries";
+import { FollowUpStats } from "@/components/followup/follow-up-stats";
+import { statLines, summarize } from "@/lib/followup/tracking";
 
 export const metadata = { title: "Impact" };
 
@@ -35,8 +37,17 @@ export const metadata = { title: "Impact" };
 export default async function AnalyticsPage() {
   const session = await requireSession();
 
-  const [impact, overview, recent, funnel, insights, signalWins, effectiveness, influenced] =
-    await Promise.all([
+  const [
+    impact,
+    overview,
+    recent,
+    funnel,
+    insights,
+    signalWins,
+    effectiveness,
+    influenced,
+    followUps,
+  ] = await Promise.all([
     getImpactSummary(session.orgId),
     getRevenueOverview(session.orgId),
     db.revenueAttribution.findMany({
@@ -52,6 +63,16 @@ export default async function AnalyticsPage() {
     getSignalWinRates(session.orgId),
     getActionEffectiveness(session.orgId),
     getInfluencedTotals(session.orgId),
+    db.dealFollowUp.findMany({
+      where: { orgId: session.orgId },
+      select: {
+        id: true,
+        status: true,
+        sentAt: true,
+        repliedAt: true,
+        edited: true,
+      },
+    }),
   ]);
 
   const currency = overview.currency;
@@ -147,6 +168,20 @@ export default async function AnalyticsPage() {
           <InsightsList insights={insights} />
         </div>
       </section>
+
+      <FollowUpStats
+        lines={statLines(
+          summarize(
+            followUps.map((f) => ({
+              ...f,
+              // Not yet attributed to an individual follow-up — null keeps
+              // the figure honest rather than reporting an unchecked zero.
+              meetingAt: null,
+              stageChangedAt: null,
+            }))
+          )
+        )}
+      />
 
       <section className="mt-6 rounded-2xl border border-border/70 bg-card p-5">
         <h2 className="text-sm font-semibold">Loop performance</h2>

@@ -68,7 +68,11 @@ test("the tour states no figure the scoring engine computes", () => {
   // when a weight changes. Only the deal value — an input — may be quoted.
   const prose = TOUR_STEPS.map((s) => `${s.title} ${s.body} ${s.instruction}`).join(" ");
   const amounts = prose.match(/\$[\d,]+/g) ?? [];
-  assert.deepEqual([...new Set(amounts)], ["$42,000"]);
+  // Quoting nothing is fine and is the safest version. What must never appear
+  // is a figure the engine derived; the deal value is an input, so it may.
+  for (const amount of new Set(amounts)) {
+    assert.equal(amount, "$42,000", `${amount} is not an input the CRM holds`);
+  }
   assert.equal(/\d+\s?%/.test(prose), false, "a percentage is quoted in tour copy");
 });
 
