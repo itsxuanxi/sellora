@@ -707,7 +707,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
   },
   {
     id: "priority",
-    tabLabel: "Prioritize revenue",
+    tabLabel: "Name the blocker",
     panelLabel: "Prioritized pipeline",
     subject: {
       company: "All open opportunities",

@@ -63,18 +63,19 @@ export function Hero() {
           </Link>
 
           <p className="mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--mkt-brand-deep)]">
-            For small B2B sales teams
+            For marketing agencies
           </p>
 
           <h1 className="mt-3.5 text-balance text-[2.4rem] font-medium leading-[1.03] tracking-[-0.028em] text-[var(--mkt-ink)] sm:text-[3.2rem] sm:leading-[1.01] sm:tracking-[-0.032em] lg:text-[3.5rem] xl:text-[3.9rem]">
-            Know exactly who to
-            <span className="text-[var(--mkt-brand-deep)]"> contact next.</span>
+            Know what&rsquo;s blocking your
+            <span className="text-[var(--mkt-brand-deep)]"> proposals.</span>
           </h1>
 
           <p className="mt-7 max-w-[30rem] text-pretty text-[17px] leading-[1.6] text-[var(--mkt-muted)]">
-            Selryn finds the sales opportunities your team is about to lose,
-            explains why they matter, and recommends the next action. Nothing
-            reaches a customer without you approving it first.
+            You spend money winning the lead and hours writing the proposal,
+            then lose sight of why it stalled. Selryn reads the thread and your
+            CRM, names what is actually in the way, and drafts the next
+            message. Nothing reaches a client without you approving it.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">

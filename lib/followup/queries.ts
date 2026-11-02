@@ -1,8 +1,11 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { OPEN_STAGES, STAGE_LABELS, type OpportunityStage } from "@/lib/revenue/config";
+import { identifyBlocker, type Blocker } from "@/lib/deal-facts/blockers";
+import { factsForOpportunities } from "@/lib/deal-facts/queries";
 import {
   DEFAULT_TIMING,
+  buyerHasReplied,
   evaluateFollowUp,
   isSuppressed,
   rankFollowUps,
@@ -106,6 +109,12 @@ export interface FollowUpListItem extends FollowUpItem {
   contact: { id: string; name: string; email: string } | null;
   /** An open draft for this deal, when one exists. */
   draftId: string | null;
+  /**
+   * What is actually in the way. Richer than the silence rules alone, because
+   * it can see the extracted facts — an unanswered pricing question rather
+   * than "they have not replied".
+   */
+  blocker: Blocker;
 }
 
 /**
@@ -135,7 +144,7 @@ export async function getFollowUps(
 
   const ids = opportunities.map((o) => o.id);
 
-  const [events, handled, drafts] = await Promise.all([
+  const [events, handled, drafts, factsByOpportunity] = await Promise.all([
     db.revenueEvent.findMany({
       where: { orgId, opportunityId: { in: ids } },
       orderBy: { occurredAt: "desc" },
@@ -165,6 +174,7 @@ export async function getFollowUps(
       orderBy: { createdAt: "desc" },
       select: { id: true, opportunityId: true },
     }),
+    factsForOpportunities(orgId, ids),
   ]);
 
   const byOpportunity = new Map<string, EventRow[]>();
@@ -198,6 +208,7 @@ export async function getFollowUps(
       amount: opp.dealValueBasis === "user_entered" ? opp.dealValue : null,
       currency: opp.currency,
       stage: STAGE_LABELS[opp.stage as OpportunityStage] ?? opp.stage,
+      stageKey: opp.stage,
       lastOutbound,
       lastInbound,
       lastActivity,
@@ -207,20 +218,39 @@ export async function getFollowUps(
     };
 
     const reason = evaluateFollowUp(facts, now, timing);
-    if (!reason) continue;
+
+    const blocker = identifyBlocker({
+      deal: facts,
+      facts: factsByOpportunity.get(opp.id) ?? {},
+      evidenceById: new Map(evidence.map((e) => [e.eventId, e])),
+      silenceReason: reason,
+      buyerReplied: buyerHasReplied(facts),
+    });
+    // No blocker means nothing specific is wrong — the deal is simply being
+    // worked, and putting it on a list of problems would be noise.
+    if (!blocker) continue;
 
     const newest = lastActivity?.occurredAt ?? null;
-    if (isSuppressed(handledBy.get(`${opp.id}:${reason.rule}`) ?? null, newest, now)) {
+    const handledKey = reason?.rule ?? blocker.kind;
+    if (isSuppressed(handledBy.get(`${opp.id}:${handledKey}`) ?? null, newest, now)) {
       continue;
     }
 
     items.push({
-      ...reason,
+      // A deal with a blocker but no silence rule still needs the shared
+      // shape; the blocker supplies the words.
+      rule: reason?.rule ?? "gone_quiet",
+      action: blocker.recommendedAction,
+      because: blocker.because,
+      evidence: blocker.evidence,
+      daysOverdue: reason?.daysOverdue ?? 0,
+      blocker,
       opportunityId: opp.id,
       accountName: facts.accountName,
       amount: facts.amount,
       currency: facts.currency,
       stage: facts.stage,
+      stageKey: facts.stageKey,
       lastActivityAt: newest,
       contact: opp.primaryContact,
       draftId: draftBy.get(opp.id) ?? null,

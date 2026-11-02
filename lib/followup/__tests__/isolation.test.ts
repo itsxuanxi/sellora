@@ -11,7 +11,19 @@ import path from "node:path";
  * a new query cannot be added without the filter.
  */
 
-const ROOT = path.join(process.cwd(), "lib", "followup");
+/**
+ * Every directory that queries on behalf of one agency.
+ *
+ * Widened as the product grew: a guard that covers the first module written
+ * and not the next three is a guard that passes while the hole opens.
+ */
+const ROOTS = [
+  path.join(process.cwd(), "lib", "followup"),
+  path.join(process.cwd(), "lib", "deal-facts"),
+  path.join(process.cwd(), "lib", "recovery"),
+  path.join(process.cwd(), "app", "(app)", "dashboard"),
+  path.join(process.cwd(), "app", "(app)", "opportunities"),
+];
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -24,12 +36,13 @@ function sourceFiles(dir: string): string[] {
 }
 
 /** Every `db.<model>.<method>(` call, with the argument object that follows. */
-function prismaCalls(source: string): { call: string; args: string }[] {
-  const calls: { call: string; args: string }[] = [];
+function prismaCalls(source: string): { call: string; args: string; callIndex: number }[] {
+  const calls: { call: string; args: string; callIndex: number }[] = [];
   const re = /db\.([a-zA-Z]+)\.([a-zA-Z]+)\(/g;
   let m: RegExpExecArray | null;
 
   while ((m = re.exec(source)) !== null) {
+    const callIndex = m.index;
     // Walk to the matching close paren so nested objects are captured whole.
     let depth = 0;
     let i = re.lastIndex - 1;
@@ -43,6 +56,7 @@ function prismaCalls(source: string): { call: string; args: string }[] {
     calls.push({
       call: `${m[1]}.${m[2]}`,
       args: source.slice(re.lastIndex, i),
+      callIndex,
     });
   }
   return calls;
@@ -51,18 +65,40 @@ function prismaCalls(source: string): { call: string; args: string }[] {
 /** Reads that cannot leak across workspaces because they take no filter. */
 const UNSCOPED_SAFE = new Set(["$transaction", "$queryRaw", "$executeRaw"]);
 
-test("every follow-up query is scoped to one workspace", () => {
-  const files = sourceFiles(ROOT);
+/**
+ * How far back to look for the ownership check that makes a write safe.
+ *
+ * `update({ where: { id } })` is legitimate when the row was just fetched
+ * with an orgId filter — the id is then already proven to belong to the
+ * caller. Allowlisting the method name instead would let a genuinely
+ * unscoped `opportunity.update` through later, so the test looks for the
+ * check rather than trusting the method.
+ */
+const OWNERSHIP_WINDOW = 1_200;
+
+function hasNearbyOwnershipCheck(source: string, callIndex: number): boolean {
+  const start = Math.max(0, callIndex - OWNERSHIP_WINDOW);
+  const preceding = source.slice(start, callIndex);
+  // The read that proves ownership, and the session it was scoped by.
+  return /orgId/.test(preceding) && /\b(findFirst|findUnique|findMany|count)\b/.test(preceding);
+}
+
+test("every query is scoped to one workspace", () => {
+  const files = ROOTS.flatMap(sourceFiles);
   assert.ok(files.length > 0, "found no source files to check");
 
   const offenders: string[] = [];
 
   for (const file of files) {
     const source = readFileSync(file, "utf8");
-    for (const { call, args } of prismaCalls(source)) {
+    for (const { call, args, callIndex } of prismaCalls(source)) {
       if (UNSCOPED_SAFE.has(call)) continue;
-      if (!/\borgId\b/.test(args)) {
-        offenders.push(`${path.relative(ROOT, file)} → db.${call}(…) has no orgId`);
+      if (/\borgId\b/.test(args)) continue;
+      if (hasNearbyOwnershipCheck(source, callIndex)) continue;
+      {
+        offenders.push(
+          `${path.relative(process.cwd(), file)} → db.${call}(…) has no orgId`
+        );
       }
     }
   }

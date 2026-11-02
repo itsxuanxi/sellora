@@ -303,8 +303,11 @@ export async function sendFollowUp(
         sandbox,
       });
 
-      await db.dealFollowUp.update({
-        where: { id: draft!.id },
+      // updateMany so the workspace filter is on the write itself. The read
+      // and the claim above are both scoped, but a write that carries its own
+      // filter cannot be made unsafe by someone rearranging the lines above it.
+      await db.dealFollowUp.updateMany({
+        where: { orgId: session.orgId, id: draft!.id },
         data: {
           status: "SENT",
           sentAt: new Date(),
@@ -338,8 +341,8 @@ export async function sendFollowUp(
       // The text is kept so nothing the seller wrote is lost. The claim
       // stands: after a transport error we cannot know whether the provider
       // accepted the message, and sending again is the unrecoverable mistake.
-      await db.dealFollowUp.update({
-        where: { id: draft!.id },
+      await db.dealFollowUp.updateMany({
+        where: { orgId: session.orgId, id: draft!.id },
         data: { status: "FAILED", failureReason: reason.slice(0, 500) },
       });
       revalidate();

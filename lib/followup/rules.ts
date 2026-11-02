@@ -60,7 +60,10 @@ export interface DealFacts {
   /** The CRM's amount, or null when it holds none. Never estimated. */
   amount: number | null;
   currency: string;
+  /** Display label, e.g. "Proposal". */
   stage: string;
+  /** The raw CRM stage, e.g. "PROPOSAL" — rules compare against this. */
+  stageKey: string;
   /** The last thing we sent them. */
   lastOutbound: EvidenceRef | null;
   /** The last thing they sent us. */
@@ -113,7 +116,10 @@ export interface FollowUpItem extends FollowUpReason {
   accountName: string;
   amount: number | null;
   currency: string;
+  /** Display label, e.g. "Proposal". */
   stage: string;
+  /** The raw CRM stage, e.g. "PROPOSAL" — rules compare against this. */
+  stageKey: string;
   /** Last contact either way, for the "last activity" column. */
   lastActivityAt: Date | null;
 }

@@ -21,6 +21,7 @@ import { formatMoney } from "@/lib/revenue/money";
 import { handleFollowUp } from "@/app/(app)/dashboard/followup-actions";
 import { DraftDialog } from "@/components/followup/draft-dialog";
 import type { EvidenceKind, FollowUpRule } from "@/lib/followup/rules";
+import type { BlockerKind } from "@/lib/deal-facts/blockers";
 
 /**
  * One deal on the follow-up list.
@@ -51,20 +52,37 @@ export interface FollowUpCardData {
   }[];
   contact: { id: string; name: string; email: string } | null;
   draftId: string | null;
+  blocker: {
+    kind: BlockerKind;
+    title: string;
+    because: string;
+    recommendedAction: string;
+  };
 }
 
-const RULE_LABEL: Record<FollowUpRule, string> = {
-  followup_due: "Follow-up date passed",
-  quote_no_reply: "Quote unanswered",
-  gone_quiet: "No recent activity",
+/** What is in the way, named plainly. */
+const BLOCKER_LABEL: Record<BlockerKind, string> = {
+  overdue_action: "You owe them a step",
+  unanswered_pricing: "Pricing question open",
+  unclear_scope: "Scope unclear",
+  missing_decision_maker: "No decision-maker known",
+  awaiting_reply: "Proposal unanswered",
+  gone_quiet: "Conversation stopped",
 };
 
-const RULE_TONE: Record<FollowUpRule, string> = {
-  followup_due: "border-rose-300 bg-rose-50 text-rose-800 dark:bg-rose-950/30 dark:text-rose-300",
-  quote_no_reply:
+const BLOCKER_TONE: Record<BlockerKind, string> = {
+  overdue_action:
+    "border-rose-300 bg-rose-50 text-rose-800 dark:bg-rose-950/30 dark:text-rose-300",
+  unanswered_pricing:
     "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-300",
+  unclear_scope:
+    "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-300",
+  missing_decision_maker: "border-border bg-muted/60 text-muted-foreground",
+  awaiting_reply: "border-border bg-muted/60 text-muted-foreground",
   gone_quiet: "border-border bg-muted/60 text-muted-foreground",
 };
+
+
 
 const EVIDENCE_ICON: Record<EvidenceKind, typeof Mail> = {
   email_outbound: Mail,
@@ -151,10 +169,10 @@ export function FollowUpCard({
               <span
                 className={cn(
                   "rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em]",
-                  RULE_TONE[item.rule]
+                  BLOCKER_TONE[item.blocker.kind]
                 )}
               >
-                {RULE_LABEL[item.rule]}
+                {BLOCKER_LABEL[item.blocker.kind]}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -178,12 +196,15 @@ export function FollowUpCard({
           )}
         </div>
 
-        {/* The reason. The one line the list exists to deliver. */}
-        <p className="mt-4 text-[15px] leading-relaxed">{item.because}</p>
+        {/* What is blocking it, then the one thing to do about it. */}
+        <p className="mt-4 text-[15px] font-medium leading-snug">{item.blocker.title}</p>
+        <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">
+          {item.blocker.because}
+        </p>
 
-        <p className="mt-2 text-sm">
-          <span className="font-medium">Suggested: </span>
-          <span className="text-muted-foreground">{item.action}</span>
+        <p className="mt-3 text-sm">
+          <span className="font-medium">Do next: </span>
+          <span className="text-muted-foreground">{item.blocker.recommendedAction}</span>
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">

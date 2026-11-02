@@ -80,8 +80,10 @@ model Organization {
   integrations  Integration[]
 
   // Follow-up assistant
-  followUpActions FollowUpAction[]
-  dealFollowUps   DealFollowUp[]
+  followUpActions    FollowUpAction[]
+  dealFollowUps      DealFollowUp[]
+  dealFacts          DealFact[]
+  recoveryExclusions RecoveryExclusion[]
 
   // Notifications
   notificationPrefs NotificationPreference[]
@@ -869,8 +871,10 @@ model Opportunity {
   //
   // The unique index tolerates nulls (Postgres does not collide NULLs), so
   // manually created rows are unaffected by it.
-  externalId     String?
-  externalSource String? // hubspot | salesforce | csv_import
+  externalId         String?
+  externalSource     String? // hubspot | salesforce | csv_import
+  dealFacts          DealFact[]
+  recoveryExclusions RecoveryExclusion[]
 
   @@unique([orgId, externalSource, externalId])
   @@index([orgId, stage])
@@ -1559,4 +1563,77 @@ model DealFollowUp {
   @@index([orgId, status])
   @@index([orgId, opportunityId])
   @@index([orgId, sentAt])
+}
+
+/// One thing known about a deal, and how well it is known.
+///
+/// The three-way distinction is the point of this table. A budget the client
+/// stated in writing, a budget the model inferred from a sentence, and a
+/// budget nobody has mentioned are three different things, and a sales tool
+/// that renders them identically teaches its user to distrust all three. So
+/// `status` is carried on every row and the absence of a row means unknown —
+/// never a blank that might be a zero.
+///
+/// `evidence` and `sourceKind` answer "says who?", `confirmedBy` records that
+/// a person settled it, and `correctedFrom` keeps what the machine originally
+/// claimed so a correction is visible rather than silently overwritten.
+model DealFact {
+  id            String       @id @default(cuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  /// decision_maker | budget | objection | scope_question | decision_date | service
+  kind  String
+  value String
+
+  /// CONFIRMED (a person settled it) | SUGGESTED (extracted, unreviewed)
+  status String @default("SUGGESTED")
+
+  /// email | crm | user — where the claim came from.
+  sourceKind String
+  /// JSON array of RevenueEvent ids backing it.
+  evidence   String?
+
+  /// What the extraction originally said, kept when a person changed it.
+  correctedFrom String?
+  confirmedBy   String?
+  confirmedAt   DateTime?
+  /// Set when a person says the suggestion is wrong. Kept, not deleted, so
+  /// the same wrong guess is not re-offered next time it is extracted.
+  rejectedAt    DateTime?
+
+  /// When the underlying evidence was last seen — a fact from an email six
+  /// months old is stale in a way a fresh one is not, and the UI says so.
+  lastVerifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, opportunityId])
+  @@index([orgId, kind])
+}
+
+/// A deal or contact that must not be approached again.
+///
+/// Separate from the deal's stage because the reasons are different in kind:
+/// a lost deal may be worth revisiting, someone who asked not to be contacted
+/// never is. Recovery reads this before it reads anything else.
+model RecoveryExclusion {
+  id            String       @id @default(cuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  /// do_not_contact | explicit_rejection | user_excluded | unsubscribed
+  reason String
+  note   String?
+
+  excludedBy String?
+  createdAt  DateTime @default(now())
+
+  @@unique([opportunityId, reason])
+  @@index([orgId])
 }

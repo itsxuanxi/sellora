@@ -25,15 +25,15 @@ const brandNarrow = Archivo_Narrow({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Selryn — Know exactly who to contact next",
+    default: "Selryn — Know what's blocking your proposals",
     template: "%s · Selryn",
   },
   description:
-    "Selryn finds the sales opportunities your team is about to lose, explains why they matter, and recommends the next action. Nothing reaches a customer without your approval.",
+    "Follow-up for marketing agencies. Selryn reads your proposal threads and CRM, names what is actually blocking each deal, and drafts the next message. Nothing reaches a client without your approval.",
   openGraph: {
-    title: "Selryn — Know exactly who to contact next",
+    title: "Selryn — Know what's blocking your proposals",
     description:
-      "Warm deals go quiet and nobody notices. Selryn watches the pipeline you already have, surfaces the opportunities at risk, and drafts the follow-up for you to approve.",
+      "Agencies spend money on leads and hours on proposals, then lose sight of why deals stall. Selryn names the blocker — an unanswered pricing question, an open scope point, a missed follow-up — and drafts the reply for you to approve.",
     siteName: "Selryn",
   },
 };

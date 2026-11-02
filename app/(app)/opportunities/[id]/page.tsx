@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import { ArrowLeft, Building2, Mail } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
+import { DealFactsPanel } from "@/components/deal-facts/deal-facts-panel";
+import { factsForOpportunity } from "@/lib/deal-facts/queries";
+import { isStale } from "@/lib/deal-facts/kinds";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { requireSession } from "@/lib/auth";
@@ -56,7 +59,7 @@ export default async function OpportunityDetailPage({
   );
   if (!enriched) notFound();
 
-  const [snapshot, signals, recommendations, emails, outcomes] = await Promise.all([
+  const [snapshot, signals, recommendations, emails, outcomes, dealFacts] = await Promise.all([
     db.opportunityScoreSnapshot.findFirst({
       where: { orgId: session.orgId, opportunityId: id },
       orderBy: { createdAt: "desc" },
@@ -92,6 +95,7 @@ export default async function OpportunityDetailPage({
       orderBy: { occurredAt: "desc" },
       take: 5,
     }),
+    factsForOpportunity(session.orgId, id),
   ]);
 
 
@@ -246,6 +250,22 @@ export default async function OpportunityDetailPage({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
+          <DealFactsPanel
+            opportunityId={enriched.id}
+            canEdit={can(session.role, "action:approve")}
+            facts={dealFacts
+              .filter((f) => !f.rejectedAt)
+              .map((f) => ({
+                id: f.id,
+                kind: f.kind,
+                value: f.value,
+                status: f.status,
+                sourceKind: f.sourceKind,
+                correctedFrom: f.correctedFrom,
+                stale: isStale(f, new Date()),
+              }))}
+          />
+
           {/* ── Recommended Next Action (§7) ── */}
           <section
             data-tour="next-action"

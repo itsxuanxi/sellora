@@ -38,8 +38,8 @@ export default async function TodayPage() {
 
   const header = (
     <PageHeader
-      title="Today's follow-ups"
-      description="Deals waiting on you, with the reason and the records behind it. Ranked by what is most overdue — never by a predicted win rate."
+      title="What's blocking your proposals"
+      description="Open proposals with something specific in the way, the records behind it, and one thing to do next. Ordered by what you can act on today."
     />
   );
 
@@ -50,8 +50,8 @@ export default async function TodayPage() {
         {header}
         <EmptyState
           icon={Plug}
-          title="Connect your CRM to see what needs following up"
-          description="Selryn reads your deals and their email history from HubSpot, then shows the ones that have gone quiet, missed a follow-up date, or are waiting on an answer to a quote."
+          title="Connect your CRM to see what's blocking your proposals"
+          description="Selryn reads your deals and their email history from HubSpot, then shows what is actually in the way of each one — an unanswered pricing question, an open scope point, a missed follow-up — with the emails behind it."
         >
           <Button asChild>
             <Link href="/intent">Connect HubSpot</Link>
@@ -68,11 +68,11 @@ export default async function TodayPage() {
         {header}
         <EmptyState
           icon={CheckCircle2}
-          title="Nothing needs chasing today"
+          title="Nothing is blocked today"
           description={
             opportunityCount === 0
               ? "No open deals have synced yet. Once your CRM has deals with activity, the ones that go quiet will appear here."
-              : "Every open deal has been touched recently, has a future follow-up date, or is waiting on you rather than on them."
+              : "Every open proposal has been answered, has a future follow-up date, or has nothing specific in the way."
           }
         >
           <Button asChild variant="ghost">
@@ -116,7 +116,7 @@ export default async function TodayPage() {
       )}
 
       <p className="mt-8 text-[12px] leading-relaxed text-muted-foreground">
-        Reasons come from your own CRM records and their email history
+Blockers come from your own CRM records and their email history
         {connection?.lastSyncSucceededAt && (
           <> · last synced {new Date(connection.lastSyncSucceededAt).toLocaleString()}</>
         )}

@@ -7,11 +7,18 @@ import { NAV_DESTINATIONS, RETIRED_NAV_HREFS } from "@/lib/nav";
  * things worth asserting are its size and its honesty — not its styling.
  */
 
-test("there are exactly six destinations", () => {
-  assert.equal(NAV_DESTINATIONS.length, 6);
+test("the navigation stays small, and names what it contains", () => {
+  // The number is a budget, not a target. Overlooked earned the seventh slot
+  // because recovery is a separate job done at a separate time — a weekly
+  // trawl through dormant deals, not part of working today's list — and it
+  // was unreachable as a filter on a page about live proposals.
+  assert.ok(
+    NAV_DESTINATIONS.length <= 7,
+    `${NAV_DESTINATIONS.length} destinations — the daily loop does not have that many parts`
+  );
   assert.deepEqual(
     NAV_DESTINATIONS.map((i) => i.name),
-    ["Today", "Deals", "Actions", "Impact", "Integrations", "Settings"]
+    ["Today", "Deals", "Overlooked", "Actions", "Impact", "Integrations", "Settings"]
   );
 });
 

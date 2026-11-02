@@ -8,8 +8,9 @@
  *
  * Each destination answers exactly one question:
  *
- *   Today        what should I do now?
+ *   Today        what is blocking my proposals?
  *   Deals        which opportunities matter?
+ *   Overlooked   which dormant deals are worth reopening?
  *   Actions      what is waiting for execution?
  *   Impact       what revenue changed?
  *   Integrations where does the data come from?
@@ -29,6 +30,7 @@ export interface NavDestination {
 export const NAV_DESTINATIONS: NavDestination[] = [
   { name: "Today", href: "/dashboard" },
   { name: "Deals", href: "/opportunities" },
+  { name: "Overlooked", href: "/recovery" },
   { name: "Actions", href: "/actions" },
   { name: "Impact", href: "/impact" },
   { name: "Integrations", href: "/integrations" },
