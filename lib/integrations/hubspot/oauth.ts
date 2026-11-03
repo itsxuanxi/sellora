@@ -6,6 +6,7 @@ import {
   randomToken,
   safeEqual,
 } from "@/lib/security/crypto";
+import { LEADS_SCOPE } from "@/lib/integrations/hubspot/leads";
 import { ENGAGEMENT_SCOPES } from "@/lib/integrations/hubspot/engagements";
 
 /**
@@ -105,7 +106,10 @@ export function buildAuthorizeUrl(opts: { origin: string; orgId: string }): {
   // or app configuration that lacks one still completes consent and connects
   // — it simply syncs less. Requesting them as required would turn a scope
   // string we cannot fully verify into a connection that fails for everyone.
-  params.set("optional_scope", ENGAGEMENT_SCOPES.join(" "));
+  // The Leads object is not present in every portal — it depends on hub and
+  // tier — so it rides the same optional channel. A portal without it still
+  // connects and simply syncs no leads.
+  params.set("optional_scope", [...ENGAGEMENT_SCOPES, LEADS_SCOPE].join(" "));
 
   return { url: `${AUTH_BASE}?${params.toString()}`, state };
 }

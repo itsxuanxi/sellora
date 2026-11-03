@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { RETENTION_POLICY } from "@/lib/integrations/retention-policy";
 import type { IntegrationHealth } from "@/lib/integrations/sync-runner";
 import {
   disconnectHubspot,
@@ -245,6 +246,7 @@ function Stat({
 function HubspotControls() {
   const [pending, startTransition] = useTransition();
   const [confirming, setConfirming] = useState(false);
+  const [erase, setErase] = useState(false);
 
   const run = (fn: () => Promise<{ ok: boolean; data?: string; error?: string }>) =>
     startTransition(async () => {
@@ -271,21 +273,44 @@ function HubspotControls() {
       </Button>
 
       {confirming ? (
-        <div className="flex items-center gap-2 rounded-full border border-rose-300 bg-rose-50 px-3 py-1 dark:bg-rose-950/30">
-          <span className="text-xs text-rose-800 dark:text-rose-300">
-            Disconnect? Synced records are kept.
-          </span>
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={pending}
-            onClick={() => run(disconnectHubspot)}
-          >
-            Disconnect
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
-            Cancel
-          </Button>
+        <div className="w-full rounded-xl border border-rose-300 bg-rose-50 p-3 dark:bg-rose-950/30">
+          <p className="text-[13px] font-medium text-rose-900 dark:text-rose-200">
+            Disconnect HubSpot?
+          </p>
+          {/* The policy, stated where the decision is made rather than in a
+              terms page nobody opens at this moment. */}
+          <ul className="mt-2 space-y-1 text-[12px] leading-relaxed text-rose-900/90 dark:text-rose-300/90">
+            <li>{RETENTION_POLICY.credentials}</li>
+            <li>
+              {erase
+                ? RETENTION_POLICY.syncedRecordsOnRequest
+                : RETENTION_POLICY.syncedRecordsDefault}
+            </li>
+          </ul>
+
+          <label className="mt-3 flex items-start gap-2 text-[12px] text-rose-900 dark:text-rose-200">
+            <input
+              type="checkbox"
+              checked={erase}
+              onChange={(e) => setErase(e.target.checked)}
+              className="mt-0.5"
+            />
+            Also erase everything synced from HubSpot. This cannot be undone.
+          </label>
+
+          <div className="mt-3 flex items-center gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={pending}
+              onClick={() => run(() => disconnectHubspot({ eraseSyncedRecords: erase }))}
+            >
+              {erase ? "Disconnect and erase" : "Disconnect"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+          </div>
         </div>
       ) : (
         <Button

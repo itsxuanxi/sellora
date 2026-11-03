@@ -11,6 +11,7 @@ import {
   verifyState,
 } from "@/lib/integrations/hubspot/oauth";
 import { enqueueSync } from "@/lib/integrations/sync-runner";
+import { LEADS_SCOPE } from "@/lib/integrations/hubspot/leads";
 import {
   ENGAGEMENT_OBJECT_TYPES,
   ENGAGEMENT_SCOPES,
@@ -115,7 +116,8 @@ export async function GET(req: Request) {
     const missing = ENGAGEMENT_SCOPES.filter((sc) => !grantedScopes.includes(sc));
     console.info(
       `[hubspot] connected portal ${account.portalId} with ${grantedScopes.length} scopes` +
-        (missing.length ? `; engagement scopes not granted: ${missing.join(", ")}` : "")
+        (missing.length ? `; engagement scopes not granted: ${missing.join(", ")}` : "") +
+        (grantedScopes.includes(LEADS_SCOPE) ? "" : "; no Leads object on this portal")
     );
 
     const connection = await saveConnection({
@@ -131,11 +133,18 @@ export async function GET(req: Request) {
     // portal takes minutes, and an HTTP redirect is not the place for it.
     // Engagements last: they resolve against deals and contacts, so syncing
     // them first would orphan every row and need a second pass.
+    // Leads only when the portal granted the optional scope. Queueing it
+    // regardless would put a job in every customer's queue that can only ever
+    // 403, which turns a normal configuration into recurring noise in the
+    // dead-letter list.
+    const syncsLeads = grantedScopes.includes(LEADS_SCOPE);
+
     for (const objectType of [
       "owners",
       "companies",
       "contacts",
       "deals",
+      ...(syncsLeads ? ["leads"] : []),
       ...ENGAGEMENT_OBJECT_TYPES,
     ]) {
       await enqueueSync({

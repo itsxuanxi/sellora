@@ -37,7 +37,10 @@ export type MapResult<T> =
 /** The properties worth requesting per object type. */
 export const REQUESTED_PROPERTIES = {
   companies: ["name", "domain", "industry", "numberofemployees", "country", "hs_lastmodifieddate"],
-  contacts: ["firstname", "lastname", "email", "jobtitle", "company", "associatedcompanyid", "hs_lastmodifieddate"],
+  // lifecyclestage and hs_lead_status are listed as ranking signals, so they
+  // have to actually be fetched; without them the scorer was reasoning about
+  // fields it never received.
+  contacts: ["firstname", "lastname", "email", "jobtitle", "company", "associatedcompanyid", "lifecyclestage", "hs_lead_status", "hs_lastmodifieddate"],
   deals: ["dealname", "amount", "dealstage", "closedate", "hubspot_owner_id", "pipeline", "hs_lastmodifieddate"],
   owners: [],
 } as const;

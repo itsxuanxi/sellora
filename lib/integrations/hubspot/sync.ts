@@ -22,6 +22,11 @@ import {
 import type { JobProgress } from "@/lib/integrations/sync-runner";
 import { expectedRevenue } from "@/lib/revenue/money";
 import { STAGE_WIN_BASELINE, type OpportunityStage } from "@/lib/revenue/config";
+import {
+  LEAD_PROPERTIES,
+  LEAD_PROVENANCE,
+  mapLead,
+} from "@/lib/integrations/hubspot/leads";
 
 /**
  * The handlers that turn one page of HubSpot objects into Selryn records.
@@ -494,6 +499,82 @@ export async function syncOwners(orgId: string): Promise<JobProgress> {
   return { processed: page.results.length, failed: 0, cursor: null };
 }
 
+/**
+ * HubSpot's dedicated Leads object.
+ *
+ * Stored as prospects under a different `externalSource`, so a lead and a
+ * contact can never overwrite one another and the UI can say which kind of
+ * record it is showing. See lib/integrations/hubspot/leads.ts for why the
+ * distinction matters.
+ *
+ * A 403 means the portal does not have the Leads object or did not grant the
+ * optional scope. That is a normal configuration, not a failure: it returns
+ * an empty page so the job completes and the rest of the sync is unaffected.
+ */
+export async function syncLeads(
+  orgId: string,
+  connectionId: string,
+  cursor: string | null
+): Promise<JobProgress> {
+  let page;
+  try {
+    page = await fetchObjectPage<HubspotObject>(orgId, "leads", {
+      after: cursor ?? undefined,
+      limit: PAGE_SIZE,
+      properties: [...LEAD_PROPERTIES],
+    });
+  } catch (err) {
+    if (err instanceof HubspotApiError && (err.status === 403 || err.status === 404)) {
+      console.warn(`[hubspot:leads] portal has no Leads object or scope — skipping`);
+      return { processed: 0, failed: 0, cursor: null };
+    }
+    throw err;
+  }
+
+  let processed = 0;
+  let failed = 0;
+
+  for (const obj of page.results) {
+    const mapped = mapLead(obj);
+    if (!mapped.ok) {
+      console.warn(`[hubspot:leads] skipped — ${mapped.reason}`);
+      failed++;
+      continue;
+    }
+    const lead = mapped.value;
+
+    await db.prospect.upsert({
+      where: {
+        orgId_externalSource_externalId: {
+          orgId,
+          externalSource: LEAD_PROVENANCE.leadsObject,
+          externalId: lead.externalId,
+        },
+      },
+      update: {
+        name: lead.name,
+        notes: lead.leadSource ? `Lead source: ${lead.leadSource}` : undefined,
+      },
+      create: {
+        orgId,
+        externalSource: LEAD_PROVENANCE.leadsObject,
+        externalId: lead.externalId,
+        name: lead.name,
+        // The Leads object carries no email of its own; it associates to a
+        // contact that does. Until that association is resolved the row is a
+        // lead we can show but not write to, which is the honest state.
+        email: "",
+        company: lead.name,
+        stage: "NEW_LEAD",
+        notes: lead.leadSource ? `Lead source: ${lead.leadSource}` : null,
+      },
+    });
+    processed++;
+  }
+
+  return { processed, failed, cursor: page.paging?.next?.after ?? null };
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 /** Stage id to the label the customer chose, across every deal pipeline. */
@@ -570,6 +651,8 @@ export async function runHubspotJob(job: {
       return syncDeals(job.orgId, job.connectionId, job.cursor);
     case "owners":
       return syncOwners(job.orgId);
+    case "leads":
+      return syncLeads(job.orgId, job.connectionId, job.cursor);
     case "emails":
     case "meetings":
     case "calls":

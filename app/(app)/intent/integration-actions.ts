@@ -7,6 +7,7 @@ import { actionError, type ActionResult } from "@/lib/types";
 import { requirePermission } from "@/lib/security/rbac";
 import { recordAudit } from "@/lib/security/audit";
 import { HUBSPOT_PROVIDER, revokeConnection } from "@/lib/integrations/hubspot/oauth";
+import { purgeSyncedRecords, type PurgeReport } from "@/lib/integrations/retention";
 import { enqueueSync } from "@/lib/integrations/sync-runner";
 
 /**
@@ -70,12 +71,23 @@ export async function resyncHubspot(): Promise<ActionResult<string>> {
  * of their Selryn pipeline, and silently deleting them because a credential
  * was revoked would destroy work. Removing them is a separate, explicit act.
  */
-export async function disconnectHubspot(): Promise<ActionResult<string>> {
+export async function disconnectHubspot(
+  opts: { eraseSyncedRecords?: boolean } = {}
+): Promise<ActionResult<string>> {
   try {
     const session = await requireSession();
     requirePermission(session.role, "integration:connect");
 
+    // Credentials go first and unconditionally — that is what revoking
+    // access means, and it must not depend on the erase succeeding.
     await revokeConnection(session.orgId);
+
+    let erased: PurgeReport | null = null;
+    if (opts.eraseSyncedRecords) {
+      erased = await purgeSyncedRecords(session.orgId, HUBSPOT_PROVIDER, {
+        actorId: session.id,
+      });
+    }
 
     await recordAudit({
       orgId: session.orgId,
@@ -84,13 +96,15 @@ export async function disconnectHubspot(): Promise<ActionResult<string>> {
       action: "integration.revoked",
       targetType: "integration",
       targetId: HUBSPOT_PROVIDER,
-      metadata: { keptSyncedRecords: true },
+      metadata: { keptSyncedRecords: !opts.eraseSyncedRecords },
     });
 
     revalidatePath("/integrations");
     return {
       ok: true,
-      data: "HubSpot disconnected. Records already synced are kept.",
+      data: erased
+        ? `HubSpot disconnected and ${erased.opportunities} deals, ${erased.accounts} companies and ${erased.prospects} contacts erased.`
+        : "HubSpot disconnected. Records already synced are kept.",
     };
   } catch (e) {
     return actionError(e, "Could not disconnect HubSpot.");
