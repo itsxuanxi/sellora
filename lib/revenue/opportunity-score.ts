@@ -98,6 +98,117 @@ function clampDimension(dim: ScoreDimension, raw: number): number {
   return Math.max(DIMENSION_MIN[dim], Math.min(DIMENSION_MAX[dim], raw));
 }
 
+// ── Reconciliation ─────────────────────────────────────────────────────────
+
+/** One dimension, as both the raw rules and the capped contribution. */
+export interface DimensionReconciliation {
+  dimension: ScoreDimension;
+  label: string;
+  /** What the rules added up to, before any cap. */
+  raw: number;
+  /** What actually counted toward the total, after the cap and floor. */
+  contributed: number;
+  min: number;
+  max: number;
+  /** Positive when the cap discarded points; 0 when nothing was discarded. */
+  cappedBy: number;
+  /** Positive when the floor absorbed a deeper penalty. */
+  flooredBy: number;
+  /** True when no rule fired for this dimension — absence, not a zero score. */
+  noEvidence: boolean;
+  factors: ScoreFactorResult[];
+}
+
+export interface ScoreReconciliation {
+  dimensions: DimensionReconciliation[];
+  /**
+   * Stored factors whose dimension this version of the config no longer
+   * recognises. Snapshots are immutable and outlive config changes, so a
+   * renamed dimension leaves rows behind. They are surfaced rather than
+   * dropped: silently discarding them would make the breakdown stop adding
+   * up to the stored score, which is the bug this type exists to prevent.
+   */
+  unknown: ScoreFactorResult[];
+  dimensionTotals: Record<ScoreDimension, number>;
+  /** Sum of the capped contributions. */
+  subtotal: number;
+  /** The published score: subtotal held inside 0-100. */
+  total: number;
+  /** Non-zero when the overall 0-100 clamp moved the number. */
+  clampedBy: number;
+  /** The invariant: contributions add to the total. False is a bug. */
+  reconciles: boolean;
+}
+
+/**
+ * The one place a score is added up.
+ *
+ * Two things make this worth its own export rather than a loop inside the
+ * scorer. First, capping: a dimension's rules can fire for more points than
+ * the dimension is allowed to contribute, so "what the rules said" and "what
+ * counted" are different numbers and both have to be shown — hiding the gap
+ * is what produced a breakdown reading 29 out of a possible 25. Second,
+ * every surface that displays a breakdown now reads this instead of
+ * re-summing rows, so a screen cannot disagree with the score it is
+ * explaining.
+ *
+ * Dimensions with no factors are returned too, flagged `noEvidence`. They
+ * used to be dropped, which left a breakdown whose visible rows could not
+ * add up to the headline number and no way for a reader to tell a dimension
+ * that scored zero from one that was never assessed.
+ */
+export function reconcileScore(
+  // Deliberately looser than ScoreFactorResult: persisted snapshot rows have
+  // `dimension: string`, and narrowing them at the call site with a cast is
+  // how a stale dimension name would get laundered into a valid one.
+  factors: { dimension: string; ruleKey: string; label: string; points: number; reason: string }[]
+): ScoreReconciliation {
+  const dimensions: DimensionReconciliation[] = [];
+  const dimensionTotals = {} as Record<ScoreDimension, number>;
+  const known = Object.keys(DIMENSION_MAX) as ScoreDimension[];
+
+  for (const dimension of known) {
+    const rows = factors.filter((f) => f.dimension === dimension) as ScoreFactorResult[];
+    const raw = rows.reduce((sum, f) => sum + f.points, 0);
+    const contributed = clampDimension(dimension, raw);
+    const max = DIMENSION_MAX[dimension];
+    const min = DIMENSION_MIN[dimension];
+
+    dimensionTotals[dimension] = contributed;
+    dimensions.push({
+      dimension,
+      label: DIMENSION_LABELS[dimension],
+      raw,
+      contributed,
+      min,
+      max,
+      cappedBy: raw > max ? raw - max : 0,
+      flooredBy: raw < min ? min - raw : 0,
+      noEvidence: rows.length === 0,
+      factors: rows,
+    });
+  }
+
+  const unknown = factors.filter(
+    (f) => !(known as string[]).includes(f.dimension)
+  ) as ScoreFactorResult[];
+
+  const subtotal =
+    dimensions.reduce((sum, d) => sum + d.contributed, 0) +
+    unknown.reduce((sum, f) => sum + f.points, 0);
+  const total = Math.max(0, Math.min(100, subtotal));
+
+  return {
+    dimensions,
+    unknown,
+    dimensionTotals,
+    subtotal,
+    total,
+    clampedBy: total - subtotal,
+    reconciles: subtotal === total,
+  };
+}
+
 export function computeOpportunityScore(
   input: OpportunityScoreInput,
   now: Date = new Date()
@@ -283,18 +394,14 @@ export function computeOpportunityScore(
   }
 
   // ── Totals ──────────────────────────────────────────────────────────────
-  const dimensionTotals = {} as Record<ScoreDimension, number>;
-  for (const dim of Object.keys(DIMENSION_MAX) as ScoreDimension[]) {
-    const raw = factors
-      .filter((f) => f.dimension === dim)
-      .reduce((sum, f) => sum + f.points, 0);
-    dimensionTotals[dim] = clampDimension(dim, raw);
-  }
-
-  const score = Math.max(
-    0,
-    Math.min(100, Object.values(dimensionTotals).reduce((a, b) => a + b, 0))
-  );
+  // Delegated to `reconcileScore` so the arithmetic exists once. The UI used
+  // to re-sum the factor rows itself and showed the *raw* sum against the
+  // cap — which is how Engagement rendered as "29 / 25" while the total it
+  // contributed to was 25, and why the five dimensions on screen did not add
+  // up to the headline number. Nothing may re-derive this.
+  const reconciliation = reconcileScore(factors);
+  const dimensionTotals = reconciliation.dimensionTotals;
+  const score = reconciliation.total;
 
   // ── Win probability ─────────────────────────────────────────────────────
   // The stage sets the baseline; the score modulates it within ±40%. A closed

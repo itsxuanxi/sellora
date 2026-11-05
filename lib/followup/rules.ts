@@ -22,12 +22,21 @@
  * which is what makes the whole file testable.
  */
 
-/** The three situations this version detects. Each maps to one spec trigger. */
+/** The situations this version detects. Each maps to one spec trigger. */
 export type FollowUpRule =
   /** We quoted and they have not answered. */
   | "quote_no_reply"
   /** The follow-up date agreed in the CRM has passed. */
   | "followup_due"
+  /**
+   * A live deal with nobody's name against a date.
+   *
+   * The most common way a deal dies quietly: the last conversation ended
+   * without anyone agreeing what happens next, so there is no date to miss
+   * and nothing ever flags it. `gone_quiet` eventually catches it, two weeks
+   * later. This catches it while the conversation is still warm.
+   */
+  | "no_next_step"
   /** Nothing has happened on the deal for a long time. */
   | "gone_quiet";
 
@@ -81,6 +90,17 @@ export interface DealFacts {
   nextStepDueAt: Date | null;
   /** Where that date came from, for the evidence panel. */
   nextStepEvidence: EvidenceRef | null;
+  /**
+   * Days since the newest record of any kind on this deal, or null when
+   * there is none.
+   *
+   * Carried so a reason can disclose how old its evidence is. A deal whose
+   * last record is six weeks old may well have moved in the customer's CRM,
+   * in a rep's inbox, or in a phone call nobody logged — advice built on it
+   * is a guess dressed as a finding, and the UI should say so rather than
+   * present it with the same confidence as a deal that synced this morning.
+   */
+  dataAgeDays: number | null;
 }
 
 /** Timing a workspace can adjust. Defaults are the product's opinion, not law. */
@@ -89,12 +109,29 @@ export interface FollowUpTiming {
   quietAfterQuoteDays: number;
   /** Days with no activity at all before a deal counts as gone quiet. */
   goneQuietDays: number;
+  /**
+   * Days a live deal may sit with no agreed next step before it is raised.
+   *
+   * Shorter than `goneQuietDays` on purpose: the gap is visible immediately
+   * after the conversation ends, and the useful moment to fix it is while
+   * both sides still remember what was said.
+   */
+  noNextStepDays: number;
 }
 
 export const DEFAULT_TIMING: FollowUpTiming = {
   quietAfterQuoteDays: 3,
   goneQuietDays: 14,
+  noNextStepDays: 5,
 };
+
+/**
+ * Stages where a missing next step is a gap worth raising.
+ *
+ * A NEW or QUALIFYING deal legitimately has no agreed next step — nobody has
+ * met yet. From a meeting onward, its absence is an omission.
+ */
+const LIVE_STAGES = new Set(["MEETING", "PROPOSAL", "NEGOTIATION"]);
 
 export interface FollowUpReason {
   rule: FollowUpRule;
@@ -109,6 +146,13 @@ export interface FollowUpReason {
    * ordering and is shown to the user, so it has to mean something exact.
    */
   daysOverdue: number;
+  /**
+   * Set when the evidence is old enough that the conclusion may be out of
+   * date. Shown with the reason; never used to hide the item, because a deal
+   * nobody has touched in two months is exactly the kind that needs looking
+   * at.
+   */
+  staleness: string | null;
 }
 
 export interface FollowUpItem extends FollowUpReason {
@@ -136,13 +180,15 @@ export interface FollowUpItem extends FollowUpReason {
 export const RULE_ORDER: FollowUpRule[] = [
   "followup_due",
   "quote_no_reply",
+  "no_next_step",
   "gone_quiet",
 ];
 
 const RULE_RANK: Record<FollowUpRule, number> = {
   followup_due: 0,
   quote_no_reply: 1,
-  gone_quiet: 2,
+  no_next_step: 2,
+  gone_quiet: 3,
 };
 
 function wholeDaysBetween(from: Date, to: Date): number {
@@ -192,6 +238,7 @@ export function evaluateFollowUp(
           : `The follow-up date recorded on this deal passed ${formatDays(daysOverdue)} ago.`,
       evidence: compact([facts.nextStepEvidence, facts.lastActivity]),
       daysOverdue,
+      staleness: describeStaleness(facts),
     };
   }
 
@@ -214,6 +261,7 @@ export function evaluateFollowUp(
           : `You last wrote ${formatDays(days)} ago and there has been no reply.`,
         evidence: compact([facts.quoteSent, facts.lastOutbound]),
         daysOverdue: days - timing.quietAfterQuoteDays,
+        staleness: describeStaleness(facts),
       };
     }
     // A quote inside the waiting window is not yet a reason to act, and it
@@ -221,7 +269,25 @@ export function evaluateFollowUp(
     return null;
   }
 
-  // ── 3. Nothing at all for a long time ──
+  // ── 3. A live deal with no agreed next step ──
+  // Requires both halves: no date on the record *and* the conversation has
+  // paused. Either alone is normal — a deal talked to yesterday does not need
+  // chasing because nobody has typed a date yet.
+  if (!facts.nextStepDueAt && LIVE_STAGES.has(facts.stageKey) && facts.lastActivity) {
+    const days = wholeDaysBetween(facts.lastActivity.occurredAt, now);
+    if (days >= timing.noNextStepDays && days < timing.goneQuietDays) {
+      return {
+        rule: "no_next_step",
+        action: `Agree a next step with ${facts.accountName}`,
+        because: `This deal is at ${facts.stage} with no next step recorded, and nothing has happened for ${formatDays(days)}.`,
+        evidence: compact([facts.lastActivity, facts.lastOutbound]),
+        daysOverdue: days - timing.noNextStepDays,
+        staleness: describeStaleness(facts),
+      };
+    }
+  }
+
+  // ── 4. Nothing at all for a long time ──
   if (facts.lastActivity) {
     const days = wholeDaysBetween(facts.lastActivity.occurredAt, now);
     if (days >= timing.goneQuietDays) {
@@ -231,11 +297,23 @@ export function evaluateFollowUp(
         because: `Nothing has happened on this deal for ${formatDays(days)}.`,
         evidence: compact([facts.lastActivity]),
         daysOverdue: days - timing.goneQuietDays,
+        staleness: describeStaleness(facts),
       };
     }
   }
 
   return null;
+}
+
+/** How stale a deal's records are, when stale enough to matter. */
+export const STALE_EVIDENCE_DAYS = 30;
+
+function describeStaleness(facts: DealFacts): string | null {
+  if (facts.dataAgeDays == null) {
+    return "No activity has ever synced for this deal, so there is nothing to check this against.";
+  }
+  if (facts.dataAgeDays < STALE_EVIDENCE_DAYS) return null;
+  return `The newest record on this deal is ${formatDays(facts.dataAgeDays)} old — check the CRM before acting on this.`;
 }
 
 function compact(refs: (EvidenceRef | null)[]): EvidenceRef[] {

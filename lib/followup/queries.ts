@@ -102,6 +102,7 @@ export async function followUpTiming(orgId: string): Promise<FollowUpTiming> {
   return {
     quietAfterQuoteDays: settings?.followUpQuoteDays ?? DEFAULT_TIMING.quietAfterQuoteDays,
     goneQuietDays: settings?.followUpQuietDays ?? DEFAULT_TIMING.goneQuietDays,
+    noNextStepDays: DEFAULT_TIMING.noNextStepDays,
   };
 }
 
@@ -215,6 +216,12 @@ export async function getFollowUps(
       quoteSent: QUOTING_STAGES.has(opp.stage) ? lastOutbound : null,
       nextStepDueAt: opp.nextStepDueAt,
       nextStepEvidence: null,
+      // How old the evidence is, so a reason can disclose it rather than
+      // presenting a two-month-old record with the confidence of this
+      // morning's sync.
+      dataAgeDays: lastActivity
+        ? Math.floor((now.getTime() - lastActivity.occurredAt.getTime()) / 86_400_000)
+        : null,
     };
 
     const reason = evaluateFollowUp(facts, now, timing);
@@ -244,6 +251,7 @@ export async function getFollowUps(
       because: blocker.because,
       evidence: blocker.evidence,
       daysOverdue: reason?.daysOverdue ?? 0,
+      staleness: reason?.staleness ?? null,
       blocker,
       opportunityId: opp.id,
       accountName: facts.accountName,

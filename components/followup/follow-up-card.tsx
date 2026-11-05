@@ -41,6 +41,8 @@ export interface FollowUpCardData {
   rule: FollowUpRule;
   action: string;
   because: string;
+  /** Set when the evidence is old enough that the conclusion may be stale. */
+  staleness: string | null;
   lastActivityAt: string | null;
   evidence: {
     eventId: string;
@@ -201,6 +203,16 @@ export function FollowUpCard({
         <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">
           {item.blocker.because}
         </p>
+
+        {/* How old the evidence is, when it is old enough to matter.
+            Shown rather than used to hide the card: a deal nobody has touched
+            in two months is exactly the kind that needs looking at, but the
+            seller should know the record is cold before acting on it. */}
+        {item.staleness && (
+          <p className="mt-2 text-[13px] leading-relaxed text-amber-700 dark:text-amber-400">
+            {item.staleness}
+          </p>
+        )}
 
         <p className="mt-3 text-sm">
           <span className="font-medium">Do next: </span>

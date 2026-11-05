@@ -963,9 +963,15 @@ model Recommendation {
   // can be clicked through rather than prose that merely sounds specific.
   supportingSignals String?
 
-  // What acting is expected to do, in money and in words. `expectedImpact` is
-  // the sentence; `expectedImpactValue` is the modelled delta in currency
-  // units, and is null when there is not enough history to model one.
+  // What acting is expected to do, in words. `expectedImpact` is the
+  // sentence, and it cites the measured reaction rate when there is one.
+  //
+  // `expectedImpactValue` is retained for the rows already written and is no
+  // longer populated. It held `expectedValue × actionHitRate` and was
+  // presented as the money an action would add, but a reaction rate is not a
+  // conversion rate and the product of the two has no referent — it was an
+  // invented conversion lift. Kept nullable rather than dropped so existing
+  // rows stay readable; nothing reads it.
   expectedImpact      String?
   expectedImpactValue Int?
 

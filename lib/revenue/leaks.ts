@@ -9,6 +9,7 @@ import {
   type OpportunityStage,
 } from "@/lib/revenue/config";
 import type { SignalType } from "@/lib/intent/config";
+import type { ReplyState } from "@/lib/revenue/facts";
 
 /**
  * Revenue leak detection (§4, §8).
@@ -50,8 +51,22 @@ export interface LeakInput {
    * the leak that produced it.
    */
   lastTouchAt: Date | null;
-  /** True when the prospect has never replied to any outbound. */
-  neverReplied: boolean;
+  /**
+   * The buyer's side of the conversation, from `lib/revenue/facts.ts`.
+   *
+   * A boolean `neverReplied` used to live here, and it was the cause of a
+   * leak card reading "they have never replied to you" on a deal whose
+   * timeline showed a reply: the flag was derived from the Email table alone,
+   * while the timeline rendered Response rows. Taking the state rather than a
+   * flag also forces the rules below to distinguish an account that has never
+   * engaged from one that engaged and then went quiet — two situations that
+   * call for completely different messages.
+   */
+  replyState: ReplyState;
+  /** Days since their last reply, or null when there has never been one. */
+  daysSinceReply: number | null;
+  /** Outbound messages sent since their last reply (or in total, if none). */
+  outboundSinceLastReply: number;
   /** Active signals on the account, newest first. */
   signals: { signalType: SignalType | string; occurredAt: Date; title: string }[];
 }
@@ -155,19 +170,30 @@ export function detectLeaks(input: LeakInput, now: Date = new Date()): DetectedL
   }
 
   // ── High intent, no response ────────────────────────────────────────────
+  // Two different findings, deliberately not merged. "Never replied" is a
+  // claim about the whole relationship and is false the moment one reply
+  // exists anywhere in the record; "replied before, silent now" is a claim
+  // about this exchange. The old rule made the first claim in both cases.
   if (
     input.score >= LEAK_THRESHOLDS.highIntentScore &&
-    input.neverReplied &&
     sinceOutbound != null &&
-    sinceOutbound >= 3
+    sinceOutbound >= 3 &&
+    (input.replyState === "never_replied" || input.replyState === "awaiting_reply")
   ) {
+    const neverReplied = input.replyState === "never_replied";
+    const sent = Math.max(1, input.outboundSinceLastReply);
     leaks.push(
       make(
         "high_intent_no_response",
-        `Strong buying signals, but they have never replied to you.`,
+        neverReplied
+          ? `Strong buying signals, but they have not replied to anything you have sent.`
+          : `Strong buying signals, and they have gone quiet since their last reply.`,
         [
           `Opportunity score ${input.score}`,
           ...input.signals.slice(0, 2).map((s) => s.title),
+          neverReplied
+            ? `${plural(sent, "message")} sent, no reply`
+            : `Last replied ${plural(input.daysSinceReply ?? 0, "day")} ago · ${plural(sent, "message")} since`,
           `Last contacted ${plural(Math.floor(sinceOutbound), "day")} ago`,
         ],
         sinceOutbound

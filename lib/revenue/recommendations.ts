@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { isOpenStage, type Urgency } from "@/lib/revenue/config";
 import { loadEnrichedOpportunities, type EnrichedOpportunity } from "@/lib/revenue/queries";
+import { findContradiction, premiseContradictedNow } from "@/lib/revenue/contradiction";
 import { getActionHitRates } from "@/lib/revenue/learning";
 import {
   computeActionPriority,
@@ -67,11 +68,17 @@ function buildRecommendationFields(
     dealValue: opp.dealValue,
     supportingSignals: JSON.stringify(supporting.map((sig) => sig.id)),
     expectedImpact: describeImpact(opp, actionHitRate),
-    // Only modelled where this workspace has a hit rate to model it from.
-    expectedImpactValue:
-      actionHitRate == null
-        ? null
-        : Math.round(action.expectedValue * actionHitRate),
+    // Deliberately never written.
+    //
+    // This was `expectedValue × actionHitRate`, presented as the money this
+    // action would add. The two factors do not compose into that: the hit
+    // rate is how often an action of this type drew any customer reaction,
+    // which is not a conversion rate, and expected value is already an
+    // estimate off an uncalibrated baseline. Their product is a currency
+    // figure with no referent — an invented conversion lift. The reaction
+    // rate itself is real and is stated in `expectedImpact`, in the terms it
+    // was actually measured in.
+    expectedImpactValue: null,
     confidence: recommendationConfidence({
       supportingSignalCount: supporting.length,
       actionHitRate,
@@ -89,9 +96,9 @@ function buildRecommendationFields(
  */
 function describeImpact(opp: EnrichedOpportunity, hitRate: number | null): string {
   if (hitRate == null) {
-    return `${opp.nextAction.headline} on a deal with ${opp.expectedValue.toLocaleString()} ${opp.currency} of expected revenue. Not enough history here yet to model the lift.`;
+    return `${opp.nextAction.headline}. No history for this action type in your workspace yet, so there is no basis for estimating what it is worth.`;
   }
-  return `Similar actions in this workspace drew a customer reaction ${Math.round(hitRate * 100)}% of the time.`;
+  return `Similar actions in this workspace drew a customer reaction ${Math.round(hitRate * 100)}% of the time. That is a reaction rate, not a close rate.`;
 }
 
 /**
@@ -118,6 +125,15 @@ function describeImpact(opp: EnrichedOpportunity, hitRate: number | null): strin
  * time a page loads. Recommendations whose situation has resolved are
  * closed out rather than deleted, so the history stays intact.
  */
+/**
+ * The status for advice that events overtook before anyone acted on it.
+ *
+ * Deliberately distinct from both COMPLETED (a person did it) and DISMISSED
+ * (a person decided not to). Conflating the first of those is how "15
+ * recommendations worked" came to include recommendations nobody had seen.
+ */
+export const WITHDRAWN = "WITHDRAWN";
+
 export async function syncRecommendations(orgId: string): Promise<{
   created: number;
   updated: number;
@@ -130,8 +146,17 @@ export async function syncRecommendations(orgId: string): Promise<{
   const maxExpectedValue = Math.max(0, ...opps.map((o) => o.nextAction.expectedValue));
   const existing = await db.recommendation.findMany({
     where: { orgId, status: "OPEN" },
-    select: { id: true, opportunityId: true, dedupeKey: true },
+    select: {
+      id: true,
+      opportunityId: true,
+      dedupeKey: true,
+      createdAt: true,
+      leakType: true,
+      actionType: true,
+      expiresAt: true,
+    },
   });
+  const factsByOpportunity = new Map(opps.map((o) => [o.id, o.facts]));
 
   const existingByKey = new Map(
     existing.map((r) => [`${r.opportunityId}:${r.dedupeKey}`, r.id])
@@ -145,6 +170,12 @@ export async function syncRecommendations(orgId: string): Promise<{
     const action = opp.nextAction;
     // "Wait" and closed deals are advice, not tasks — they never become rows.
     if (action.actionType === "wait" || !isOpenStage(opp.stage)) continue;
+
+    // Advice the present state already refutes is not written at all.
+    // Without this the row flip-flops: the stale pass below withdraws a
+    // contradicted recommendation, and the next sync reopens it because the
+    // leak underneath is still being detected.
+    if (premiseContradictedNow(action.leakType, opp.facts)) continue;
 
     const key = `${opp.id}:${action.dedupeKey}`;
     stillLive.add(key);
@@ -179,19 +210,37 @@ export async function syncRecommendations(orgId: string): Promise<{
     }
   }
 
-  // Anything open that no longer corresponds to a live situation resolved
-  // itself — the rep followed up, the deal moved, the signal expired.
-  const stale = existing.filter(
-    (r) => !stillLive.has(`${r.opportunityId}:${r.dedupeKey}`)
-  );
+  // Anything open that no longer corresponds to a live situation has been
+  // overtaken by events — the rep followed up, the buyer replied, the deal
+  // moved, the signal expired.
+  //
+  // Marked WITHDRAWN, not COMPLETED. The old code wrote COMPLETED with
+  // `completedBy: "auto_resolved"`, and the impact read model counts every
+  // COMPLETED recommendation as one a human worked. So a recommendation that
+  // nobody ever opened, resolved by a stage change, was reported back to the
+  // customer as work they had done — and inflated the follow-up coverage
+  // percentage that sits beside it.
+  // Two ways a recommendation stops being advice worth giving.
+  //
+  // The first is that its situation is no longer detected. The second is that
+  // the advice has been specifically contradicted — and that is not the same
+  // test, which is why it took a second condition to get right. A proposal
+  // the buyer has now replied to still has no follow-up from our side, so the
+  // `proposal_viewed_no_followup` leak keeps firing and the row survived the
+  // first test; but "follow up on the proposal they opened" is the wrong
+  // thing to tell someone whose reply is sitting unread. The read-time check
+  // on the detail page caught it and this did not, which left the two
+  // disagreeing — the exact failure mode this audit is about.
+  const now = new Date();
+  const stale = existing.filter((r) => {
+    if (!stillLive.has(`${r.opportunityId}:${r.dedupeKey}`)) return true;
+    const facts = factsByOpportunity.get(r.opportunityId);
+    return facts != null && findContradiction(r, facts, now) != null;
+  });
   if (stale.length > 0) {
     await db.recommendation.updateMany({
       where: { id: { in: stale.map((r) => r.id) } },
-      data: {
-        status: "COMPLETED",
-        completedAt: new Date(),
-        completedBy: "auto_resolved",
-      },
+      data: { status: WITHDRAWN, dismissedAt: now },
     });
   }
 
@@ -278,15 +327,24 @@ export async function completeRecommendation(
       where: { id: rec.id },
       data: { status: "COMPLETED", completedAt: now, completedBy: userId },
     }),
+    // An attribution row records that a human acted on a recommendation.
+    // That is all it records.
+    //
+    // `amount` used to be `rec.expectedValue` — deal value × an uncalibrated
+    // win probability — and the Impact page summed those rows into "Revenue
+    // recovered". Marking a task complete therefore produced revenue. It now
+    // carries the deal's CRM value, which is at least a fact about a record,
+    // and the read model reports it as pipeline worked rather than money
+    // earned. See lib/revenue/vocabulary.ts.
     db.revenueAttribution.create({
       data: {
         orgId,
         opportunityId: rec.opportunityId,
         recommendationId: rec.id,
         kind,
-        amount: rec.expectedValue,
+        amount: rec.opportunity.dealValue,
         reason: rec.leakType
-          ? `Acted on "${rec.headline}" — recovered a deal flagged as ${rec.leakType.replace(/_/g, " ")}.`
+          ? `Acted on "${rec.headline}" — a deal flagged as ${rec.leakType.replace(/_/g, " ")}.`
           : `Acted on "${rec.headline}".`,
         occurredAt: now,
       },
@@ -361,7 +419,15 @@ export async function markOpportunityWon(
     data: { stage: "WON", closedAt: now, winProbability: 100 },
   });
 
-  // Only claim the revenue if Selryn actually touched this deal.
+  // Record the overlap, not a claim of credit.
+  //
+  // This used to write the deal's full value with the reason "closed won
+  // after Selryn surfaced and recovered it", on the sole condition that some
+  // earlier recommendation had been worked. One follow-up suggestion thereby
+  // claimed an entire win, and the Impact page added it to a figure labelled
+  // "Revenue recovered". Nothing in the data supports that inference, so the
+  // row now says what actually happened and the read model derives closed-won
+  // value from the opportunity itself rather than from this amount.
   if (opp.attributions.length > 0) {
     await db.revenueAttribution.create({
       data: {
@@ -369,7 +435,8 @@ export async function markOpportunityWon(
         opportunityId: opp.id,
         kind: "recovered",
         amount: opp.dealValue,
-        reason: "Deal closed won after Selryn surfaced and recovered it.",
+        reason:
+          "Closed won. Selryn had flagged this deal and someone worked it — overlap, not measured credit.",
         occurredAt: now,
       },
     });

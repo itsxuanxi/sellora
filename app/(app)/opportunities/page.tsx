@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { OPEN_STAGES, STAGE_LABELS, type OpportunityStage } from "@/lib/revenue/config";
 import { formatMoney, formatMoneyCompact } from "@/lib/revenue/money";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
+import { REVENUE_VOCABULARY, WIN_PROBABILITY_CAVEAT, likelihoodBand } from "@/lib/revenue/vocabulary";
 import { db } from "@/lib/db";
 import { IMPORT_SOURCE } from "@/lib/import/apply";
 import { describeImportFreshness } from "@/lib/import/freshness";
@@ -106,7 +107,7 @@ export default async function OpportunitiesPage({
     <>
       <PageHeader
         title="Deals"
-        description="Every deal, ranked by expected revenue — deal value × likelihood of closing."
+        description="Every open deal by estimated expected revenue — deal value × an estimated close likelihood. This orders deals by size, not by who to contact today; for that, see Today."
       >
         <Button asChild variant="outline" size="sm">
           <Link href="/opportunities/import">
@@ -159,7 +160,7 @@ export default async function OpportunitiesPage({
             <Metric label="Opportunities" value={String(filtered.length)} />
             <Metric label="Total deal value" value={formatMoney(totalValue, currency)} />
             <Metric
-              label="Expected revenue"
+              label={REVENUE_VOCABULARY.estimated_expected_revenue.label}
               value={formatMoney(totalExpected, currency)}
               emphasis
             />
@@ -177,9 +178,9 @@ export default async function OpportunitiesPage({
                     <Th>Opportunity</Th>
                     <Th>Stage</Th>
                     <Th align="right">Deal value</Th>
-                    <Th align="right">Win prob.</Th>
-                    <Th align="right">Expected</Th>
-                    <Th align="right">At risk</Th>
+                    <Th align="right">Est. likelihood</Th>
+                    <Th align="right">Est. expected</Th>
+                    <Th align="right">Est. at risk</Th>
                     <Th>Why it matters</Th>
                     <Th>Next best action</Th>
                   </tr>
@@ -210,15 +211,21 @@ export default async function OpportunitiesPage({
                           <span className="ml-1 text-xs text-muted-foreground">est.</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                        {opp.winProbability}%
+                      {/* A band, not a percentage — see the note on the deal
+                          detail page. The figure is a generic stage baseline
+                          times a score factor, with no calibration behind it. */}
+                      <td
+                        className="px-4 py-3 text-right text-muted-foreground"
+                        title={`Model figure: ${opp.winProbability}% — ${WIN_PROBABILITY_CAVEAT}`}
+                      >
+                        {likelihoodBand(opp.winProbability).label}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold tabular-nums">
                         {formatMoneyCompact(opp.expectedValue, opp.currency)}
                       </td>
-                      {/* Revenue at risk, not the score: a number in money is
-                          the thing a rep can act on, and the score is already
-                          explained in full on the deal itself. */}
+                      {/* Estimated value at risk. An estimate of a share of
+                          an estimate, so the column header says so; the score
+                          is explained in full on the deal itself. */}
                       <td className="px-4 py-3 text-right tabular-nums">
                         {opp.atRisk > 0 ? (
                           <span className="font-medium text-rose-600 dark:text-rose-400">

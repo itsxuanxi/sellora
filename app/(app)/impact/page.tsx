@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { ATTRIBUTION_CAVEAT, REVENUE_VOCABULARY } from "@/lib/revenue/vocabulary";
 import { formatMoney } from "@/lib/revenue/money";
 import { getImpactSummary, getRevenueOverview } from "@/lib/revenue/queries";
 import { FollowUpStats } from "@/components/followup/follow-up-stats";
@@ -84,7 +85,7 @@ export default async function AnalyticsPage() {
         <EmptyState
           icon={BarChart3}
           title="No impact recorded yet"
-          description="Selryn records impact when you act on a recommendation — not before. Work a recommendation from the Overview or Recover page and it will show up here with the revenue attached to it."
+          description="Selryn records impact when you act on a recommendation — not before. Work a recommendation from the Overview or Recover page and it will show up here with the deal it was on."
         >
           <Button asChild>
             <Link href="/opportunities?filter=needs-attention">Open the recovery queue</Link>
@@ -98,33 +99,40 @@ export default async function AnalyticsPage() {
     <>
       <PageHeader
         title="Impact"
-        description={`What Selryn has done for your revenue — ${impact.monthLabel}.`}
+        description={`What Selryn flagged, what you worked, and what closed — ${impact.monthLabel}.`}
       />
 
-      {/* ── The four numbers that justify the subscription ── */}
+      {/* ── The four headline numbers.
+             Each one is either realized money or a count of something that
+             happened. None of them is an estimate, and none of them turns an
+             event into revenue — the previous version's "Revenue recovered"
+             did exactly that, summing deal value × an uncalibrated win
+             probability the instant a recommendation was marked complete. ── */}
       <div data-tour="impact" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <BigStat
-          label="Revenue recovered"
-          value={formatMoney(impact.revenueRecovered, currency)}
-          note="from deals Selryn flagged and you rescued"
-          tone="positive"
+          label="Closed-won value"
+          value={formatMoney(impact.closedWonValue, currency)}
+          note={`${impact.dealsWon} deal${impact.dealsWon === 1 ? "" : "s"} closed won this month`}
+          tone={impact.closedWonValue > 0 ? "positive" : undefined}
         />
         <BigStat
-          label="Pipeline influenced"
-          value={formatMoney(impact.pipelineInfluenced, currency)}
-          note="expected revenue on deals Selryn touched"
+          label="…on deals Selryn flagged"
+          value={formatMoney(impact.closedWonValueFlagged, currency)}
+          note={`${impact.dealsWonFlagged} of those ${impact.dealsWonFlagged === 1 ? "deal was" : "deals were"} flagged here — overlap, not credit`}
         />
         <BigStat
-          label="Opportunities saved"
-          value={String(impact.opportunitiesSaved)}
-          note="leaking deals brought back"
+          label="Open pipeline worked"
+          value={formatMoney(impact.openPipelineWorked, currency)}
+          note={`CRM deal value on ${impact.dealsWorked} open deal${impact.dealsWorked === 1 ? "" : "s"} you acted on`}
         />
         <BigStat
-          label="Meetings generated"
-          value={String(impact.meetingsGenerated)}
-          note="booked off a recommendation"
+          label="Recommendations worked"
+          value={String(impact.recommendationsActedOn)}
+          note={`of ${impact.recommendationsShown} surfaced · ${impact.meetingsBooked} meeting${impact.meetingsBooked === 1 ? "" : "s"} booked`}
         />
       </div>
+
+      <p className="mt-3 text-xs text-muted-foreground">{ATTRIBUTION_CAVEAT}</p>
 
       {/* ── Influenced pipeline and revenue ──
              "Influenced" is a factual claim about contact: a Selryn-prompted
@@ -259,7 +267,8 @@ export default async function AnalyticsPage() {
         <section className="rounded-2xl border border-border/70 bg-card p-5">
           <h2 className="text-sm font-semibold">Pipeline position</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Where the money currently sits.
+            Where the money currently sits. Open pipeline and closed-won value are
+            CRM deal values; value at risk is an estimate.
           </p>
 
           <dl className="mt-4 space-y-3">
@@ -268,15 +277,15 @@ export default async function AnalyticsPage() {
               value={formatMoney(overview.totalOpenPipeline, currency)}
             />
             <StatRow
-              label="Currently at risk"
+              label={REVENUE_VOCABULARY.value_at_risk.label}
               value={formatMoney(overview.revenueAtRisk, currency)}
               tone={overview.revenueAtRisk > 0 ? "critical" : undefined}
             />
             <StatRow label="Deals won this month" value={String(impact.dealsWon)} />
             <StatRow
-              label="Won value"
-              value={formatMoney(impact.wonValue, currency)}
-              tone={impact.wonValue > 0 ? "positive" : undefined}
+              label={REVENUE_VOCABULARY.closed_won_value.label}
+              value={formatMoney(impact.closedWonValue, currency)}
+              tone={impact.closedWonValue > 0 ? "positive" : undefined}
             />
           </dl>
         </section>

@@ -4,7 +4,7 @@ import {
   DIMENSION_MAX,
   type ScoreDimension,
 } from "@/lib/revenue/config";
-import { scoreHeadline } from "@/lib/revenue/opportunity-score";
+import { reconcileScore, scoreHeadline } from "@/lib/revenue/opportunity-score";
 
 /**
  * Score display. §5 is explicit: never show an unexplained AI score. So the
@@ -123,37 +123,45 @@ export function WhyNow({
 }
 
 /**
- * Full breakdown by the five dimensions of §5, with a bar per dimension
- * showing how much of its available budget the deal earned.
+ * Full breakdown by the five dimensions, with a bar per dimension showing how
+ * much of its available budget the deal earned.
+ *
+ * This component does no arithmetic. It used to: it re-summed the factor rows
+ * and printed that sum against the dimension's cap, so a dimension whose
+ * rules fired for more than its budget rendered as "29 / 25" — a figure that
+ * cannot be true by the definition printed beside it — and the five
+ * dimensions on screen did not add up to the headline score, because the
+ * score was built from capped values and the breakdown from uncapped ones.
+ *
+ * Both numbers are real and both are now shown: what the rules found, and
+ * what the cap allowed to count. The reader can see the score is bounded
+ * rather than being handed a figure that quietly contradicts its own scale.
  */
 export function ScoreBreakdown({
   factors,
+  /** The stored score, when there is one, so the sum can be checked on screen. */
+  total,
 }: {
-  factors: {
-    dimension: string;
-    ruleKey: string;
-    label: string;
-    points: number;
-    reason: string;
-  }[];
+  factors: { dimension: string; ruleKey: string; label: string; points: number; reason: string }[];
+  total?: number | null;
 }) {
-  const dimensions = Object.keys(DIMENSION_MAX) as ScoreDimension[];
+  const r = reconcileScore(factors);
 
   return (
     <div className="space-y-5">
-      {dimensions.map((dim) => {
-        const rows = factors.filter((f) => f.dimension === dim);
-        if (rows.length === 0) return null;
-
-        const subtotal = rows.reduce((s, f) => s + f.points, 0);
-        const max = DIMENSION_MAX[dim];
-        const pct = Math.max(0, Math.min(100, (subtotal / max) * 100));
-        const negative = subtotal < 0;
+      {r.dimensions.map((d) => {
+        // A dimension with no rules fired is shown, not hidden. Dropping it
+        // left a breakdown whose visible rows could not reach the total, and
+        // gave a reader no way to tell "assessed, scored nothing" from "never
+        // assessed" — the difference between a weak deal and an unknown one.
+        const pct =
+          d.max > 0 ? Math.max(0, Math.min(100, (d.contributed / d.max) * 100)) : 0;
+        const negative = d.contributed < 0;
 
         return (
-          <div key={dim}>
+          <div key={d.dimension}>
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-sm font-medium">{DIMENSION_LABELS[dim]}</span>
+              <span className="text-sm font-medium">{d.label}</span>
               <span
                 className={cn(
                   "text-sm tabular-nums",
@@ -162,9 +170,9 @@ export function ScoreBreakdown({
                     : "text-muted-foreground"
                 )}
               >
-                {subtotal > 0 ? "+" : ""}
-                {subtotal}
-                <span className="text-muted-foreground"> / {max}</span>
+                {d.contributed > 0 ? "+" : ""}
+                {d.contributed}
+                <span className="text-muted-foreground"> / {d.max}</span>
               </span>
             </div>
 
@@ -178,29 +186,91 @@ export function ScoreBreakdown({
               />
             </div>
 
-            <ul className="mt-2 space-y-1">
-              {rows.map((f, i) => (
-                <li key={i} className="flex gap-2 text-xs text-muted-foreground">
-                  <span
-                    className={cn(
-                      "shrink-0 font-medium tabular-nums",
-                      f.points < 0
-                        ? "text-rose-600 dark:text-rose-400"
-                        : f.points > 0
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-muted-foreground"
-                    )}
-                  >
-                    {f.points > 0 ? "+" : ""}
-                    {f.points}
-                  </span>
-                  <span>{f.reason}</span>
-                </li>
-              ))}
-            </ul>
+            {d.noEvidence ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                No evidence recorded for this dimension yet — it contributes nothing
+                rather than counting against the deal.
+              </p>
+            ) : (
+              <>
+                <ul className="mt-2 space-y-1">
+                  {d.factors.map((f, i) => (
+                    <li key={i} className="flex gap-2 text-xs text-muted-foreground">
+                      <span
+                        className={cn(
+                          "shrink-0 font-medium tabular-nums",
+                          f.points < 0
+                            ? "text-rose-600 dark:text-rose-400"
+                            : f.points > 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-muted-foreground"
+                        )}
+                      >
+                        {f.points > 0 ? "+" : ""}
+                        {f.points}
+                      </span>
+                      <span>{f.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {d.cappedBy > 0 && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    The rules above add to {d.raw}. {d.label} contributes at most{" "}
+                    {d.max}, so {d.cappedBy} point{d.cappedBy === 1 ? "" : "s"} did not
+                    count.
+                  </p>
+                )}
+                {d.flooredBy > 0 && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    The penalties above add to {d.raw}. This dimension cannot fall
+                    below {d.min}, so {d.flooredBy} point
+                    {d.flooredBy === 1 ? "" : "s"} did not count.
+                  </p>
+                )}
+              </>
+            )}
           </div>
         );
       })}
+
+      {r.unknown.length > 0 && (
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm font-medium">Other</span>
+            <span className="text-sm tabular-nums text-muted-foreground">
+              {r.unknown.reduce((r2, f) => r2 + f.points, 0)}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Scored by a rule group this version no longer uses. Kept so the total
+            still adds up; it will disappear when the deal is next rescored.
+          </p>
+        </div>
+      )}
+
+      {/* The sum, stated. A breakdown that does not visibly add up to the
+          headline is a breakdown nobody can check. */}
+      <div className="border-t border-border/70 pt-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm font-medium">Total</span>
+          <span className="text-sm font-semibold tabular-nums">
+            {r.total}
+            <span className="font-normal text-muted-foreground"> / 100</span>
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          The five contributions above add to {r.total}.
+          {r.clampedBy !== 0 &&
+            ` The components sum to ${r.subtotal}; the score is held within 0–100.`}
+        </p>
+        {total != null && total !== r.total && (
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+            The stored score is {total}, which no longer matches these components —
+            the deal has changed since it was last scored. Refresh to recompute.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -44,6 +44,7 @@ function deal(over: Partial<DealFacts> = {}): DealFacts {
     quoteSent: null,
     nextStepDueAt: null,
     nextStepEvidence: null,
+    dataAgeDays: 1,
     ...over,
   };
 }
@@ -54,6 +55,7 @@ const silence = (rule: FollowUpReason["rule"]): FollowUpReason => ({
   because: `because of ${rule}`,
   evidence: [ev("e1")],
   daysOverdue: 4,
+  staleness: null,
 });
 
 function identify(over: Partial<Parameters<typeof identifyBlocker>[0]> = {}) {

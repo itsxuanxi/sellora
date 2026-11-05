@@ -487,6 +487,17 @@ export async function seedSampleData(
     stage: string;
     dealValue: number;
     signalIds: string[];
+    /**
+     * Whether this deal's narrative includes the buyer writing back.
+     *
+     * The loop history below used to pick each outcome by `index % 8`, with
+     * no reference to the deal it was attached to. That is how Cloudmint —
+     * whose whole scenario is "opened your email three times and never
+     * replied" — ended up with a `replied` Response row, so its timeline
+     * showed a reply while every other panel reported silence. The generator
+     * now reads the narrative instead of a modulo.
+     */
+    hasReplied: boolean;
   }[] = [];
   const savedOpportunities: {
     id: string;
@@ -604,6 +615,9 @@ export async function seedSampleData(
       stage: s.stage,
       dealValue: s.dealValue,
       signalIds: seededSignalIds,
+      hasReplied:
+        s.lastInteractionKind === "email_replied" ||
+        (emailsByProspect.get(p.id) ?? []).some((e) => e.repliedAt != null),
     };
 
     // ── Score it with the real engine, so demo numbers are honest ──
@@ -799,6 +813,21 @@ export async function seedSampleData(
     "stakeholder_added",
   ];
 
+  /**
+   * The reactions available to a deal the buyer has never answered.
+   *
+   * `proposal_viewed` and `stakeholder_added` are buyer activity without
+   * being a reply, so they belong in a silent deal's history; `replied` and
+   * `meeting_booked` do not. `opportunity_advanced` is ours, not theirs.
+   */
+  const SILENT_REACTIONS = [
+    "no_response",
+    "proposal_viewed",
+    "no_response",
+    "stakeholder_added",
+    "opportunity_advanced",
+  ] as const;
+
   const SENTIMENT: Record<string, string> = {
     replied: "positive",
     meeting_booked: "positive",
@@ -819,13 +848,20 @@ export async function seedSampleData(
   const recRows: Prisma.RecommendationCreateManyInput[] = [];
   const actionRows: Prisma.ActionCreateManyInput[] = [];
   const responseRows: Prisma.ResponseCreateManyInput[] = [];
+  const eventRows: Prisma.RevenueEventCreateManyInput[] = [];
 
   for (const [dealIndex, deal] of sampleDeals.entries()) {
     // Three passes per deal gets the sample counts over the learning gates
     // without inventing companies that do not exist in the sample narrative.
     for (let pass = 0; pass < 3; pass++) {
       const spec = LOOP_ACTIONS[(dealIndex + pass) % LOOP_ACTIONS.length];
-      const reaction = LOOP_REACTIONS[(dealIndex * 3 + pass) % LOOP_REACTIONS.length];
+      // The reaction still varies by index so the learning panels have a mix
+      // to work with, but a deal whose narrative is "never replied" can only
+      // draw a reaction that is not a reply. Without this constraint the
+      // fixture contradicts itself, and every screen downstream faithfully
+      // reports the contradiction.
+      const pool = deal.hasReplied ? LOOP_REACTIONS : SILENT_REACTIONS;
+      const reaction = pool[(dealIndex * 3 + pass) % pool.length];
 
       // Walk backwards in time so older passes sit earlier on the timeline.
       const recommendedAt = daysAgo(28 - pass * 8, 9);
@@ -879,6 +915,11 @@ export async function seedSampleData(
         createdAt: recommendedAt,
       });
 
+      const observedAt =
+        reaction === "no_response"
+          ? new Date(executedAt.getTime() + 72 * 3_600_000)
+          : respondedAt;
+
       responseRows.push({
         orgId,
         opportunityId: deal.opportunityId,
@@ -889,11 +930,28 @@ export async function seedSampleData(
         sentiment: SENTIMENT[reaction] ?? "neutral",
         detail: "Sample data",
         hoursToRespond: reaction === "no_response" ? null : 20,
-        observedAt:
-          reaction === "no_response"
-            ? new Date(executedAt.getTime() + 72 * 3_600_000)
-            : respondedAt,
+        observedAt,
       });
+
+      // A reply is recorded in every place a real reply would land, not only
+      // in the outcome tracker. A fixture that writes one source and not the
+      // others is a fixture that disagrees with itself the moment two screens
+      // read different tables — which is the bug this seeding produced.
+      if (reaction === "replied" || reaction === "meeting_booked") {
+        eventRows.push({
+          orgId,
+          accountId: deal.accountId,
+          contactId: deal.contactId,
+          opportunityId: deal.opportunityId,
+          source: "demo",
+          sourceEventId: `sample-reply-${deal.opportunityId}-${pass}`,
+          eventType: reaction === "replied" ? "email.replied" : "meeting.held",
+          occurredAt: observedAt,
+          actorType: "buyer",
+          confidence: 100,
+          idempotencyKey: `sample-reply-${deal.opportunityId}-${pass}`,
+        });
+      }
     }
   }
 
@@ -901,6 +959,9 @@ export async function seedSampleData(
   await db.recommendation.createMany({ data: recRows });
   await db.action.createMany({ data: actionRows });
   await db.response.createMany({ data: responseRows });
+  if (eventRows.length > 0) {
+    await db.revenueEvent.createMany({ data: eventRows, skipDuplicates: true });
+  }
 
   loopRecommendations = recRows.length;
   loopActions = actionRows.length;

@@ -72,7 +72,7 @@ export default async function IntentDashboardPage() {
     <>
       <PageHeader
         title="Intent Dashboard"
-        description="Companies worth contacting today, ranked by verifiable buying signals — not a guess."
+        description="Accounts by buying-signal strength — each signal is a record with a date, decayed by age. A strong signal is a reason to look, not a decision about who to contact today; Today decides that from follow-up dates and real silence."
       >
         <Button asChild>
           <Link href="/intent/new">

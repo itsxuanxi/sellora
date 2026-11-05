@@ -10,6 +10,8 @@ import {
   type OpportunityScoreInput,
   type OpportunityScoreResult,
 } from "@/lib/revenue/opportunity-score";
+import { loadFactsForOpportunity } from "@/lib/revenue/facts-load";
+import type { OpportunityFacts } from "@/lib/revenue/facts";
 
 /**
  * Server-side scoring pipeline: gathers the evidence an opportunity's score
@@ -37,7 +39,13 @@ export interface OpportunityEvidence {
   lastOutboundAt: Date | null;
   lastMeetingAt: Date | null;
   proposalOpenedAt: Date | null;
-  neverReplied: boolean;
+  /**
+   * The shared reply/activity facts this evidence was read from. Carried
+   * through rather than flattened to a boolean so callers downstream — the
+   * leak rules, the recommendation writer — reach the same three-state
+   * answer instead of re-deriving their own.
+   */
+  facts: OpportunityFacts;
 }
 
 /** Splits a comma-separated ICP field into a normalized set. */
@@ -66,9 +74,10 @@ function matchesAny(value: string | null | undefined, set: Set<string>): boolean
  */
 export async function gatherEvidence(
   orgId: string,
-  accountId: string
+  accountId: string,
+  opportunityId: string
 ): Promise<OpportunityEvidence> {
-  const [signals, emails] = await Promise.all([
+  const [signals, facts] = await Promise.all([
     db.buyingSignal.findMany({
       where: { orgId, accountId, expired: false },
       orderBy: { occurredAt: "desc" },
@@ -81,58 +90,20 @@ export async function gatherEvidence(
         title: true,
       },
     }),
-    db.email.findMany({
-      where: { orgId, prospect: { accountId } },
-      select: { sentAt: true, openedAt: true, repliedAt: true, status: true },
-    }),
+    loadFactsForOpportunity(orgId, opportunityId),
   ]);
 
-  const emailsOpened = emails.filter((e) => e.openedAt).length;
-  const emailsReplied = emails.filter((e) => e.repliedAt).length;
-
-  const latest = (dates: (Date | null)[]): Date | null =>
-    dates.filter((d): d is Date => d != null).sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
-
-  const lastOutboundAt = latest(emails.map((e) => e.sentAt));
-  const lastRepliedAt = latest(emails.map((e) => e.repliedAt));
-  const lastOpenedAt = latest(emails.map((e) => e.openedAt));
-
-  const signalAt = (types: SignalType[]): Date | null =>
-    latest(
-      signals
-        .filter((s) => (types as string[]).includes(s.signalType))
-        .map((s) => s.occurredAt)
-    );
-
-  const lastMeetingAt = signalAt(["meeting_attended"]);
-  const proposalOpenedAt = signalAt(["proposal_opened"]);
-  const lastBehaviouralAt = latest(
-    signals
-      .filter((s) => (BEHAVIOURAL_SIGNALS as string[]).includes(s.signalType))
+  const signalAt = (types: SignalType[]): Date | null => {
+    const dates = signals
+      .filter((s) => (types as string[]).includes(s.signalType))
       .map((s) => s.occurredAt)
-  );
+      .sort((a, b) => b.getTime() - a.getTime());
+    return dates[0] ?? null;
+  };
 
+  const proposalOpenedAt = signalAt(["proposal_opened"]);
   const siteVisits = signals.filter((s) =>
     (SITE_VISIT_SIGNALS as string[]).includes(s.signalType)
-  ).length;
-  const proposalsSent = emails.length > 0 && proposalOpenedAt ? 1 : 0;
-
-  // The most recent thing that happened, whoever caused it.
-  const candidates: { at: Date | null; kind: string }[] = [
-    { at: lastRepliedAt, kind: "email_replied" },
-    { at: lastMeetingAt, kind: "meeting" },
-    { at: lastOpenedAt, kind: "email_opened" },
-    { at: lastOutboundAt, kind: "email_sent" },
-    { at: lastBehaviouralAt, kind: "signal" },
-  ].filter((c) => c.at != null);
-  candidates.sort((a, b) => b.at!.getTime() - a.at!.getTime());
-
-  const lastInteractionAt = candidates[0]?.at ?? null;
-  const lastInteractionKind = candidates[0]?.kind ?? null;
-
-  // Outbound sent after their last reply — the "am I talking to a wall?" count.
-  const unansweredOutbound = emails.filter(
-    (e) => e.sentAt && (!lastRepliedAt || e.sentAt > lastRepliedAt)
   ).length;
 
   return {
@@ -141,23 +112,45 @@ export async function gatherEvidence(
       confidence: s.confidence as Confidence,
     })),
     engagement: {
-      emailsOpened,
-      emailsReplied,
-      meetingsHeld: lastMeetingAt ? 1 : 0,
-      proposalsSent,
+      emailsOpened: facts.emailsOpened,
+      emailsReplied: facts.emailsReplied,
+      meetingsHeld: facts.meetingsHeld,
+      proposalsSent: proposalOpenedAt || facts.proposalViews > 0 ? 1 : 0,
       siteVisits,
-      unansweredOutbound: emailsReplied > 0 ? unansweredOutbound : emails.filter((e) => e.sentAt).length,
+      // Messages sent with no answer after them. When they have never
+      // replied this is every message sent; the facts module already
+      // resolves that distinction, so it is not re-derived here.
+      unansweredOutbound: facts.outboundSinceLastReply,
     },
-    lastInteractionAt,
-    lastInteractionKind,
-    theyRepliedLast: Boolean(
-      lastRepliedAt && (!lastOutboundAt || lastRepliedAt > lastOutboundAt)
-    ),
-    lastOutboundAt,
-    lastMeetingAt,
+    lastInteractionAt: facts.lastActivityAt,
+    lastInteractionKind: interactionKind(facts),
+    theyRepliedLast: facts.replyState === "they_replied_last",
+    lastOutboundAt: facts.lastOutboundAt,
+    lastMeetingAt: facts.lastBuyerActivityKind === "meeting" ? facts.lastBuyerActivityAt : signalAt(["meeting_attended"]),
     proposalOpenedAt,
-    neverReplied: emailsReplied === 0,
+    facts,
   };
+}
+
+/** The legacy `lastInteractionKind` vocabulary, from the shared facts. */
+function interactionKind(facts: OpportunityFacts): string | null {
+  switch (facts.lastActivityKind) {
+    case "reply":
+      return "email_replied";
+    case "meeting":
+      return "meeting";
+    case "email_open":
+      return "email_opened";
+    case "proposal_view":
+      return "proposal_sent";
+    case "site_visit":
+    case "other_signal":
+      return "signal";
+    case "outbound":
+      return "email_sent";
+    default:
+      return null;
+  }
 }
 
 /**
@@ -180,7 +173,7 @@ export async function rescoreOpportunity(
 
   const [icp, evidence] = await Promise.all([
     db.icpProfile.findUnique({ where: { orgId } }),
-    gatherEvidence(orgId, opp.accountId),
+    gatherEvidence(orgId, opp.accountId, opp.id),
   ]);
 
   const industries = listSet(icp?.industries);

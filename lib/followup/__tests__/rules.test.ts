@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_TIMING,
+  RULE_ORDER,
   buyerHasReplied,
+  compareFollowUps,
   evaluateFollowUp,
   rankFollowUps,
   type DealFacts,
@@ -40,6 +42,7 @@ function facts(over: Partial<DealFacts> = {}): DealFacts {
     quoteSent: null,
     nextStepDueAt: null,
     nextStepEvidence: null,
+    dataAgeDays: 1,
     ...over,
   };
 }
@@ -175,6 +178,7 @@ function item(over: Partial<FollowUpItem>): FollowUpItem {
     stage: "Proposal",
     stageKey: "PROPOSAL",
     lastActivityAt: null,
+    staleness: null,
     rule: "gone_quiet",
     action: "a",
     because: "b",
@@ -282,4 +286,115 @@ test("an ignored deal stays ignored", () => {
 
 test("a deal nobody has touched is never suppressed", () => {
   assert.equal(isSuppressed(null, day(5), NOW), false);
+});
+
+// ── Missing next steps, value and freshness (requirement 4) ───────────────
+
+test("a live deal with no agreed next step is raised while it is still warm", () => {
+  const reason = evaluateFollowUp(
+    facts({
+      stageKey: "MEETING",
+      stage: "Meeting",
+      nextStepDueAt: null,
+      quoteSent: null,
+      lastActivity: ev("meeting", 7),
+      lastOutbound: ev("email_outbound", 7),
+      dataAgeDays: 7,
+    }),
+    NOW
+  );
+  assert.equal(reason?.rule, "no_next_step");
+  assert.match(reason!.because, /no next step recorded/i);
+  assert.match(reason!.because, /7 days/);
+  assert.ok(reason!.evidence.length > 0, "must cite the record it read");
+});
+
+test("an early-stage deal with no next step is not a gap", () => {
+  // Nobody has met yet, so there is nothing to have agreed.
+  const reason = evaluateFollowUp(
+    facts({
+      stageKey: "QUALIFYING",
+      nextStepDueAt: null,
+      quoteSent: null,
+      lastActivity: ev("email_outbound", 7),
+      dataAgeDays: 7,
+    }),
+    NOW
+  );
+  assert.notEqual(reason?.rule, "no_next_step");
+});
+
+test("a deal talked to yesterday is not chased for a missing next step", () => {
+  const reason = evaluateFollowUp(
+    facts({
+      stageKey: "PROPOSAL",
+      nextStepDueAt: null,
+      quoteSent: null,
+      lastActivity: ev("email_outbound", 1),
+      dataAgeDays: 1,
+    }),
+    NOW
+  );
+  assert.equal(reason, null);
+});
+
+test("stale evidence is disclosed on the reason, not used to hide it", () => {
+  const reason = evaluateFollowUp(
+    facts({
+      stageKey: "PROPOSAL",
+      quoteSent: null,
+      nextStepDueAt: null,
+      lastActivity: ev("email_outbound", 70),
+      dataAgeDays: 70,
+    }),
+    NOW
+  );
+  assert.equal(reason?.rule, "gone_quiet", "a long-dormant deal still surfaces");
+  assert.ok(reason!.staleness, "staleness must be stated");
+  assert.match(reason!.staleness!, /70 days old/);
+  assert.match(reason!.staleness!, /check the CRM/i);
+});
+
+test("fresh evidence carries no staleness caveat", () => {
+  const reason = evaluateFollowUp(
+    facts({
+      nextStepDueAt: day(2),
+      lastActivity: ev("email_outbound", 2),
+      dataAgeDays: 2,
+    }),
+    NOW
+  );
+  assert.equal(reason?.rule, "followup_due");
+  assert.equal(reason!.staleness, null);
+});
+
+test("a deal with no synced activity at all says so rather than asserting silence", () => {
+  const reason = evaluateFollowUp(
+    facts({ nextStepDueAt: day(3), lastActivity: null, dataAgeDays: null }),
+    NOW
+  );
+  assert.equal(reason?.rule, "followup_due");
+  assert.match(reason!.staleness!, /nothing to check this against/i);
+});
+
+test("every rule in RULE_ORDER is rankable, so none can silently drift", () => {
+  for (const rule of RULE_ORDER) {
+    const a = item({ rule, daysOverdue: 1 });
+    const b = item({ rule, daysOverdue: 5 });
+    assert.ok(compareFollowUps(b, a) < 0, `${rule} must order by days overdue`);
+  }
+});
+
+test("opportunity value breaks a tie but never jumps the rule order", () => {
+  const bigQuiet = item({ rule: "gone_quiet", daysOverdue: 2, amount: 500_000 });
+  const smallDue = item({ rule: "followup_due", daysOverdue: 0, amount: 500 });
+  assert.equal(
+    rankFollowUps([bigQuiet, smallDue])[0].rule,
+    "followup_due",
+    "a missed commitment outranks a large dormant deal"
+  );
+
+  const small = item({ rule: "gone_quiet", daysOverdue: 2, amount: 1_000, opportunityId: "a" });
+  const big = item({ rule: "gone_quiet", daysOverdue: 2, amount: 90_000, opportunityId: "b" });
+  assert.equal(rankFollowUps([small, big])[0].opportunityId, "b");
 });

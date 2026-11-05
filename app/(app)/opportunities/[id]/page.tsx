@@ -20,6 +20,13 @@ import {
 import { formatMoney } from "@/lib/revenue/money";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
 import { OpportunityScore, ConfidenceNote, ScoreBreakdown, WhyNow } from "@/components/revenue/score";
+import { findContradiction, insufficientEvidence } from "@/lib/revenue/contradiction";
+import {
+  ATTRIBUTION_CAVEAT,
+  REVENUE_VOCABULARY,
+  WIN_PROBABILITY_CAVEAT,
+  likelihoodBand,
+} from "@/lib/revenue/vocabulary";
 import { UrgencyPill } from "@/components/revenue/leak-card";
 import { interpretSignals } from "@/components/revenue/signal-timeline";
 import { LoopStrip, LoopTimeline } from "@/components/revenue/loop-timeline";
@@ -100,6 +107,27 @@ export default async function OpportunityDetailPage({
 
 
   const openRec = recommendations.find((r) => r.status === "OPEN") ?? null;
+
+  // Advice is checked against the live facts before it is rendered.
+  //
+  // A recommendation is a claim about the present, and the row outlives the
+  // situation: between one refresh and the next, a buyer can reply to the
+  // very thread the card is telling the seller to chase. Showing it anyway
+  // is worse than showing nothing — it proves Selryn is reading different
+  // records from the person using it.
+  const contradiction = openRec
+    ? findContradiction(
+        {
+          createdAt: openRec.createdAt,
+          leakType: openRec.leakType,
+          actionType: openRec.actionType,
+          expiresAt: openRec.expiresAt,
+        },
+        enriched.facts,
+        new Date()
+      )
+    : null;
+  const notEnough = insufficientEvidence(enriched.facts);
 
   // The action the console is about: one awaiting approval, or the decision
   // already taken on the *currently open* recommendation.
@@ -205,32 +233,52 @@ export default async function OpportunityDetailPage({
           </div>
           {enriched.dealValueBasis !== "user_entered" && (
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Estimated — set it below for accurate forecasting
+              Estimated — your CRM holds no amount for this deal
             </p>
           )}
         </Panel>
-        <Panel label="Likelihood">
-          <div className="text-2xl font-semibold tracking-tight tabular-nums">
-            {enriched.winProbability}%
+        {/* A band, not a percentage.
+            "62%" asserts a precision the derivation does not have: it is a
+            generic stage baseline multiplied by a hand-tuned score factor,
+            uncalibrated against this workspace's own win history. The band
+            keeps the ordering, which is the useful part, and drops the false
+            precision. The number itself is still available on hover for
+            anyone who wants it. */}
+        <Panel label="Estimated likelihood">
+          <div
+            className="text-2xl font-semibold tracking-tight"
+            title={`Model figure: ${enriched.winProbability}% — ${WIN_PROBABILITY_CAVEAT}`}
+          >
+            {likelihoodBand(enriched.winProbability).label}
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            From stage {enriched.stage.toLowerCase()} + score
+            Estimated from stage {enriched.stage.toLowerCase()} and score — not
+            calibrated to your history
           </p>
         </Panel>
-        <Panel label="Expected revenue">
+        <Panel label={REVENUE_VOCABULARY.estimated_expected_revenue.label}>
           <div className="text-2xl font-semibold tracking-tight tabular-nums text-primary">
             {formatMoney(enriched.expectedValue, enriched.currency)}
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">value × likelihood</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Deal value × estimated likelihood. An estimate.
+          </p>
         </Panel>
-        <Panel label={enriched.primaryLeak ? "Revenue at risk" : "Days since contact"}>
+        <Panel
+          label={
+            enriched.primaryLeak
+              ? REVENUE_VOCABULARY.value_at_risk.label
+              : "Days since contact"
+          }
+        >
           {enriched.primaryLeak ? (
             <>
               <div className="text-2xl font-semibold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
                 {formatMoney(enriched.atRisk, enriched.currency)}
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                {enriched.primaryLeak.category}
+                {enriched.primaryLeak.category} · estimated share of estimated
+                expected revenue
               </p>
             </>
           ) : (
@@ -280,11 +328,34 @@ export default async function OpportunityDetailPage({
 
             <h2 className="mt-2 text-lg font-semibold tracking-tight">{action.headline}</h2>
 
+            {contradiction && (
+              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-50/70 p-3 dark:bg-amber-950/30">
+                <div className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  Withdrawn — the situation changed
+                </div>
+                <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-200/90">
+                  {contradiction.because} This advice was raised on{" "}
+                  {format(openRec!.createdAt, "MMM d")} and no longer applies.
+                </p>
+              </div>
+            )}
+
+            {!contradiction && notEnough && (
+              <p className="mt-3 rounded-lg bg-muted/60 p-3 text-sm text-muted-foreground">
+                Not enough evidence to be confident here. {notEnough}
+              </p>
+            )}
+
             <div className="mt-3">
               <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 Why
               </div>
               <p className="mt-1 text-sm leading-relaxed">{action.rationale}</p>
+              {/* The one sentence allowed to describe the buyer's silence,
+                  from the same shared facts the timeline below renders. */}
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {enriched.replySummary}
+              </p>
             </div>
 
             {/* The evidence this advice rests on, resolved from the stored
@@ -538,7 +609,7 @@ export default async function OpportunityDetailPage({
                       <div className="text-sm">{r.headline}</div>
                       <div className="text-xs text-muted-foreground">
                         {ACTION_LABELS[r.actionType as ActionType] ?? r.actionType} ·{" "}
-                        {formatMoney(r.expectedValue, enriched.currency)} at stake
+                        {formatMoney(r.dealValue, enriched.currency)} deal value
                       </div>
                     </div>
                     <span
@@ -546,12 +617,14 @@ export default async function OpportunityDetailPage({
                         "shrink-0 text-xs font-medium",
                         r.status === "COMPLETED"
                           ? "text-emerald-600 dark:text-emerald-400"
-                          : r.status === "DISMISSED"
+                          : r.status === "DISMISSED" ||
+                              r.status === "WITHDRAWN" ||
+                              r.status === "EXPIRED"
                             ? "text-muted-foreground"
                             : "text-amber-600 dark:text-amber-400"
                       )}
                     >
-                      {r.status.toLowerCase()}
+                      {r.status === "WITHDRAWN" ? "withdrawn" : r.status.toLowerCase()}
                     </span>
                   </li>
                 ))}
@@ -591,7 +664,7 @@ export default async function OpportunityDetailPage({
                 <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                   Full breakdown
                 </div>
-                <ScoreBreakdown factors={snapshot.factors} />
+                <ScoreBreakdown factors={snapshot.factors} total={snapshot.score} />
                 <p className="mt-4 text-[11px] text-muted-foreground">
                   Scored {formatDistanceToNow(snapshot.createdAt, { addSuffix: true })} ·
                   model v{snapshot.version}

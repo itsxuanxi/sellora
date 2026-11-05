@@ -11,6 +11,8 @@ import { detectLeaks, revenueAtRisk, type DetectedLeak } from "@/lib/revenue/lea
 import { expectedRevenue } from "@/lib/revenue/money";
 import { decideNextAction, type NextAction } from "@/lib/revenue/next-action";
 import { signalImportance } from "@/lib/intent/signals";
+import { loadFactsForOpportunities } from "@/lib/revenue/facts-load";
+import { describeReplyState, emptyFacts, type OpportunityFacts } from "@/lib/revenue/facts";
 
 /**
  * Read models for the Revenue Intelligence screens.
@@ -57,21 +59,20 @@ export interface EnrichedOpportunity {
   leaks: DetectedLeak[];
   primaryLeak: DetectedLeak | null;
   nextAction: NextAction;
-  /** Expected revenue exposed by the primary leak — 0 when nothing is leaking. */
+  /**
+   * Estimated share of this deal's estimated expected revenue that the
+   * primary leak puts at risk — 0 when nothing is leaking.
+   *
+   * An estimate twice over: `expectedValue` is already deal value × an
+   * uncalibrated stage baseline, and the exposure fraction is a judgement.
+   * Never realized or attributable revenue. See `revenueAtRisk`.
+   */
   atRisk: number;
+  /** The shared reply/activity facts every screen reads. */
+  facts: OpportunityFacts;
+  /** The one sentence allowed to describe the buyer's silence. */
+  replySummary: string;
 }
-
-/**
- * Engagement event types that count as *us* contacting *them*.
- *
- * `note.logged` is deliberately absent: writing a note to yourself is not
- * reaching out, and counting it would clear a "needs follow-up" leak the
- * moment a rep typed a reminder to handle it later.
- */
-const OUTBOUND_EVENT_TYPES = new Set(["email.sent", "call.placed", "meeting.held"]);
-
-/** Engagement event types that are the buyer coming back to us. */
-const INBOUND_EVENT_TYPES = new Set(["email.replied", "call.received"]);
 
 function daysSince(d: Date | null, now: Date): number | null {
   if (!d) return null;
@@ -101,7 +102,13 @@ export async function loadEnrichedOpportunities(
 
   const accountIds = [...new Set(opportunities.map((o) => o.accountId))];
 
-  const [signals, emails, events] = await Promise.all([
+  // Reply and activity facts come from one shared derivation (see
+  // lib/revenue/facts.ts). This file used to compute its own, from Email
+  // plus the event log but not the Response table, while the deal detail
+  // page computed a third from Email alone — which is how one page could
+  // show a reply in the timeline and "never replied" in the leak panel.
+  const [factsByOpportunity, signals] = await Promise.all([
+    loadFactsForOpportunities(orgId, opportunities),
     db.buyingSignal.findMany({
       where: { orgId, accountId: { in: accountIds }, expired: false },
       orderBy: { occurredAt: "desc" },
@@ -114,29 +121,6 @@ export async function loadEnrichedOpportunities(
         importanceScore: true,
       },
     }),
-    db.email.findMany({
-      where: { orgId, prospect: { accountId: { in: accountIds } } },
-      select: {
-        sentAt: true,
-        openedAt: true,
-        repliedAt: true,
-        prospect: { select: { accountId: true } },
-      },
-    }),
-    // CRM engagement history. Selryn's own Email rows only cover what Selryn
-    // sent; a rep emailing from HubSpot or Gmail is invisible to them, and a
-    // deal they have been working all week would read as untouched.
-    db.revenueEvent.findMany({
-      where: {
-        orgId,
-        accountId: { in: accountIds },
-        eventType: {
-          in: [...OUTBOUND_EVENT_TYPES, ...INBOUND_EVENT_TYPES],
-        },
-      },
-      orderBy: { occurredAt: "desc" },
-      select: { accountId: true, eventType: true, occurredAt: true },
-    }),
   ]);
 
   const signalsByAccount = new Map<string, typeof signals>();
@@ -146,53 +130,30 @@ export async function loadEnrichedOpportunities(
     signalsByAccount.set(s.accountId, list);
   }
 
-  const eventsByAccount = new Map<string, typeof events>();
-  for (const e of events) {
-    if (!e.accountId) continue;
-    const list = eventsByAccount.get(e.accountId) ?? [];
-    list.push(e);
-    eventsByAccount.set(e.accountId, list);
-  }
-
-  const emailsByAccount = new Map<string, typeof emails>();
-  for (const e of emails) {
-    const id = e.prospect.accountId;
-    if (!id) continue;
-    const list = emailsByAccount.get(id) ?? [];
-    list.push(e);
-    emailsByAccount.set(id, list);
-  }
-
   return opportunities.map((opp) => {
     const accSignals = signalsByAccount.get(opp.accountId) ?? [];
-    const accEmails = emailsByAccount.get(opp.accountId) ?? [];
-    const accEvents = eventsByAccount.get(opp.accountId) ?? [];
+    const facts = factsByOpportunity.get(opp.id) ?? emptyFacts(opp.id);
 
     const latest = (dates: (Date | null)[]) =>
       dates.filter((d): d is Date => d != null).sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
-    const lastOutboundAt = latest([
-      ...accEmails.map((e) => e.sentAt),
-      ...accEvents.filter((e) => OUTBOUND_EVENT_TYPES.has(e.eventType)).map((e) => e.occurredAt),
-    ]);
-    const lastRepliedAt = latest([
-      ...accEmails.map((e) => e.repliedAt),
-      ...accEvents.filter((e) => INBOUND_EVENT_TYPES.has(e.eventType)).map((e) => e.occurredAt),
-    ]);
     const signalAt = (t: SignalType) =>
       latest(accSignals.filter((s) => s.signalType === t).map((s) => s.occurredAt));
 
     const value = expectedRevenue(opp.dealValue, opp.winProbability);
 
-    // Interaction kinds that represent *us* acting, as opposed to the
-    // prospect opening or replying to something.
+    // "Us acting" is narrower than "something happened": a prospect opening
+    // an email is not a follow-up, so a rule asking "has anyone actioned
+    // this?" must not be satisfied by it. The cached column is consulted as
+    // a fallback because a manually logged touch lands there and nowhere the
+    // facts module can see.
     const ourAction =
       opp.lastInteractionKind != null &&
       ["email_sent", "call", "meeting", "proposal_sent", "note"].includes(
         opp.lastInteractionKind
       );
     const lastTouchAt = latest([
-      lastOutboundAt,
+      facts.lastOutboundAt,
       ourAction ? opp.lastInteractionAt : null,
     ]);
 
@@ -208,15 +169,21 @@ export async function loadEnrichedOpportunities(
         closedAt: opp.closedAt,
         lastMeetingAt: signalAt("meeting_attended"),
         proposalOpenedAt: signalAt("proposal_opened"),
-        lastOutboundAt,
+        lastOutboundAt: facts.lastOutboundAt,
         lastTouchAt,
-        neverReplied: lastRepliedAt == null,
+        replyState: facts.replyState,
+        daysSinceReply: facts.daysSinceReply,
+        outboundSinceLastReply: facts.outboundSinceLastReply,
         signals: accSignals,
       },
       now
     );
 
-    const quietDays = daysSince(opp.lastInteractionAt, now);
+    // Read from the shared facts rather than the cached column: the column
+    // is only as fresh as the last rescore, and a list that disagrees with
+    // the detail page about "days since contact" is the same class of bug as
+    // the reply inconsistency this refactor removes.
+    const quietDays = facts.daysSinceAnyActivity ?? daysSince(opp.lastInteractionAt, now);
 
     const nextAction = decideNextAction({
       stage: opp.stage,
@@ -229,7 +196,7 @@ export async function loadEnrichedOpportunities(
       quietDays,
       hasProposal: signalAt("proposal_opened") != null || opp.stage === "PROPOSAL" || opp.stage === "NEGOTIATION",
       hasMeeting: signalAt("meeting_attended") != null,
-      theyRepliedLast: Boolean(lastRepliedAt && (!lastOutboundAt || lastRepliedAt > lastOutboundAt)),
+      theyRepliedLast: facts.replyState === "they_replied_last",
     });
 
     const primaryLeak = leaks[0] ?? null;
@@ -247,7 +214,7 @@ export async function loadEnrichedOpportunities(
       scoreBand: opp.scoreBand,
       confidence: opp.confidence,
       whyNow: opp.whyNow ? opp.whyNow.split("\n").filter(Boolean) : [],
-      lastInteractionAt: opp.lastInteractionAt,
+      lastInteractionAt: facts.lastActivityAt ?? opp.lastInteractionAt,
       lastInteractionKind: opp.lastInteractionKind,
       nextStepDueAt: opp.nextStepDueAt,
       daysSinceContact: quietDays,
@@ -272,6 +239,8 @@ export async function loadEnrichedOpportunities(
             primaryLeak.type
           )
         : 0,
+      facts,
+      replySummary: describeReplyState(facts),
     };
   });
 }
@@ -423,29 +392,65 @@ export async function getSignalFeed(orgId: string, take = 60) {
 // ── Impact / attribution (§12) ────────────────────────────────────────────
 
 export interface ImpactSummary {
-  revenueRecovered: number;
-  pipelineInfluenced: number;
-  opportunitiesSaved: number;
-  meetingsGenerated: number;
+  // ── Realized money. The only figures here that are not estimates. ──
+  /** Deal value of everything that closed won this month. */
+  closedWonValue: number;
   dealsWon: number;
-  wonValue: number;
+  /** Of those, the ones Selryn had flagged. Overlap, never credit. */
+  closedWonValueFlagged: number;
+  dealsWonFlagged: number;
+
+  // ── Pipeline, in CRM deal value. Not revenue, and not an estimate. ──
+  /** Deal value of the open deals Selryn flagged and someone then worked. */
+  openPipelineWorked: number;
+  dealsWorked: number;
+
+  // ── Events. Counted as events, never converted to money. ──
+  meetingsBooked: number;
   recommendationsActedOn: number;
   recommendationsShown: number;
-  followUpCoverage: number; // percent of leaking deals that have been actioned
+  followUpCoverage: number; // percent of recommendations that have been actioned
   avgResponseDays: number | null;
+
   monthLabel: string;
   hasData: boolean;
 }
 
+/**
+ * What Selryn can honestly say it did this month.
+ *
+ * Rewritten because the previous version manufactured revenue. It summed
+ * `RevenueAttribution.amount` into a field called `revenueRecovered` and the
+ * Impact page printed it as money — but those rows are written the moment
+ * someone marks a recommendation complete, with the amount set to deal value
+ * × an uncalibrated win probability. Clicking "done" produced revenue.
+ *
+ * Two further faults in that sum, both silent:
+ *
+ *  - It added one row per completed recommendation, so three completed
+ *    recommendations on one deal reported that deal's value three times.
+ *    Sums over per-row estimates double-count by construction; the figures
+ *    below group by opportunity instead.
+ *
+ *  - A won deal with any prior attribution contributed its entire value as
+ *    "recovered", asserting that Selryn caused the whole win on the strength
+ *    of having once suggested a follow-up.
+ *
+ * So: realized money comes only from deals that actually closed won, in CRM
+ * deal value. Pipeline is reported as pipeline. Everything else is a count of
+ * things that happened. `ATTRIBUTION_CAVEAT` travels with the overlap figures.
+ */
 export async function getImpactSummary(orgId: string): Promise<ImpactSummary> {
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [attributions, recs, wonOpps, respondedOpps] = await Promise.all([
+  const [attributions, recs, wonOpps, openWorked] = await Promise.all([
+    // Every attribution ever, not just this month: a deal flagged in March
+    // and won in April was still flagged by Selryn.
     db.revenueAttribution.findMany({
-      where: { orgId, occurredAt: { gte: monthStart } },
-      select: { kind: true, amount: true },
+      where: { orgId },
+      select: { kind: true, opportunityId: true },
     }),
     db.recommendation.findMany({
       where: { orgId, createdAt: { gte: monthStart } },
@@ -453,16 +458,20 @@ export async function getImpactSummary(orgId: string): Promise<ImpactSummary> {
     }),
     db.opportunity.findMany({
       where: { orgId, stage: "WON", closedAt: { gte: monthStart } },
-      select: { dealValue: true },
+      select: { id: true, dealValue: true },
     }),
     db.opportunity.findMany({
       where: { orgId, stage: { in: [...OPEN_STAGES] } },
-      select: { lastInteractionAt: true },
+      select: { id: true, dealValue: true },
     }),
   ]);
 
-  const sumOf = (kinds: string[]) =>
-    attributions.filter((a) => kinds.includes(a.kind)).reduce((s, a) => s + a.amount, 0);
+  // Grouped by opportunity, so a deal counts once however many times it was
+  // worked.
+  const flagged = new Set(attributions.map((a) => a.opportunityId));
+
+  const wonFlagged = wonOpps.filter((o) => flagged.has(o.id));
+  const workedOpen = openWorked.filter((o) => flagged.has(o.id));
 
   const actedOn = recs.filter((r) => r.status === "COMPLETED");
   const responseDays = actedOn
@@ -470,12 +479,19 @@ export async function getImpactSummary(orgId: string): Promise<ImpactSummary> {
     .map((r) => (r.completedAt!.getTime() - r.createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
   return {
-    revenueRecovered: sumOf(["recovered", "saved"]),
-    pipelineInfluenced: sumOf(["influenced", "saved", "recovered", "meeting"]),
-    opportunitiesSaved: attributions.filter((a) => a.kind === "saved").length,
-    meetingsGenerated: attributions.filter((a) => a.kind === "meeting").length,
+    closedWonValue: wonOpps.reduce((s, o) => s + o.dealValue, 0),
     dealsWon: wonOpps.length,
-    wonValue: wonOpps.reduce((s, o) => s + o.dealValue, 0),
+    closedWonValueFlagged: wonFlagged.reduce((s, o) => s + o.dealValue, 0),
+    dealsWonFlagged: wonFlagged.length,
+
+    openPipelineWorked: workedOpen.reduce((s, o) => s + o.dealValue, 0),
+    dealsWorked: workedOpen.length,
+
+    // Distinct opportunities, not rows: booking two meetings on one deal is
+    // two meetings, but the same meeting recorded twice is not.
+    meetingsBooked: new Set(
+      attributions.filter((a) => a.kind === "meeting").map((a) => a.opportunityId)
+    ).size,
     recommendationsActedOn: actedOn.length,
     recommendationsShown: recs.length,
     followUpCoverage: recs.length
@@ -484,7 +500,8 @@ export async function getImpactSummary(orgId: string): Promise<ImpactSummary> {
     avgResponseDays: responseDays.length
       ? Math.round((responseDays.reduce((a, b) => a + b, 0) / responseDays.length) * 10) / 10
       : null,
+
     monthLabel: monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-    hasData: attributions.length > 0 || recs.length > 0 || respondedOpps.length > 0,
+    hasData: attributions.length > 0 || recs.length > 0 || wonOpps.length > 0,
   };
 }

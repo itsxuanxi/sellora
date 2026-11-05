@@ -118,7 +118,9 @@ function fallback(ctx: DraftContext): GeneratedDraft {
       ? "I said I would come back to you on this — are you still looking at it?"
       : ctx.rule === "quote_no_reply"
         ? "Did you get a chance to look at what I sent?"
-        : "Is this still something you are considering?";
+        : ctx.rule === "no_next_step"
+          ? "What would be a useful next step from here?"
+          : "Is this still something you are considering?";
 
   return {
     subject,

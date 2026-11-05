@@ -23,7 +23,9 @@ function baseLeakInput(overrides: Partial<LeakInput> = {}): LeakInput {
     proposalOpenedAt: null,
     lastOutboundAt: daysAgo(1),
     lastTouchAt: daysAgo(1),
-    neverReplied: false,
+    replyState: "they_replied_last",
+    daysSinceReply: 1,
+    outboundSinceLastReply: 0,
     signals: [],
     ...overrides,
   };
@@ -101,7 +103,9 @@ test("high intent with no reply is detected", () => {
   const leaks = detectLeaks(
     baseLeakInput({
       score: 80,
-      neverReplied: true,
+      replyState: "never_replied",
+      daysSinceReply: null,
+      outboundSinceLastReply: 3,
       lastOutboundAt: daysAgo(5),
       lastTouchAt: daysAgo(5),
       lastInteractionAt: daysAgo(5),
@@ -342,4 +346,64 @@ test("bigger companies skew to larger estimated deals", () => {
   const small = estimateDealValue({ icpMin: 10_000, icpMax: 30_000, companySize: "1-10" });
   const large = estimateDealValue({ icpMin: 10_000, icpMax: 30_000, companySize: "1000+" });
   assert.ok(large.dealValue > small.dealValue);
+});
+
+/**
+ * The regression that started the audit.
+ *
+ * Cloudmint's detail page showed a "Replied" entry in its timeline and, in
+ * the panel above it, "they have never replied to you". The leak rule took a
+ * boolean derived from the Email table alone, so a reply recorded anywhere
+ * else was invisible to it. Now the rule takes the reply *state*, and a deal
+ * that engaged and then went quiet must not be described as one that never
+ * engaged at all.
+ */
+test("a deal that replied and then went quiet is not called 'never replied'", () => {
+  const leaks = detectLeaks(
+    baseLeakInput({
+      score: 80,
+      replyState: "awaiting_reply",
+      daysSinceReply: 21,
+      outboundSinceLastReply: 2,
+      lastOutboundAt: daysAgo(5),
+      lastTouchAt: daysAgo(5),
+      lastInteractionAt: daysAgo(5),
+      signals: [
+        { signalType: "pricing_page_viewed", occurredAt: daysAgo(1), title: "Pricing viewed" },
+      ],
+    }),
+    NOW
+  );
+  const leak = leaks.find((l) => l.type === "high_intent_no_response");
+  assert.ok(leak, "the leak should still fire — they are silent now");
+  assert.ok(
+    !/never replied|not replied to anything/i.test(leak.summary),
+    `must not claim they never replied: ${leak.summary}`
+  );
+  assert.match(leak.summary, /gone quiet since their last reply/i);
+  assert.ok(
+    leak.evidence.some((e) => /Last replied 21 days ago/.test(e)),
+    `evidence should cite the real last reply: ${leak.evidence.join(" | ")}`
+  );
+});
+
+test("a deal with no outreach at all raises no silence leak", () => {
+  const leaks = detectLeaks(
+    baseLeakInput({
+      score: 80,
+      replyState: "no_outreach_yet",
+      daysSinceReply: null,
+      outboundSinceLastReply: 0,
+      lastOutboundAt: null,
+      lastTouchAt: null,
+      signals: [
+        { signalType: "pricing_page_viewed", occurredAt: daysAgo(1), title: "Pricing viewed" },
+      ],
+    }),
+    NOW
+  );
+  assert.ok(
+    !leaks.some((l) => l.type === "high_intent_no_response"),
+    "silence is not a finding when nothing was sent"
+  );
 });

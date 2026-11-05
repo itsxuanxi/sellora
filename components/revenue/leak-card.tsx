@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { likelihoodBand } from "@/lib/revenue/vocabulary";
 import { Button } from "@/components/ui/button";
 import { ACTION_LABELS, URGENCY_LABELS, type ActionType, type Urgency } from "@/lib/revenue/config";
 import { formatMoney } from "@/lib/revenue/money";
@@ -62,7 +63,7 @@ export function LeakCard({
               {formatMoney(opportunity.atRisk || opportunity.expectedValue, opportunity.currency)}
             </span>
             <span className="text-sm text-muted-foreground">
-              {leak ? "at risk" : "expected"}
+              {leak ? "est. at risk" : "est. expected"}
             </span>
             {leak && (
               <span className="text-xs text-muted-foreground">· {leak.category}</span>
@@ -129,7 +130,7 @@ export function LeakCard({
           )}
           <span>
             {formatMoney(opportunity.dealValue, opportunity.currency)} ·{" "}
-            {opportunity.winProbability}% likely
+{likelihoodBand(opportunity.winProbability).label}
           </span>
         </div>
 

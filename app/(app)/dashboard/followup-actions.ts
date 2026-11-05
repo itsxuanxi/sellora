@@ -10,6 +10,7 @@ import { isSimulated } from "@/lib/sandbox";
 import { recordAudit } from "@/lib/security/audit";
 import { generateFollowUpDraft } from "@/lib/followup/draft";
 import { decideSend } from "@/lib/followup/send-guard";
+import { RULE_ORDER, type FollowUpRule } from "@/lib/followup/rules";
 import { getFollowUps } from "@/lib/followup/queries";
 
 /**
@@ -25,7 +26,10 @@ function revalidate() {
   revalidatePath("/follow-ups");
 }
 
-const ruleSchema = z.enum(["quote_no_reply", "followup_due", "gone_quiet"]);
+// Derived from RULE_ORDER rather than listed again. A hand-written copy of
+// this union silently rejected a new rule the moment one was added, so the
+// card rendered and its buttons returned a validation error.
+const ruleSchema = z.enum(RULE_ORDER as [FollowUpRule, ...FollowUpRule[]]);
 
 /** Confirms the deal belongs to this workspace, and returns nothing else. */
 async function assertOwned(orgId: string, opportunityId: string): Promise<boolean> {
