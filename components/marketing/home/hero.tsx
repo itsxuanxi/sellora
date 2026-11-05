@@ -62,20 +62,25 @@ export function Hero() {
             <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
 
+          {/* Founder-led teams and lean sales teams are who we are chasing
+              first, so they are named. Not a restriction: nothing in the
+              product assumes SaaS, or a founder doing the selling. */}
           <p className="mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--mkt-brand-deep)]">
-            For marketing agencies
+            For founder-led and small B2B sales teams
           </p>
 
           <h1 className="mt-3.5 text-balance text-[2.4rem] font-medium leading-[1.03] tracking-[-0.028em] text-[var(--mkt-ink)] sm:text-[3.2rem] sm:leading-[1.01] sm:tracking-[-0.032em] lg:text-[3.5rem] xl:text-[3.9rem]">
-            Know what&rsquo;s blocking your
-            <span className="text-[var(--mkt-brand-deep)]"> proposals.</span>
+            Catch the deals slipping away after your
+            <span className="text-[var(--mkt-brand-deep)]"> demos and proposals.</span>
           </h1>
 
           <p className="mt-7 max-w-[30rem] text-pretty text-[17px] leading-[1.6] text-[var(--mkt-muted)]">
-            You spend money winning the lead and hours writing the proposal,
-            then lose sight of why it stalled. Selryn reads the thread and your
-            CRM, names what is actually in the way, and drafts the next
-            message. Nothing reaches a client without you approving it.
+            A demo goes well, the proposal goes out, and three weeks later
+            nobody remembers who owes whom a reply. Selryn reads your deals and
+            their email history, shows which ones have gone quiet and what the
+            records say about why, tells you who to follow up today, and tracks
+            what came back. It does not replace your CRM, and nothing reaches a
+            customer without you approving it.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">

@@ -15,6 +15,7 @@ import {
   OUTCOME_METRICS,
   SCENARIOS,
   stepDelays,
+  CAPABILITY_STATUS_HELP,
   TRUST_POINTS,
 } from "@/components/marketing/home/demo-data";
 
@@ -249,15 +250,24 @@ export function Scenarios({
             <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--mkt-muted)]">
               Integrations
             </h3>
+            {/* Three states, because there are three real situations. The
+                two-state version had to call a finished connector with no
+                credentials either "available" — offering a connection nobody
+                can make — or "planned", denying work that exists and is
+                tested. The honest middle is "needs setup". */}
             <ul className="mt-4 flex flex-wrap gap-2">
               {integrations.map((it) => (
                 <li key={it.name}>
                   <span
+                    title={CAPABILITY_STATUS_HELP[it.status]}
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px]",
-                      it.status === "available"
-                        ? "border border-[var(--mkt-line)] bg-[var(--mkt-surface)] text-[var(--mkt-ink)]"
-                        : "border border-dashed border-[var(--mkt-line)] text-[var(--mkt-muted)]"
+                      it.status === "available" &&
+                        "border border-[var(--mkt-line)] bg-[var(--mkt-surface)] text-[var(--mkt-ink)]",
+                      it.status === "needs_setup" &&
+                        "border border-[var(--mkt-line)] text-[var(--mkt-ink)]",
+                      it.status === "planned" &&
+                        "border border-dashed border-[var(--mkt-line)] text-[var(--mkt-muted)]"
                     )}
                   >
                     {it.status === "available" && (
@@ -266,10 +276,16 @@ export function Scenarios({
                         aria-hidden
                       />
                     )}
+                    {it.status === "needs_setup" && (
+                      <span
+                        className="size-1.5 rounded-full border border-[var(--mkt-success)]"
+                        aria-hidden
+                      />
+                    )}
                     {it.name}
-                    {it.status === "planned" && (
+                    {it.status !== "available" && (
                       <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--mkt-muted)]">
-                        planned
+                        {it.status === "needs_setup" ? "needs setup" : "planned"}
                       </span>
                     )}
                   </span>
@@ -277,8 +293,9 @@ export function Scenarios({
               ))}
             </ul>
             <p className="mt-3 text-[12px] leading-relaxed text-[var(--mkt-muted)]">
-              Solid rows connect today. Dashed rows are on the roadmap and not
-              yet available — we would rather say so than imply otherwise.
+              A filled dot works now with nothing to configure. A hollow dot is
+              built and tested but needs credentials or a connection first.
+              Dashed is not built — we would rather say so than imply otherwise.
             </p>
 
             <h3 className="mt-9 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--mkt-muted)]">

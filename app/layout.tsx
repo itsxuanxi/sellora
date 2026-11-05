@@ -25,15 +25,15 @@ const brandNarrow = Archivo_Narrow({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Selryn — Know what's blocking your proposals",
+    default: "Selryn — Catch deals slipping after demos and proposals",
     template: "%s · Selryn",
   },
   description:
-    "Follow-up for marketing agencies. Selryn reads your proposal threads and CRM, names what is actually blocking each deal, and drafts the next message. Nothing reaches a client without your approval.",
+    "Selryn helps small B2B teams catch deals slipping away after demos and proposals, decide the next follow-up, and track what happens. It reads your deals and their email history, shows the evidence behind every alert, and never sends anything without your approval.",
   openGraph: {
-    title: "Selryn — Know what's blocking your proposals",
+    title: "Selryn — Catch deals slipping after demos and proposals",
     description:
-      "Agencies spend money on leads and hours on proposals, then lose sight of why deals stall. Selryn names the blocker — an unanswered pricing question, an open scope point, a missed follow-up — and drafts the reply for you to approve.",
+      "A demo goes well, the proposal goes out, and weeks later nobody remembers who owes whom a reply. Selryn shows which deals have gone quiet and what the records say about why, tells you who to follow up today, and tracks what came back.",
     siteName: "Selryn",
   },
 };

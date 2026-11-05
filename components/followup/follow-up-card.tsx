@@ -21,6 +21,12 @@ import { formatMoney } from "@/lib/revenue/money";
 import { handleFollowUp } from "@/app/(app)/dashboard/followup-actions";
 import { DraftDialog } from "@/components/followup/draft-dialog";
 import type { EvidenceKind, FollowUpRule } from "@/lib/followup/rules";
+import {
+  BASIS_HELP,
+  BASIS_LABEL,
+  type RiskBasis,
+  type RiskKind,
+} from "@/lib/risk/kinds";
 import type { BlockerKind } from "@/lib/deal-facts/blockers";
 
 /**
@@ -43,6 +49,18 @@ export interface FollowUpCardData {
   because: string;
   /** Set when the evidence is old enough that the conclusion may be stale. */
   staleness: string | null;
+  /** The risk, in the product's one public vocabulary. */
+  risk: RiskKind;
+  /** Whether the claim is read off the records or reasoned from them. */
+  basis: RiskBasis;
+  /** True when another email is not the move — offer the call outline first. */
+  preferCall: boolean;
+  callOutline: {
+    objective: string;
+    context: string[];
+    ask: string;
+    close: string;
+  };
   lastActivityAt: string | null;
   evidence: {
     eventId: string;
@@ -126,6 +144,8 @@ export function FollowUpCard({
   tourAnchor?: string;
 }) {
   const [showEvidence, setShowEvidence] = useState(false);
+  // Open by default where the records say an email is the wrong next move.
+  const [showOutline, setShowOutline] = useState(item.preferCall);
   const [drafting, setDrafting] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -176,6 +196,23 @@ export function FollowUpCard({
               >
                 {BLOCKER_LABEL[item.blocker.kind]}
               </span>
+              {/* Whether this claim was read off the records or reasoned from
+                  them. An overdue date cannot be wrong unless the CRM is; an
+                  unanswered question depends on having understood a sentence
+                  and on having seen every reply. Showing both with the same
+                  confidence is how a tool teaches its user to discount all of
+                  it. */}
+              <span
+                title={BASIS_HELP[item.basis]}
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em]",
+                  item.basis === "observed"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                )}
+              >
+                {BASIS_LABEL[item.basis]}
+              </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {item.stage}
@@ -219,10 +256,54 @@ export function FollowUpCard({
           <span className="text-muted-foreground">{item.blocker.recommendedAction}</span>
         </p>
 
+        {/* The outline for a call, when another email is not the move.
+            Shown rather than hidden behind the draft button: on a thread that
+            has been one-way for three weeks, a fourth email is the thing the
+            seller should be talked out of. */}
+        {showOutline && (
+          <div className="mt-3 rounded-lg border border-border/70 bg-muted/40 p-3.5">
+            <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              If you call
+            </div>
+            <p className="mt-1.5 text-sm font-medium">{item.callOutline.objective}</p>
+            {item.callOutline.context.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {item.callOutline.context.map((line, i) => (
+                  <li key={i} className="text-[13px] leading-relaxed text-muted-foreground">
+                    · {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-[13px] leading-relaxed">
+              <span className="font-medium">Ask: </span>
+              <span className="text-muted-foreground">{item.callOutline.ask}</span>
+            </p>
+            <p className="mt-1 text-[13px] leading-relaxed">
+              <span className="font-medium">Before you hang up: </span>
+              <span className="text-muted-foreground">{item.callOutline.close}</span>
+            </p>
+          </div>
+        )}
+
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button size="sm" disabled={pending} onClick={() => setDrafting(true)}>
+          <Button
+            size="sm"
+            variant={item.preferCall ? "outline" : "default"}
+            disabled={pending}
+            onClick={() => setDrafting(true)}
+          >
             <Mail className="size-3.5" />
             {item.draftId ? "Open draft" : "Draft follow-up"}
+          </Button>
+          <Button
+            size="sm"
+            variant={item.preferCall ? "default" : "ghost"}
+            disabled={pending}
+            onClick={() => setShowOutline((v) => !v)}
+          >
+            <Phone className="size-3.5" />
+            {showOutline ? "Hide call outline" : "Call instead"}
           </Button>
           <Button
             size="sm"

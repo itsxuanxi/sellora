@@ -3,6 +3,17 @@ import { db } from "@/lib/db";
 import { OPEN_STAGES, STAGE_LABELS, type OpportunityStage } from "@/lib/revenue/config";
 import { identifyBlocker, type Blocker } from "@/lib/deal-facts/blockers";
 import { factsForOpportunities } from "@/lib/deal-facts/queries";
+import { riskFor } from "@/lib/risk/map";
+import { buildCallOutline, type CallOutline } from "@/lib/followup/call-outline";
+import { RISK_BASIS, type RiskBasis, type RiskKind } from "@/lib/risk/kinds";
+
+/**
+ * Days of one-way conversation after which a call beats another email.
+ *
+ * A judgement, not a measurement: nobody has calibrated it against reply
+ * rates. It is here as a named constant so it can be argued with.
+ */
+const CALL_AFTER_SILENT_DAYS = 21;
 import {
   DEFAULT_TIMING,
   buyerHasReplied,
@@ -108,6 +119,21 @@ export async function followUpTiming(orgId: string): Promise<FollowUpTiming> {
 
 export interface FollowUpListItem extends FollowUpItem {
   contact: { id: string; name: string; email: string } | null;
+  /**
+   * The risk this item represents, in the product's one public vocabulary.
+   *
+   * Derived here rather than in the component so Today, the deal page and the
+   * marketing copy cannot each pick a different word for the same situation.
+   */
+  risk: RiskKind;
+  /** Whether the claim is read off the records or reasoned from them. */
+  basis: RiskBasis;
+  /** Whether a call is the better opening move than an email. */
+  preferCall: boolean;
+  /** The outline to use if the seller calls instead. Always built — it costs
+   *  nothing, traces entirely to records, and the seller may prefer to call
+   *  on a deal where Selryn would have drafted. */
+  callOutline: CallOutline;
   /** An open draft for this deal, when one exists. */
   draftId: string | null;
   /**
@@ -237,6 +263,8 @@ export async function getFollowUps(
     // worked, and putting it on a list of problems would be noise.
     if (!blocker) continue;
 
+    const risk = riskFor({ blockerKind: blocker.kind, rule: reason?.rule ?? null });
+
     const newest = lastActivity?.occurredAt ?? null;
     const handledKey = reason?.rule ?? blocker.kind;
     if (isSuppressed(handledBy.get(`${opp.id}:${handledKey}`) ?? null, newest, now)) {
@@ -252,6 +280,36 @@ export async function getFollowUps(
       evidence: blocker.evidence,
       daysOverdue: reason?.daysOverdue ?? 0,
       staleness: reason?.staleness ?? null,
+      risk,
+      basis: RISK_BASIS[risk],
+      // A fourth unanswered email is not the move. When the thread has gone
+      // one-way for a while, or there is no email history to reply into, the
+      // outline for a call is the more useful thing to hand someone — so the
+      // card offers that instead of another draft.
+      preferCall:
+        facts.lastInbound == null &&
+        (reason?.rule === "gone_quiet" ||
+          (facts.dataAgeDays != null && facts.dataAgeDays >= CALL_AFTER_SILENT_DAYS)),
+      callOutline: buildCallOutline(
+        {
+          accountName: facts.accountName,
+          contactName: opp.primaryContact?.name ?? null,
+          risk,
+          rule: reason?.rule ?? null,
+          because: blocker.because,
+          // Only the blocker layer sees the extracted facts, and only a fact
+          // actually on record becomes a line in the outline.
+          openQuestion:
+            blocker.kind === "unanswered_pricing" || blocker.kind === "unclear_scope"
+              ? blocker.because
+              : null,
+          lastOutbound: facts.lastOutbound,
+          lastInbound: facts.lastInbound,
+          lastActivity: facts.lastActivity,
+          nextStepDueAt: facts.nextStepDueAt,
+        },
+        now
+      ),
       blocker,
       opportunityId: opp.id,
       accountName: facts.accountName,

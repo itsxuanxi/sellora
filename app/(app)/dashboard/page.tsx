@@ -9,20 +9,31 @@ import { getFollowUps } from "@/lib/followup/queries";
 import { TOP_FOLLOW_UPS } from "@/lib/followup/rules";
 import { FollowUpCard } from "@/components/followup/follow-up-card";
 import { FollowUpList } from "@/components/followup/follow-up-list";
+import { RiskSummary } from "@/components/followup/risk-summary";
+import { summarizeRisks } from "@/lib/risk/map";
 
 export const metadata = { title: "Today" };
 
 /**
- * Today's follow-ups — the workbench.
+ * Today — the product's entry point.
  *
- * One question: which deals need me today, and why? The page leads with three
- * because a list of forty is a list nobody works; the rest are one click away
- * rather than hidden. Every row carries the reason and the records behind it,
- * and the work — draft, edit, send — happens here rather than three screens in.
+ * One question: which deals need me now, why, and what do I do about it? The
+ * band at the top is detection (how much is on fire); the list below it is the
+ * decision (what to do first). They are on one screen deliberately: a count of
+ * problems with no list is an anxiety generator, and a list with no count
+ * leaves the reader unsure whether they are looking at all of it.
  *
- * There is no forecast on this page. Nothing is ranked by a win probability
- * Selryn estimated, because a seller cannot argue with a number we invented.
- * See lib/followup/rules.ts.
+ * The page leads with three cards because a list of forty is a list nobody
+ * works; the rest are one click away rather than hidden. Every card carries
+ * the reason, the records behind it, how old those records are, and the work
+ * itself — draft, edit, send, or an outline to call from.
+ *
+ * There is no forecast here. Nothing is ranked by a win probability Selryn
+ * estimated, because a seller cannot argue with a number we invented, and
+ * nothing is ranked by deal value alone. Ordering comes from the rules in
+ * lib/followup/rules.ts: a missed commitment, then an unanswered question,
+ * then a silent proposal, then a deal with no agreed next step, then dormancy
+ * — with opportunity value breaking ties and data freshness disclosed.
  */
 export default async function TodayPage() {
   const session = await requireSession();
@@ -38,8 +49,8 @@ export default async function TodayPage() {
 
   const header = (
     <PageHeader
-      title="What's blocking your proposals"
-      description="Open proposals with something specific in the way, the records behind it, and one thing to do next. Ordered by what you can act on today."
+      title="Today"
+      description="Deals slipping after a demo or proposal, why each needs you now, and the next follow-up to make. Ordered by what you can act on today — not by deal size."
     />
   );
 
@@ -50,11 +61,14 @@ export default async function TodayPage() {
         {header}
         <EmptyState
           icon={Plug}
-          title="Connect your CRM to see what's blocking your proposals"
-          description="Selryn reads your deals and their email history from HubSpot, then shows what is actually in the way of each one — an unanswered pricing question, an open scope point, a missed follow-up — with the emails behind it."
+          title="Bring your deals in to see what is slipping"
+          description="Selryn reads your open deals and their email history, then shows which ones have gone quiet after a demo or proposal — an unanswered pricing question, a meeting with no next step, a follow-up date that passed — with the records behind each one. Import a spreadsheet to start, or connect a CRM."
         >
           <Button asChild>
-            <Link href="/intent">Connect HubSpot</Link>
+            <Link href="/opportunities/import">Import a spreadsheet</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/integrations">Connect a CRM</Link>
           </Button>
         </EmptyState>
       </>
@@ -68,7 +82,7 @@ export default async function TodayPage() {
         {header}
         <EmptyState
           icon={CheckCircle2}
-          title="Nothing is blocked today"
+          title="Nothing needs you today"
           description={
             opportunityCount === 0
               ? "No open deals have synced yet. Once your CRM has deals with activity, the ones that go quiet will appear here."
@@ -96,6 +110,8 @@ export default async function TodayPage() {
   return (
     <>
       {header}
+
+      <RiskSummary risks={summarizeRisks(items)} total={opportunityCount} />
 
       <section aria-label="Start here" className="space-y-4">
         <h2 className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">

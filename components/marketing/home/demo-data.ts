@@ -276,7 +276,33 @@ export type IntegrationKey =
   | "gmail"
   | "calendar";
 
-export type CapabilityStatus = "available" | "planned";
+/**
+ * What a visitor can actually do with a feature today.
+ *
+ * Three states, not two. The missing middle was doing real damage: a finished
+ * HubSpot connector with no OAuth app registered for this deployment had to be
+ * called either "available", which offers a connection nobody can make, or
+ * "planned", which denies months of shipped work. Neither is what a buyer
+ * asked — they asked "can I use this?", and the true answer for that case is
+ * "yes, once it is configured".
+ *
+ *   available    works now, nothing to set up
+ *   needs_setup  built and tested; needs credentials or a connection first
+ *   planned      not built. Never shown as though it were.
+ */
+export type CapabilityStatus = "available" | "needs_setup" | "planned";
+
+export const CAPABILITY_STATUS_LABEL: Record<CapabilityStatus, string> = {
+  available: "Available",
+  needs_setup: "Needs setup",
+  planned: "Planned",
+};
+
+export const CAPABILITY_STATUS_HELP: Record<CapabilityStatus, string> = {
+  available: "Works now, with nothing to configure.",
+  needs_setup: "Built and tested. Needs credentials or a connection before you can use it.",
+  planned: "Not built yet. Listed so you know what is and is not here.",
+};
 
 /**
  * The integration catalog.

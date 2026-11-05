@@ -25,7 +25,7 @@ import { rescoreOpportunity } from "@/lib/revenue/opportunities";
  */
 
 function revalidateRevenue(opportunityId: string) {
-  for (const path of ["/dashboard", "/opportunities", "/actions", "/impact"]) {
+  for (const path of ["/dashboard", "/opportunities", "/outcomes"]) {
     revalidatePath(path);
   }
   revalidatePath(`/opportunities/${opportunityId}`);

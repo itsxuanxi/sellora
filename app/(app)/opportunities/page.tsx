@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Upload } from "lucide-react";
+import { Archive, Upload } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { cn } from "@/lib/utils";
 import { requireSession } from "@/lib/auth";
@@ -113,6 +113,15 @@ export default async function OpportunitiesPage({
           <Link href="/opportunities/import">
             <Upload className="size-3.5" />
             Import
+          </Link>
+        </Button>
+        {/* Overlooked lost its nav slot but not its page: reopening dormant
+            deals is a real job with eligibility rules behind it, just a
+            weekly one rather than part of working today's list. */}
+        <Button asChild variant="outline" size="sm">
+          <Link href="/recovery">
+            <Archive className="size-3.5" />
+            Overlooked
           </Link>
         </Button>
         <RefreshIntelligenceButton action={refreshRevenueIntelligence} />

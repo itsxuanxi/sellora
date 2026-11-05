@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Briefcase,
-  CheckSquare,
   LayoutDashboard,
   Plug,
   Settings,
@@ -23,7 +22,11 @@ import { cn } from "@/lib/utils";
  * will see the moment they sign in.
  */
 
-import { NAV_DESTINATIONS, type NavDestination } from "@/lib/nav";
+import {
+  NAV_DESTINATIONS,
+  NAV_SUPPORTING,
+  type NavDestination,
+} from "@/lib/nav";
 
 export interface NavItem extends NavDestination {
   icon: typeof LayoutDashboard;
@@ -32,17 +35,22 @@ export interface NavItem extends NavDestination {
 const ICONS: Record<string, typeof LayoutDashboard> = {
   Today: LayoutDashboard,
   Deals: Briefcase,
-  Actions: CheckSquare,
-  Impact: BarChart3,
+  Outcomes: BarChart3,
   Integrations: Plug,
   Settings,
 };
 
-/** The rendered navigation. Order and destinations come from lib/nav.ts. */
-export const primaryNav: NavItem[] = NAV_DESTINATIONS.map((d) => ({
-  ...d,
-  icon: ICONS[d.name] ?? LayoutDashboard,
-}));
+const withIcons = (items: NavDestination[]): NavItem[] =>
+  items.map((d) => ({ ...d, icon: ICONS[d.name] ?? LayoutDashboard }));
+
+/** The three capabilities. Order and destinations come from lib/nav.ts. */
+export const primaryNav: NavItem[] = withIcons(NAV_DESTINATIONS);
+
+/** Infrastructure, below a divider. */
+export const supportingNav: NavItem[] = withIcons(NAV_SUPPORTING);
+
+/** Both groups, for anything that needs to resolve any nav href. */
+export const allNav: NavItem[] = [...primaryNav, ...supportingNav];
 
 /** How a surface answers "where does this item go, and is it live here?" */
 export type NavResolver = (item: NavItem) => {
@@ -111,6 +119,22 @@ export function SidebarNav({
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4">
       {primaryNav.map((item) => (
+        <NavLink
+          key={item.name}
+          item={item}
+          onNavigate={onNavigate}
+          pathname={pathname}
+          resolve={resolve}
+        />
+      ))}
+
+      {/* Infrastructure sits below a divider rather than alongside the three
+          capabilities. Where the data comes from matters enormously and is
+          not a thing anyone opens daily; mixing it into the same list made
+          the rail read as five equal features. */}
+      <div className="my-2 border-t border-border/60" />
+
+      {supportingNav.map((item) => (
         <NavLink
           key={item.name}
           item={item}

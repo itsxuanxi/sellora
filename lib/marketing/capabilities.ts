@@ -64,10 +64,34 @@ export interface IntegrationClaim {
   status: CapabilityStatus;
 }
 
-/** The integration list as this deployment may honestly present it. */
+/**
+ * The integration list as this deployment may honestly present it.
+ *
+ * Three outcomes, because there are three real situations. The two-state
+ * version collapsed the middle one and had to lie in one direction or the
+ * other: a finished connector with no credentials was reported as "planned",
+ * which denied work that exists and is tested, and the alternative would have
+ * been to advertise a connection that errors on click.
+ *
+ * `built` is a fact about the codebase; `isUsableHere` is a fact about this
+ * deployment. Both true means available. Built but not usable is the honest
+ * middle: it exists, and someone has to set it up. Not built is planned, and
+ * nothing moves it until the code does.
+ */
 export function integrationClaims(): IntegrationClaim[] {
   return INTEGRATION_CATALOG.map(({ key, name, built }) => ({
     name,
-    status: built && isUsableHere(key) ? "available" : "planned",
+    status: !built ? "planned" : isUsableHere(key) ? "available" : "needs_setup",
   }));
+}
+
+/** Grouped for display, in the order a reader cares about. */
+export function groupedIntegrationClaims(): {
+  status: CapabilityStatus;
+  items: IntegrationClaim[];
+}[] {
+  const claims = integrationClaims();
+  return (["available", "needs_setup", "planned"] as CapabilityStatus[])
+    .map((status) => ({ status, items: claims.filter((c) => c.status === status) }))
+    .filter((g) => g.items.length > 0);
 }

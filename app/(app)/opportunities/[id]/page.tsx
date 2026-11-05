@@ -21,6 +21,14 @@ import { formatMoney } from "@/lib/revenue/money";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
 import { OpportunityScore, ConfidenceNote, ScoreBreakdown, WhyNow } from "@/components/revenue/score";
 import { findContradiction, insufficientEvidence } from "@/lib/revenue/contradiction";
+import { riskFromLeak } from "@/lib/risk/map";
+import {
+  BASIS_HELP,
+  BASIS_LABEL,
+  RISK_BASIS,
+  RISK_LABEL,
+  type RiskBasis,
+} from "@/lib/risk/kinds";
 import {
   ATTRIBUTION_CAVEAT,
   REVENUE_VOCABULARY,
@@ -41,6 +49,24 @@ import { can } from "@/lib/security/rbac";
 import type { OpportunityStage } from "@/lib/revenue/config";
 import { StagePill } from "@/app/(app)/opportunities/page";
 import { OpportunityControls } from "@/components/revenue/opportunity-controls";
+
+/**
+ * The leak's name and basis in the product's public vocabulary.
+ *
+ * `leak.category` is the internal section heading from lib/revenue/config.ts
+ * and it does not match what Today calls the same situation. Mapping here
+ * means a deal described as "Awaiting response" on Today is described the same
+ * way on its own page.
+ */
+function riskLabelFor(leakType: string): string | null {
+  const kind = riskFromLeak(leakType);
+  return kind ? RISK_LABEL[kind] : null;
+}
+
+function riskBasisFor(leakType: string): RiskBasis | null {
+  const kind = riskFromLeak(leakType);
+  return kind ? RISK_BASIS[kind] : null;
+}
 
 export const metadata = { title: "Deal" };
 
@@ -505,7 +531,7 @@ export default async function OpportunityDetailPage({
 
           {/* ── All detected leaks ── */}
           {enriched.leaks.length > 0 && (
-            <Section title="Detected leaks">
+            <Section title="Detected risks">
               <ul className="space-y-3">
                 {enriched.leaks.map((leak, i) => (
                   <li key={i} className="rounded-xl border border-border/60 p-3.5">
@@ -521,10 +547,30 @@ export default async function OpportunityDetailPage({
                         )}
                         aria-hidden
                       />
-                      <span className="text-sm font-medium">{leak.category}</span>
+                      <span className="text-sm font-medium">
+                        {riskLabelFor(leak.type) ?? leak.category}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         open {leak.ageDays} day{leak.ageDays === 1 ? "" : "s"}
                       </span>
+                      {/* Read off the records, or reasoned from them. The
+                          difference is the difference between "this date
+                          passed" and "nobody answered their question", and a
+                          reader who cannot tell them apart ends up trusting
+                          neither. */}
+                      {riskBasisFor(leak.type) && (
+                        <span
+                          title={BASIS_HELP[riskBasisFor(leak.type)!]}
+                          className={cn(
+                            "rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em]",
+                            riskBasisFor(leak.type) === "observed"
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                          )}
+                        >
+                          {BASIS_LABEL[riskBasisFor(leak.type)!]}
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{leak.summary}</p>
                     {leak.evidence.length > 0 && (
