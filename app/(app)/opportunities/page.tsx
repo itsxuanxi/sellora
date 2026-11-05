@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Upload } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { cn } from "@/lib/utils";
 import { requireSession } from "@/lib/auth";
@@ -8,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { OPEN_STAGES, STAGE_LABELS, type OpportunityStage } from "@/lib/revenue/config";
 import { formatMoney, formatMoneyCompact } from "@/lib/revenue/money";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
+import { db } from "@/lib/db";
+import { IMPORT_SOURCE } from "@/lib/import/apply";
+import { describeImportFreshness } from "@/lib/import/freshness";
 import { RefreshIntelligenceButton } from "@/components/revenue/recommendation-actions";
 import { refreshRevenueIntelligence } from "@/app/(app)/opportunities/actions";
 
@@ -51,7 +55,15 @@ export default async function OpportunitiesPage({
   const { filter: rawFilter } = await searchParams;
   const filter = (FILTERS.find((f) => f.key === rawFilter)?.key ?? "all") as Filter;
 
-  const all = await loadEnrichedOpportunities(session.orgId);
+  const [all, lastImport] = await Promise.all([
+    loadEnrichedOpportunities(session.orgId),
+    db.revenueEvent.findFirst({
+      where: { orgId: session.orgId, source: IMPORT_SOURCE },
+      orderBy: { receivedAt: "desc" },
+      select: { receivedAt: true },
+    }),
+  ]);
+  const freshness = describeImportFreshness(lastImport?.receivedAt ?? null);
   const hubspotReady = isHubspotConfigured() && isEncryptionConfigured();
 
   const advancedSince = Date.now() - ADVANCED_WITHIN_DAYS * 86_400_000;
@@ -96,6 +108,12 @@ export default async function OpportunitiesPage({
         title="Deals"
         description="Every deal, ranked by expected revenue — deal value × likelihood of closing."
       >
+        <Button asChild variant="outline" size="sm">
+          <Link href="/opportunities/import">
+            <Upload className="size-3.5" />
+            Import
+          </Link>
+        </Button>
         <RefreshIntelligenceButton action={refreshRevenueIntelligence} />
       </PageHeader>
 
@@ -119,6 +137,23 @@ export default async function OpportunitiesPage({
               </Link>
             ))}
           </div>
+
+          {/* Imported data ages, and nothing else on this page would say so. */}
+          {freshness.level !== "none" && freshness.level !== "fresh" && (
+            <p
+              className={cn(
+                "mb-5 rounded-xl border px-4 py-3 text-[13px] leading-relaxed",
+                freshness.level === "very_stale"
+                  ? "border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                  : "border-border/70 bg-muted/30 text-muted-foreground"
+              )}
+            >
+              {freshness.label}{" "}
+              <Link href="/opportunities/import" className="font-medium text-primary hover:underline">
+                Import again
+              </Link>
+            </p>
+          )}
 
           <div className="mb-5 flex flex-wrap gap-x-8 gap-y-2 rounded-xl border border-border/70 bg-card px-5 py-4">
             <Metric label="Opportunities" value={String(filtered.length)} />
@@ -337,14 +372,17 @@ function PipelineOnboarding({
         />
 
         <OnboardingOption
-          title="Import a CSV"
-          // Deliberately not "upload your pipeline": the importer takes
-          // companies and the signals against them, and opportunities are
-          // created from those on purpose rather than automatically.
-          body="Upload companies and the buying signals you already have, and start scoring them immediately."
-          status="ready"
-          href="/intent"
-          cta="Import data"
+          title="Import a spreadsheet"
+          body="Upload your open deals — company, stage, value, last contact and next step. Re-importing the same file updates them rather than creating duplicates."
+          status={sandbox ? "unavailable" : "ready"}
+          statusLabel={sandbox ? "Real workspace only" : undefined}
+          href="/opportunities/import"
+          cta="Import deals"
+          note={
+            sandbox
+              ? "Sample workspaces cannot import a real pipeline."
+              : "A template is provided, and every rejected row is reported with its line number."
+          }
         />
 
         <OnboardingOption

@@ -135,9 +135,8 @@ function OtpSignIn() {
           <span className="font-mono text-sm font-semibold tracking-widest">
             {devCode}
           </span>
-          . Set <code className="font-mono">RESEND_API_KEY</code> (email) or{" "}
-          <code className="font-mono">TWILIO_*</code> (SMS) in .env to deliver
-          codes for real.
+          . Codes are shown here because no delivery service is configured on
+          this deployment.
         </div>
       )}
       <div className="space-y-1.5">

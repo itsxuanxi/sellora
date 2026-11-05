@@ -1,5 +1,6 @@
 import type { DetectedSignal, SignalProvider } from "@/lib/intent/providers/types";
 import { SIGNAL_TYPES, type SignalType } from "@/lib/intent/config";
+import { splitCsvLine } from "@/lib/import/csv";
 
 export const csvProvider: SignalProvider = {
   key: "csv_import",
@@ -19,34 +20,6 @@ export interface CsvParseResult {
 
 const REQUIRED_HEADERS = ["company", "signal_type", "title", "occurred_at"] as const;
 
-/** Minimal RFC-4180-ish CSV line splitter — handles quoted fields with commas. */
-function splitCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        cur += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      out.push(cur);
-      cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  out.push(cur);
-  return out.map((s) => s.trim());
-}
 
 /**
  * Expected columns (header row required, any order):

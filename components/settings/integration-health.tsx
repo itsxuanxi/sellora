@@ -119,16 +119,30 @@ export function IntegrationHealthPanel({
           ))}
       </div>
 
+      {/* Deployment configuration is an administrator's problem, so only an
+          administrator is shown it. A salesperson reading "set
+          HUBSPOT_CLIENT_ID" learns nothing they can act on and is told more
+          about the deployment than they need. */}
       {!hubspotConfigured && (
         <p className="mt-4 rounded-xl border border-dashed border-border bg-muted/30 p-4 text-xs leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">
-            HubSpot is not configured on this deployment.
-          </span>{" "}
-          Set <code className="rounded bg-muted px-1">HUBSPOT_CLIENT_ID</code>,{" "}
-          <code className="rounded bg-muted px-1">HUBSPOT_CLIENT_SECRET</code> and{" "}
-          <code className="rounded bg-muted px-1">ENCRYPTION_KEY</code>, then
-          restart. Until then Selryn runs on imported and demo data only, and
-          says so everywhere it does.
+          {canManage ? (
+            <>
+              <span className="font-medium text-foreground">
+                HubSpot is not set up on this deployment yet.
+              </span>{" "}
+              It needs its API credentials and an encryption key configured on
+              the server before the connection can be offered. Until then
+              Selryn runs on imported data only, and says so everywhere it does.
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-foreground">
+                HubSpot is not available yet.
+              </span>{" "}
+              Your workspace administrator can set it up. In the meantime you
+              can import your pipeline from a spreadsheet.
+            </>
+          )}
         </p>
       )}
 

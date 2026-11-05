@@ -21,6 +21,7 @@ const ROOTS = [
   path.join(process.cwd(), "lib", "followup"),
   path.join(process.cwd(), "lib", "deal-facts"),
   path.join(process.cwd(), "lib", "recovery"),
+  path.join(process.cwd(), "lib", "import"),
   path.join(process.cwd(), "app", "(app)", "dashboard"),
   path.join(process.cwd(), "app", "(app)", "opportunities"),
 ];

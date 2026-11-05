@@ -21,6 +21,9 @@ export type EventSource =
   | "gmail"
   | "google_calendar"
   | "website_sdk"
+  // A pipeline the customer uploaded themselves. Distinct from "manual" so
+  // the UI can say where a deal came from and when the file was loaded.
+  | "csv_import"
   | "manual"
   | "demo";
 

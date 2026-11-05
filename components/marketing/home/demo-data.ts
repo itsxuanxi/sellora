@@ -301,7 +301,7 @@ export const INTEGRATION_CATALOG: {
   name: string;
   built: boolean;
 }[] = [
-  { key: "csv", name: "CSV signal import", built: true },
+  { key: "csv", name: "CSV import (deals and signals)", built: true },
   { key: "google_signin", name: "Google sign-in", built: true },
   { key: "outbound_email", name: "Outbound email", built: true },
   { key: "hubspot", name: "HubSpot", built: true },
