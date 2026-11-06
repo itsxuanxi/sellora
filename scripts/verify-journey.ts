@@ -10,6 +10,20 @@ import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
 import { findContradiction } from "@/lib/revenue/contradiction";
 import { getImpactSummary } from "@/lib/revenue/queries";
 
+/**
+ * The main journey, end to end, on synthetic data.
+ *
+ * Run: NODE_OPTIONS="--conditions=react-server" npx tsx scripts/verify-journey.ts
+ *
+ * Kept as a script rather than folded into the unit suite because it needs a
+ * real database and writes a throwaway workspace, which it deletes. It exists
+ * because every step here was individually tested and the sequence still had
+ * four bugs in it — the seams between the layers were where the product was
+ * broken, and only a pass through all of them found that.
+ *
+ * Deliberately messy input: a duplicate id, an unreadable amount, a missing
+ * amount, a missing next step, a 70-day-stale deal, a second contact.
+ */
 const db = new PrismaClient();
 const MARK = `journey-${Date.now()}`;
 let failures = 0;
