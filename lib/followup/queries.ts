@@ -4,6 +4,8 @@ import { OPEN_STAGES, STAGE_LABELS, type OpportunityStage } from "@/lib/revenue/
 import { identifyBlocker, type Blocker } from "@/lib/deal-facts/blockers";
 import { factsForOpportunities } from "@/lib/deal-facts/queries";
 import { riskFor } from "@/lib/risk/map";
+import { loadFactsForOpportunities } from "@/lib/revenue/facts-load";
+import type { FactSource } from "@/lib/revenue/facts";
 import { buildCallOutline, type CallOutline } from "@/lib/followup/call-outline";
 import { RISK_BASIS, type RiskBasis, type RiskKind } from "@/lib/risk/kinds";
 
@@ -17,6 +19,7 @@ const CALL_AFTER_SILENT_DAYS = 21;
 import {
   DEFAULT_TIMING,
   buyerHasReplied,
+  describeStaleness,
   evaluateFollowUp,
   isSuppressed,
   rankFollowUps,
@@ -117,6 +120,37 @@ export async function followUpTiming(orgId: string): Promise<FollowUpTiming> {
   };
 }
 
+/**
+ * An `EvidenceRef` for something the shared facts saw and the event log did
+ * not — a reply recorded by the outcome tracker, say.
+ *
+ * `eventId` is prefixed rather than left blank: these ids do not resolve
+ * through `getEvidence`, which queries RevenueEvent, and a blank one would
+ * look like a row that failed to load instead of one that lives elsewhere.
+ */
+function refFromFacts(
+  at: Date | null,
+  kind: EvidenceKind,
+  via: FactSource | null,
+  summary: string | null
+): EvidenceRef | null {
+  if (!at) return null;
+  return {
+    eventId: `facts:${via ?? "unknown"}:${at.getTime()}`,
+    source: via ?? "selryn",
+    sourceEventId: "",
+    kind,
+    occurredAt: at,
+    summary: summary ?? "",
+  };
+}
+
+function newerOf(a: EvidenceRef | null, b: EvidenceRef | null): EvidenceRef | null {
+  if (!a) return b;
+  if (!b) return a;
+  return b.occurredAt > a.occurredAt ? b : a;
+}
+
 export interface FollowUpListItem extends FollowUpItem {
   contact: { id: string; name: string; email: string } | null;
   /**
@@ -156,6 +190,8 @@ export async function getFollowUps(
       where: { orgId, stage: { in: [...OPEN_STAGES] } },
       select: {
         id: true,
+        accountId: true,
+        lastInteractionAt: true,
         stage: true,
         dealValue: true,
         dealValueBasis: true,
@@ -171,7 +207,7 @@ export async function getFollowUps(
 
   const ids = opportunities.map((o) => o.id);
 
-  const [events, handled, drafts, factsByOpportunity] = await Promise.all([
+  const [events, handled, drafts, factsByOpportunity, sharedFacts] = await Promise.all([
     db.revenueEvent.findMany({
       where: { orgId, opportunityId: { in: ids } },
       orderBy: { occurredAt: "desc" },
@@ -202,6 +238,10 @@ export async function getFollowUps(
       select: { id: true, opportunityId: true },
     }),
     factsForOpportunities(orgId, ids),
+    loadFactsForOpportunities(
+      orgId,
+      opportunities.map((o) => ({ id: o.id, accountId: o.accountId }))
+    ),
   ]);
 
   const byOpportunity = new Map<string, EventRow[]>();
@@ -223,9 +263,46 @@ export async function getFollowUps(
     const rows = byOpportunity.get(opp.id) ?? [];
     const evidence = rows.map(toEvidence).filter((e): e is EvidenceRef => e !== null);
 
-    const lastOutbound = evidence.find((e) => e.kind === "email_outbound") ?? null;
-    const lastInbound = evidence.find((e) => e.kind === "email_inbound") ?? null;
-    const lastActivity = evidence[0] ?? null;
+    // Reply and activity facts come from the one shared derivation.
+    //
+    // This list used to read them off the RevenueEvent rows above and nothing
+    // else — a fourth derivation of "have they replied?", after the three
+    // that lib/revenue/facts.ts replaced. It was the worst place for one to
+    // survive: a reply recorded by the outcome tracker rather than the event
+    // log left Today telling a seller to chase a thread the buyer had already
+    // answered, on the product's main screen.
+    //
+    // The event rows are still used for the evidence panel, because they are
+    // the records with ids that `getEvidence` can resolve. What changed is
+    // that the *claim* no longer comes from a subset of the sources.
+    const shared = sharedFacts.get(opp.id) ?? null;
+    const eventOutbound = evidence.find((e) => e.kind === "email_outbound") ?? null;
+    const eventInbound = evidence.find((e) => e.kind === "email_inbound") ?? null;
+
+    // The deal's own "last contacted" field, as a last resort.
+    //
+    // A workspace whose only data is a spreadsheet import has no activity
+    // *records* at all — the importer writes provenance events, not emails —
+    // so every rule that needs `lastActivity` found nothing and Today came up
+    // empty straight after the primary onboarding path. The CRM field is a
+    // real stored date and a perfectly good basis for "nothing has happened
+    // for 70 days"; what it lacks is an individual record to click through
+    // to, which the evidence panel already says plainly.
+    const crmTouch: EvidenceRef | null = opp.lastInteractionAt
+      ? {
+          eventId: `crm:${opp.id}`,
+          source: "crm_field",
+          sourceEventId: "",
+          kind: "crm_field",
+          occurredAt: opp.lastInteractionAt,
+          summary: "Last contacted, from the deal record",
+        }
+      : null;
+
+    const lastOutbound = newerOf(eventOutbound, refFromFacts(shared?.lastOutboundAt ?? null, "email_outbound", shared?.lastOutboundVia ?? null, shared?.lastOutboundSummary ?? null));
+    const lastInbound = newerOf(eventInbound, refFromFacts(shared?.lastReplyAt ?? null, "email_inbound", shared?.lastReplyVia ?? null, null));
+    const lastActivity =
+      newerOf(newerOf(newerOf(evidence[0] ?? null, lastInbound), lastOutbound), crmTouch);
 
     const facts: DealFacts = {
       opportunityId: opp.id,
@@ -239,7 +316,11 @@ export async function getFollowUps(
       lastOutbound,
       lastInbound,
       lastActivity,
-      quoteSent: QUOTING_STAGES.has(opp.stage) ? lastOutbound : null,
+      // With no email record, the deal's own last-contacted date is what the
+      // quote rule has to work from. It is weaker evidence and the card says
+      // so — but refusing to raise a silent proposal because the proposal
+      // itself was not sent through Selryn is the wrong trade.
+      quoteSent: QUOTING_STAGES.has(opp.stage) ? (lastOutbound ?? crmTouch) : null,
       nextStepDueAt: opp.nextStepDueAt,
       nextStepEvidence: null,
       // How old the evidence is, so a reason can disclose it rather than
@@ -258,6 +339,7 @@ export async function getFollowUps(
       evidenceById: new Map(evidence.map((e) => [e.eventId, e])),
       silenceReason: reason,
       buyerReplied: buyerHasReplied(facts),
+      hasExtractedFacts: Object.keys(factsByOpportunity.get(opp.id) ?? {}).length > 0,
     });
     // No blocker means nothing specific is wrong — the deal is simply being
     // worked, and putting it on a list of problems would be noise.
@@ -279,7 +361,11 @@ export async function getFollowUps(
       because: blocker.because,
       evidence: blocker.evidence,
       daysOverdue: reason?.daysOverdue ?? 0,
-      staleness: reason?.staleness ?? null,
+      // Read from the facts, not from the reason. An item can reach this list
+      // on a blocker alone, with no silence rule behind it, and those items
+      // were shipping with no freshness caveat at all — including a deal
+      // whose newest record was seventy days old.
+      staleness: reason?.staleness ?? describeStaleness(facts),
       risk,
       basis: RISK_BASIS[risk],
       // A fourth unanswered email is not the move. When the thread has gone

@@ -231,8 +231,26 @@ export async function rescoreOpportunity(
         winProbability: result.winProbability,
         whyNow: result.whyNow.join("\n"),
         scoredAt: new Date(),
-        lastInteractionAt: evidence.lastInteractionAt,
-        lastInteractionKind: evidence.lastInteractionKind,
+        // Never overwrite a stored date with nothing.
+        //
+        // `evidence.lastInteractionAt` is derived from activity *records* —
+        // emails, events, responses, signals. A deal imported from a
+        // spreadsheet has none of those: it has a `last_contacted` column the
+        // customer filled in, which lands in exactly this field. Writing the
+        // derived value unconditionally erased it, so rescoring a freshly
+        // imported pipeline silently deleted the only date it had, and every
+        // rule that needs a last-contact date then found nothing. Today came
+        // up empty straight after the primary onboarding path.
+        //
+        // Takes the newer of the two instead: real activity supersedes the
+        // imported field, and the absence of activity supersedes nothing.
+        ...(evidence.lastInteractionAt &&
+        (!opp.lastInteractionAt || evidence.lastInteractionAt > opp.lastInteractionAt)
+          ? {
+              lastInteractionAt: evidence.lastInteractionAt,
+              lastInteractionKind: evidence.lastInteractionKind,
+            }
+          : {}),
       },
     }),
   ]);

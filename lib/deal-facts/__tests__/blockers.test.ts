@@ -65,6 +65,9 @@ function identify(over: Partial<Parameters<typeof identifyBlocker>[0]> = {}) {
     evidenceById: new Map(),
     silenceReason: null,
     buyerReplied: false,
+    // Most cases here are about what a recorded fact implies, so extraction
+    // is assumed to have run. The case where it has not is tested explicitly.
+    hasExtractedFacts: true,
     ...over,
   });
 }
@@ -255,4 +258,28 @@ test("an old fact is marked stale rather than quietly trusted", () => {
   assert.equal(isStale(fact({ kind: "budget", value: "x", lastVerifiedAt: day(3) }), NOW), false);
   // Never verified is not the same as stale.
   assert.equal(isStale(fact({ kind: "budget", value: "x", lastVerifiedAt: null }), NOW), false);
+});
+
+test("a missing decision-maker is not a finding until extraction has looked", () => {
+  // The absence of a `decision_maker` fact is the default state of every deal
+  // Selryn has not read. Treating it as information made the rule fire on
+  // every open proposal in the workspace, which filled Today with one generic
+  // complaint and crowded out the specific ones.
+  const withoutExtraction = identify({
+    deal: deal({ stageKey: "PROPOSAL" }),
+    facts: {},
+    hasExtractedFacts: false,
+  });
+  assert.notEqual(
+    withoutExtraction?.kind,
+    "missing_decision_maker",
+    "silence from a deal nobody has read is not evidence about the deal"
+  );
+
+  const withExtraction = identify({
+    deal: deal({ stageKey: "PROPOSAL" }),
+    facts: {},
+    hasExtractedFacts: true,
+  });
+  assert.equal(withExtraction?.kind, "missing_decision_maker");
 });

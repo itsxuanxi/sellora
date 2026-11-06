@@ -137,23 +137,33 @@ export async function OutcomeSummary() {
 
       <p className="mt-3 text-xs text-muted-foreground">{ATTRIBUTION_CAVEAT}</p>
 
-      {/* ── Influenced pipeline and revenue ──
-             "Influenced" is a factual claim about contact: a Selryn-prompted
-             action was executed on these deals while they were open. It is
-             not a claim that they closed because of it, and the note says so. ── */}
+      {/* ── Deals a recommendation was acted on ──
+             These measure *contact*: a Selryn-prompted action went out on
+             these deals while they were open. Nothing here claims they
+             closed because of it.
+
+             The two money figures were labelled "Influenced pipeline" and
+             "Influenced revenue". The second was the more serious: it sums
+             the deal value of WON deals Selryn had touched, which is real
+             closed-won money — but calling it "influenced revenue" says
+             Selryn influenced it, and that is not measurable from this data.
+             It is also the same number the headline above reports as
+             "…on deals Selryn flagged", under a second name, which is the
+             same-figure-two-labels problem in miniature. ── */}
       <section className="mt-8 rounded-2xl border border-border/70 bg-card p-5">
-        <h2 className="text-sm font-semibold">Influenced pipeline and revenue</h2>
+        <h2 className="text-sm font-semibold">Deals you acted on</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Deals where a recommendation led to an action that actually went out.
-          Contact is what is being measured here, not credit.
+          This measures contact, not credit — the figures below are CRM deal
+          values, not a claim about what Selryn caused.
         </p>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <MiniStat
-            label="Influenced pipeline"
+            label="Open pipeline, deal value"
             value={formatMoney(influenced.influencedPipeline, currency)}
           />
           <MiniStat
-            label="Influenced revenue"
+            label="Closed-won value"
             value={formatMoney(influenced.influencedRevenue, currency)}
           />
           <MiniStat label="Deals touched" value={String(influenced.influencedDeals)} />

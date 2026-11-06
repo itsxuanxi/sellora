@@ -308,7 +308,7 @@ export function evaluateFollowUp(
 /** How stale a deal's records are, when stale enough to matter. */
 export const STALE_EVIDENCE_DAYS = 30;
 
-function describeStaleness(facts: DealFacts): string | null {
+export function describeStaleness(facts: DealFacts): string | null {
   if (facts.dataAgeDays == null) {
     return "No activity has ever synced for this deal, so there is nothing to check this against.";
   }

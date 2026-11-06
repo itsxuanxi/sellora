@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { findContradiction, insufficientEvidence } from "@/lib/revenue/contradiction";
+import {
+  findContradiction,
+  insufficientEvidence,
+  premiseContradictedNow,
+} from "@/lib/revenue/contradiction";
 import { deriveOpportunityFacts, type FactInput } from "@/lib/revenue/facts";
 
 /**
@@ -168,4 +172,34 @@ test("fresh, complete records produce no caveat", () => {
     facts({ emails: [email({ sentAt: daysAgo(3), repliedAt: daysAgo(1) })] })
   );
   assert.equal(note, null);
+});
+
+test("ordinary follow-up advice withdraws on a reply even with no leak type", () => {
+  // The most common recommendation in the product — "check in on the
+  // proposal" — carries `leakType: null`, and the silence test used to
+  // require a leak. So the one piece of advice most likely to be followed by
+  // a reply was the only one that never withdrew itself.
+  const c = findContradiction(
+    rec({ leakType: null, actionType: "follow_up" }),
+    facts({ emails: [email({ sentAt: daysAgo(10), repliedAt: daysAgo(1) })] }),
+    NOW
+  );
+  assert.equal(c?.kind, "buyer_replied");
+});
+
+test("advice to send the proposal is not withdrawn by a reply", () => {
+  // Not premised on silence: they replied, and the proposal still is not sent.
+  const c = findContradiction(
+    rec({ leakType: null, actionType: "send_proposal" }),
+    facts({ emails: [email({ sentAt: daysAgo(10), repliedAt: daysAgo(1) })] }),
+    NOW
+  );
+  assert.equal(c, null);
+});
+
+test("a fresh candidate premised on silence is not raised while they wait on us", () => {
+  const facts_ = facts({ emails: [email({ sentAt: daysAgo(5), repliedAt: daysAgo(1) })] });
+  assert.ok(premiseContradictedNow(null, facts_, "follow_up"));
+  assert.equal(premiseContradictedNow(null, facts_, "send_proposal"), null);
+  assert.ok(premiseContradictedNow("high_intent_no_response", facts_));
 });

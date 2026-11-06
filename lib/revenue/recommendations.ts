@@ -175,7 +175,7 @@ export async function syncRecommendations(orgId: string): Promise<{
     // Without this the row flip-flops: the stale pass below withdraws a
     // contradicted recommendation, and the next sync reopens it because the
     // leak underneath is still being detected.
-    if (premiseContradictedNow(action.leakType, opp.facts)) continue;
+    if (premiseContradictedNow(action.leakType, opp.facts, action.actionType)) continue;
 
     const key = `${opp.id}:${action.dedupeKey}`;
     stillLive.add(key);

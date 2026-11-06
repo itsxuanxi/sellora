@@ -124,6 +124,7 @@ export async function commitDealImport(
       metadata: {
         created: report.created,
         updated: report.updated,
+        unchanged: report.unchanged,
         rejectedRows: parsed.errors.length,
         failedWrites: report.failures.length,
       },

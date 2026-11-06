@@ -220,15 +220,24 @@ export const SCENARIOS: Scenario[] = [
       { label: "CRM is updated", note: "Stage, next step and activity written back", delay: 900 },
     ],
     outcome: [
-      { label: "Deal", value: "Recovered", tone: "good" },
+      { label: "Buyer", value: "Replied", tone: "good" },
       { label: "Next meeting", value: "Scheduled", tone: "good" },
     ],
-    result: "Estimated expected revenue protected: $43.2K",
+    // Deliberately not a money figure.
+    //
+    // This said "Estimated expected revenue protected: $43.2K", which is a
+    // revenue claim twice over: "protected" says Selryn saved the money, and
+    // the number came from deal value times an uncalibrated probability. A
+    // reply and a booked meeting are what actually happened, so those are
+    // what the scenario reports.
+    result: "Outcome: they replied, and a next meeting is on the calendar.",
   },
   {
     id: "prioritize",
     tabLabel: "Prioritize today's pipeline",
-    title: "Every open deal, ranked by what the next hour is worth.",
+    // Not "what the next hour is worth" — that prices an hour of selling
+    // from an estimate. The list orders by deal size and says so.
+    title: "Every open deal, ordered by size — and who to contact first.",
     account: "All open opportunities",
     steps: [
       { label: "Selryn scans every open opportunity", note: "248 monitored continuously", delay: 700 },
@@ -239,7 +248,10 @@ export const SCENARIOS: Scenario[] = [
     ],
     outcome: [
       { label: "Accounts ranked", value: "14", tone: "accent" },
-      { label: "Top 3 expected revenue", value: "$89.6K", tone: "accent" },
+      // Labelled as the estimate it is. "Expected revenue" unqualified reads
+      // as money coming in; it is deal value times an uncalibrated stage
+      // baseline.
+      { label: "Top 3 by est. expected revenue", value: "$89.6K", tone: "accent" },
     ],
     result: "Rep time saved: measured against your baseline once connected",
   },

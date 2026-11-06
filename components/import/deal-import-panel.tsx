@@ -158,7 +158,9 @@ export function DealImportPanel({ templateCsv }: { templateCsv: string }) {
                 }
                 setResult(res.data);
                 toast.success(
-                  `${res.data.created} deals added, ${res.data.updated} updated.`
+                  res.data.created === 0 && res.data.updated === 0
+                    ? "Nothing changed — every deal in the file already matches."
+                    : `${res.data.created} added, ${res.data.updated} updated.`
                 );
               })
             }
@@ -180,6 +182,12 @@ export function DealImportPanel({ templateCsv }: { templateCsv: string }) {
           <ul className="mt-1.5 space-y-0.5 text-[13px]">
             <li>{result.created} deals added</li>
             <li>{result.updated} deals updated</li>
+            {/* Stated rather than omitted. Re-uploading the same file to fix
+                two rows is normal, and the useful answer is that the other
+                rows were left alone — not silence about them. */}
+            {result.unchanged > 0 && (
+              <li>{result.unchanged} already up to date, left alone</li>
+            )}
             {result.skipped > 0 && <li>{result.skipped} rows skipped because of the errors above</li>}
             {result.failures.length > 0 && (
               <li className="text-rose-700 dark:text-rose-400">

@@ -38,6 +38,23 @@ const SILENCE_PREMISED: Set<LeakType | string> = new Set([
   "lost_with_new_signal",
 ]);
 
+/**
+ * Action types whose premise is buyer silence, for advice carrying no leak.
+ *
+ * Not every recommendation is raised against a detected leak — the ordinary
+ * "check in on the proposal" has `leakType: null` — and the silence test used
+ * to require a leak type, so exactly the most common piece of advice in the
+ * product was the one that never withdrew itself. A seller could reply-and-be-
+ * chased on the deal most likely to produce that sequence.
+ */
+const SILENCE_PREMISED_ACTIONS = new Set([
+  "follow_up",
+  "reengage",
+  "call",
+  "send_case_study",
+  "send_pricing",
+]);
+
 /** Advice whose premise is that nobody on our side has acted. */
 const TOUCH_PREMISED: Set<LeakType | string> = new Set([
   "proposal_viewed_no_followup",
@@ -74,6 +91,20 @@ export interface Contradiction {
 const REPLIED_STATES: ReplyState[] = ["they_replied_last"];
 
 /**
+ * Whether this advice rests on the buyer not having come back to us.
+ *
+ * Checks the leak first, because a leak is the more specific statement of
+ * why the advice exists. Falls back to the action type, which is what the
+ * ordinary "follow up on the proposal" recommendation carries — it has no
+ * leak at all, and requiring one meant the most common advice in the product
+ * never withdrew.
+ */
+function premisedOnSilence(rec: RecommendationPremise): boolean {
+  if (rec.leakType != null) return SILENCE_PREMISED.has(rec.leakType);
+  return SILENCE_PREMISED_ACTIONS.has(rec.actionType);
+}
+
+/**
  * The evidence against a recommendation, or null when it still stands.
  *
  * Checks the buyer first: a reply is the strongest refutation and the one a
@@ -86,8 +117,7 @@ export function findContradiction(
 ): Contradiction | null {
   // ── The buyer answered ──
   if (
-    rec.leakType != null &&
-    SILENCE_PREMISED.has(rec.leakType) &&
+    premisedOnSilence(rec) &&
     facts.lastReplyAt != null &&
     facts.lastReplyAt > rec.createdAt &&
     REPLIED_STATES.includes(facts.replyState)
@@ -169,10 +199,14 @@ export function insufficientEvidence(facts: OpportunityFacts): string | null {
  */
 export function premiseContradictedNow(
   leakType: string | null,
-  facts: OpportunityFacts
+  facts: OpportunityFacts,
+  actionType?: string
 ): string | null {
-  if (leakType == null) return null;
-  if (!SILENCE_PREMISED.has(leakType)) return null;
+  const premised =
+    leakType != null
+      ? SILENCE_PREMISED.has(leakType)
+      : actionType != null && SILENCE_PREMISED_ACTIONS.has(actionType);
+  if (!premised) return null;
   if (facts.replyState !== "they_replied_last") return null;
   return facts.daysSinceReply != null && facts.daysSinceReply > 0
     ? `They replied ${facts.daysSinceReply} day${facts.daysSinceReply === 1 ? "" : "s"} ago and are waiting on you.`

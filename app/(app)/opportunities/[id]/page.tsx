@@ -835,14 +835,23 @@ function buildSummary(
       `${opp.contact.name}${opp.contact.position ? `, ${opp.contact.position},` : ""} is the primary contact.`
     );
 
+  // "Last activity", not "last interaction".
+  //
+  // `daysSinceContact` counts anything that happened, the buyer's actions
+  // included — a proposal open or a pricing-page visit. The risk card a few
+  // inches away says "last contacted N days ago" and counts only what *we*
+  // sent, so the two numbers legitimately differ. They were both labelled as
+  // the last time something happened with this account, which reads as one
+  // of them being wrong. Naming each for what it counts is the fix; making
+  // them agree would mean throwing one of the two facts away.
   if (opp.lastInteractionAt && opp.daysSinceContact != null) {
     parts.push(
       opp.daysSinceContact === 0
-        ? "You were in touch today."
-        : `Last interaction was ${opp.daysSinceContact} day${opp.daysSinceContact === 1 ? "" : "s"} ago.`
+        ? "Something happened on this deal today."
+        : `Last activity of any kind, either direction, was ${opp.daysSinceContact} day${opp.daysSinceContact === 1 ? "" : "s"} ago.`
     );
   } else {
-    parts.push("No interaction has been recorded yet.");
+    parts.push("No activity has been recorded yet.");
   }
 
   parts.push(

@@ -116,8 +116,16 @@ export function identifyBlocker(opts: {
   silenceReason: FollowUpReason | null;
   /** True once the buyer has answered more recently than we wrote. */
   buyerReplied: boolean;
+  /**
+   * Whether fact extraction has produced anything for this deal.
+   *
+   * Without it, the absence of a fact cannot be read as information — it is
+   * the default state of every deal Selryn has not looked at.
+   */
+  hasExtractedFacts: boolean;
 }): Blocker | null {
   const { deal, facts, evidenceById, silenceReason, buyerReplied } = opts;
+  const input = opts;
   const candidates: Blocker[] = [];
 
   // ── An agreed action whose date has passed ──
@@ -161,7 +169,23 @@ export function identifyBlocker(opts: {
   }
 
   // ── Nobody on record can say yes ──
-  if (!facts.decision_maker && COMMITTED_STAGES.has(deal.stageKey)) {
+  //
+  // Gated on having extracted anything at all for this deal. Without that
+  // gate the rule fires on every proposal in the workspace, because the
+  // absence of a `decision_maker` fact is the default state until extraction
+  // has run — so "nothing on record says who signs it off" was a statement
+  // about Selryn, not about the deal, and it filled Today with one generic
+  // complaint about every open proposal.
+  //
+  // This is the spec's rule in a specific case: show insufficient evidence
+  // rather than forcing a conclusion. Once extraction has looked at a deal
+  // and found no decision-maker, that silence is informative and the blocker
+  // is worth raising.
+  if (
+    !facts.decision_maker &&
+    input.hasExtractedFacts &&
+    COMMITTED_STAGES.has(deal.stageKey)
+  ) {
     candidates.push({
       kind: "missing_decision_maker",
       title: "No decision-maker identified",

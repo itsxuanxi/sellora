@@ -132,7 +132,7 @@ export default async function TodayPage() {
       )}
 
       <p className="mt-8 text-[12px] leading-relaxed text-muted-foreground">
-Blockers come from your own CRM records and their email history
+Every risk above comes from your own deal records and their email history
         {connection?.lastSyncSucceededAt && (
           <> · last synced {new Date(connection.lastSyncSucceededAt).toLocaleString()}</>
         )}

@@ -23,6 +23,8 @@ export const IMPORT_SOURCE = "csv_import";
 export interface ApplyReport {
   created: number;
   updated: number;
+  /** Rows that matched a deal already identical to them. */
+  unchanged: number;
   accountsCreated: number;
   contactsCreated: number;
   /** Rows that parsed but could not be written, with the reason. */
@@ -43,6 +45,7 @@ export async function applyImportedDeals(
   const report: ApplyReport = {
     created: 0,
     updated: 0,
+    unchanged: 0,
     accountsCreated: 0,
     contactsCreated: 0,
     failures: [],
@@ -166,13 +169,16 @@ export async function applyImportedDeals(
             select: { id: true, accountId: true },
           });
 
-      if (existing) report.updated++;
-      else report.created++;
-
-      // Only record a change when something changed. Re-uploading the same
-      // file is the normal way to fix two rows, and writing an identical
+      // Only count and record a change when something changed. Re-uploading
+      // the same file is the normal way to fix two rows, and an identical
       // "updated" event every time would fill the provenance log with
       // repetitions of a thing that did not happen.
+      //
+      // The counter used to increment before this test, so a re-upload of an
+      // unchanged file reported "5 deals updated" while correctly writing no
+      // events. That is a worse failure than it sounds: the one question a
+      // person has after an import is what it changed, and the answer was
+      // always "everything".
       const changed =
         !existing ||
         existing.stage !== deal.stage ||
@@ -181,7 +187,13 @@ export async function applyImportedDeals(
         existing.lastInteractionAt?.getTime() !== deal.lastContactedAt?.getTime() ||
         existing.nextStepDueAt?.getTime() !== deal.nextStepAt?.getTime();
 
-      if (!changed) continue;
+      if (!changed) {
+        report.unchanged++;
+        continue;
+      }
+
+      if (existing) report.updated++;
+      else report.created++;
 
       events.push({
         orgId,
