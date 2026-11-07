@@ -38,6 +38,14 @@ export interface BillingState {
   planStatus: string | null;
   planRenewsAt: string | null; // ISO
   stripeEnabled: boolean;
+  /**
+   * Whether this deployment takes real money.
+   *
+   * "test" is the dangerous one and the reason this is surfaced at all: a
+   * test key makes every step of checkout succeed and bills nobody, so the
+   * product would report a paying customer who is not paying.
+   */
+  billingMode: "live" | "test" | "unconfigured";
   simulated: boolean; // current subscription was activated without payment
   canManageBilling: boolean;
   /** The metered ceilings for the plan in force, resolved server-side by
@@ -186,6 +194,19 @@ export function BillingPanel({ state }: { state: BillingState }) {
               {state.simulated && (
                 <Badge variant="secondary" className="bg-amber-50 font-normal text-amber-700">
                   Dev mode — unpaid
+                </Badge>
+              )}
+              {/* Said out loud, because a test key is invisible from every
+                  other angle: checkout succeeds, the webhook fires, the plan
+                  goes active, and nobody is billed. */}
+              {state.billingMode === "test" && (
+                <Badge variant="secondary" className="bg-amber-50 font-normal text-amber-700">
+                  Stripe test mode — cards are not charged
+                </Badge>
+              )}
+              {state.billingMode === "unconfigured" && (
+                <Badge variant="secondary" className="bg-rose-50 font-normal text-rose-700">
+                  Payments unavailable
                 </Badge>
               )}
             </div>

@@ -227,7 +227,11 @@ export const FREE_PLAN = {
   name: "Free",
   limits: FREE_LIMITS,
   cta: "Start free",
-  note: "No credit card. No time limit.",
+  // Literally true, and worth stating plainly because most "free tier"
+  // buttons in this category open a card form. Signing up writes an
+  // Organization on the free plan and touches Stripe nowhere — there is no
+  // code path from sign-up to a payment method.
+  note: "No card, now or later. No time limit.",
   /** Built from the limits above rather than typed beside them, so the
    *  sentence cannot end up quoting a number the app does not enforce. */
   summary:

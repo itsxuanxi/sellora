@@ -64,6 +64,25 @@ export async function startCheckout(
     }
 
     if (!stripe) {
+      // Never in production.
+      //
+      // Below this line is a branch that grants a paid plan with no payment.
+      // It exists so the billing loop stays testable without keys, and it is
+      // one deleted environment variable away from being a button on a live
+      // site that hands out Pro for free. The guard is the deployment it is
+      // running in, not the absence of a key, because the absence of a key
+      // is exactly the condition that triggers it.
+      if (process.env.NODE_ENV === "production") {
+        console.error(
+          "[billing] STRIPE_SECRET_KEY is missing in production; refusing to activate a paid plan without payment."
+        );
+        return {
+          ok: false,
+          error:
+            "Payments are not available right now, so nothing was charged and nothing changed. Please try again shortly.",
+        };
+      }
+
       // Dev mode: activate the same subscription Stripe would, clearly marked
       // simulated, so plan limits and the billing UI are exercised without
       // payment keys.

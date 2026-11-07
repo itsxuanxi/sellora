@@ -134,6 +134,33 @@ export function resolvePlanId(stored: string): PlanId {
 
 export const isStripeEnabled = Boolean(process.env.STRIPE_SECRET_KEY);
 
+/**
+ * Whether this deployment charges real money.
+ *
+ * Derived from the key's documented prefix, never from the key itself, so
+ * the answer can be shown in the UI without the secret going anywhere near
+ * a client bundle.
+ *
+ * It needs showing. A test key in production is the worst of the three
+ * states this can be in: checkout succeeds, Stripe returns a subscription,
+ * the webhook fires, the workspace flips to active, the customer sees a
+ * receipt-shaped confirmation — and no money moves. Everything downstream
+ * reports success, so nothing surfaces the problem until someone reconciles
+ * a bank statement. "Stripe is configured" is not the same claim as
+ * "customers are being billed", and the product should not conflate them.
+ */
+export function isStripeLive(): boolean {
+  return (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live_");
+}
+
+/** What the billing UI should say about the mode it is running in. */
+export type BillingMode = "live" | "test" | "unconfigured";
+
+export function billingMode(): BillingMode {
+  if (!process.env.STRIPE_SECRET_KEY) return "unconfigured";
+  return isStripeLive() ? "live" : "test";
+}
+
 export function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   // No apiVersion passed on purpose: stripe-node sends its own pinned version

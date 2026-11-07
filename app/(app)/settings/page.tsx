@@ -11,7 +11,7 @@ import {
 } from "@/components/settings/settings-forms";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isClerkEnabled, requireSession } from "@/lib/auth";
-import { isStripeEnabled, planOf, resolvePlanId } from "@/lib/billing";
+import { billingMode, isStripeEnabled, planOf, resolvePlanId } from "@/lib/billing";
 import { db } from "@/lib/db";
 
 export const metadata = { title: "Settings" };
@@ -162,6 +162,7 @@ export default async function SettingsPage({
               planStatus: org.planStatus,
               planRenewsAt: org.planRenewsAt?.toISOString() ?? null,
               stripeEnabled: isStripeEnabled,
+              billingMode: billingMode(),
               simulated: Boolean(org.stripeSubscriptionId?.startsWith("sim_")),
               canManageBilling: Boolean(
                 isStripeEnabled &&

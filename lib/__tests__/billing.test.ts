@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  billingMode,
   eventIsCurrentSubscription,
+  isStripeLive,
   priceIdFor,
   priceMatchesPublished,
 } from "@/lib/billing";
-import { PLAN_TIERS } from "@/lib/pricing";
+import { FREE_PLAN, PLAN_TIERS } from "@/lib/pricing";
 
 /**
  * Billing is the one part of the product where a bug takes money, so the
@@ -134,4 +136,62 @@ test("a simulated dev subscription does not block real Stripe events", () => {
   // Dev mode writes `sim_…` ids with no payment behind them. A real
   // subscription arriving afterwards must be allowed to take over.
   assert.equal(eventIsCurrentSubscription("sim_abc123", "sub_real"), true);
+});
+
+// ── Which mode is this deployment in ──────────────────────────────────────
+
+test("a live key is the only thing that counts as charging real money", () => {
+  // The dangerous state is a test key in production: checkout succeeds, the
+  // webhook fires, the plan flips to active, and nobody is billed. Every
+  // signal downstream says "paying customer", so nothing catches it until
+  // somebody reads a bank statement. The mode has to be visible.
+  const key = process.env.STRIPE_SECRET_KEY;
+  try {
+    process.env.STRIPE_SECRET_KEY = "sk_live_abc123";
+    assert.equal(isStripeLive(), true);
+    assert.equal(billingMode(), "live");
+
+    process.env.STRIPE_SECRET_KEY = "sk_test_abc123";
+    assert.equal(isStripeLive(), false, "a test key must never read as live");
+    assert.equal(billingMode(), "test");
+
+    delete process.env.STRIPE_SECRET_KEY;
+    assert.equal(isStripeLive(), false);
+    assert.equal(billingMode(), "unconfigured");
+  } finally {
+    if (key === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = key;
+  }
+});
+
+test("a restricted or malformed key is not treated as live", () => {
+  const key = process.env.STRIPE_SECRET_KEY;
+  try {
+    for (const candidate of ["rk_live_abc", "pk_live_abc", "", "sk_live", "SK_LIVE_ABC"]) {
+      process.env.STRIPE_SECRET_KEY = candidate;
+      assert.equal(isStripeLive(), false, `${candidate} should not read as live`);
+    }
+  } finally {
+    if (key === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = key;
+  }
+});
+
+// ── Free really is free ───────────────────────────────────────────────────
+
+test("the free plan is buyable without a card, and says so", () => {
+  // Signing up writes an Organization on the free plan and touches Stripe
+  // nowhere. The copy is allowed to promise that because no code path leads
+  // from sign-up to a payment method.
+  assert.match(FREE_PLAN.note, /no card/i);
+  assert.ok(!FREE_PLAN.note.toLowerCase().includes("trial"));
+});
+
+test("free is not a self-serve checkout tier", () => {
+  // startCheckout refuses anything that is not a paid, self-serve plan, so
+  // "Start free" can never open Stripe.
+  assert.ok(
+    !PLAN_TIERS.some((t) => t.id === "free"),
+    "free must not appear among the purchasable tiers"
+  );
 });
