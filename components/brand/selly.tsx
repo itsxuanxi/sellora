@@ -32,8 +32,17 @@ import { cn } from "@/lib/utils";
  */
 
 export type SellyPose =
-  /** Sitting with a laptop. The portrait pose. */
+  /** Sitting with a laptop. The portrait pose — needs room, 64px and up. */
   | "hero"
+  /**
+   * Head only, cropped from the portrait.
+   *
+   * Exists because the full-body pose is unreadable small: at 30px her head
+   * is about twelve pixels and the whole thing reads as a lavender smudge,
+   * which is worse than no mascot at all. Anything under ~44px should use
+   * this.
+   */
+  | "face"
   /** Magnifying glass — looking for the deal that needs you. */
   | "who"
   /** Hand to chin under a lightbulb — working out why. */
@@ -52,6 +61,7 @@ export type SellyPose =
 /** Alt text per pose. Describes the character, never the UI state it sits in. */
 const ALT: Record<SellyPose, string> = {
   hero: "Selly, the Selryn panda, working at a laptop",
+  face: "Selly, the Selryn panda",
   who: "Selly looking through a magnifying glass",
   why: "Selly thinking, with a lightbulb overhead",
   next: "Selly holding an envelope",

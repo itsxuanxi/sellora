@@ -124,7 +124,7 @@ export function ProductDemos() {
           {/* Selly changes pose with the step, so the character is doing the
               same job the panel is rather than watching from the margin. */}
           <span className="flex min-w-0 items-center gap-2.5">
-            <Selly pose={STEPS.find((s) => s.id === step)!.pose} size={34} />
+            <Selly pose={STEPS.find((s) => s.id === step)!.pose} size={42} />
             <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--mkt-muted)]">
               {STEPS.find((s) => s.id === step)?.question}
             </span>

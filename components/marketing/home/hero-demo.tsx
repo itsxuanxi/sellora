@@ -153,7 +153,7 @@ function PanelChrome({
             smallest thing in it. The panel above is the argument; she signs
             it. A mascot large enough to compete with the product surface
             would be answering a question nobody asked on the first screen. */}
-        <Selly pose="hero" size={30} float priority />
+        <Selly pose="face" size={32} float priority />
         <span className="text-[10px] text-[var(--mkt-muted)]/75">{DEMO_DATA_NOTE}</span>
       </div>
     </div>
