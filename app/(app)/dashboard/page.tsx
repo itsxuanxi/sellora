@@ -62,6 +62,7 @@ export default async function TodayPage() {
         {header}
         <EmptyState
           icon={Plug}
+          selly="mug"
           title="Bring your deals in to see what is slipping"
           description="Selryn reads your open proposals and the email history on them, then shows which have gone quiet — a follow-up date that passed, a proposal nobody answered, a meeting with no next step — with the records behind each one. A spreadsheet is enough to start; connecting a CRM adds the email history."
         >
@@ -83,6 +84,7 @@ export default async function TodayPage() {
         {header}
         <EmptyState
           icon={CheckCircle2}
+          selly="sleep"
           title="Nothing needs you today"
           description={
             opportunityCount === 0

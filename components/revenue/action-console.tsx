@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Copy, Loader2, Pencil, Send, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Selly } from "@/components/brand/selly";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,10 @@ export function ActionConsole({
         )}
       >
         <div className="flex items-center gap-2">
+          {/* Only on a send that happened. A rejection is a decision, not a
+              disappointment, and a mascot commiserating about it would be
+              the product having an opinion about the seller's judgement. */}
+          {sent && <Selly pose="cheer" size={30} float />}
           {sent ? (
             <Check className="size-4 text-emerald-600 dark:text-emerald-400" strokeWidth={3} />
           ) : (

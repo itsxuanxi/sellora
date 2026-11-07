@@ -5,6 +5,7 @@ import { useAutoRotate } from "@/components/marketing/home/use-auto-rotate";
 import { useDemoSequence } from "@/components/marketing/home/use-demo-sequence";
 import { StackedPanels, TabStrip } from "@/components/marketing/home/tab-strip";
 import { DemoStage } from "@/components/marketing/home/demo-stage";
+import { Selly } from "@/components/brand/selly";
 import {
   DEMO_DATA_NOTE,
   HERO_SCENARIOS,
@@ -147,7 +148,12 @@ function PanelChrome({
 
       {/* Kept, but quiet: the disclosure has to be present and must not
           compete with the product surface above it. */}
-      <div className="border-t border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-2 sm:px-6">
+      <div className="flex items-center gap-2.5 border-t border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-2 sm:px-6">
+        {/* Selly's only appearance in the hero, and deliberately the
+            smallest thing in it. The panel above is the argument; she signs
+            it. A mascot large enough to compete with the product surface
+            would be answering a question nobody asked on the first screen. */}
+        <Selly pose="hero" size={30} float priority />
         <span className="text-[10px] text-[var(--mkt-muted)]/75">{DEMO_DATA_NOTE}</span>
       </div>
     </div>

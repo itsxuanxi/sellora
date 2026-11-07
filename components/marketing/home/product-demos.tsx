@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { RULE_ORDER, rankFollowUps, type FollowUpRule } from "@/lib/followup/rules";
 import { BASIS_HELP, BASIS_LABEL, RISK_LABEL } from "@/lib/risk/kinds";
 import { prefersReducedMotion } from "@/lib/motion";
+import { Selly, type SellyPose } from "@/components/brand/selly";
 import { formatMoney } from "@/lib/revenue/money";
 import {
   BY_DEAL_VALUE,
@@ -41,10 +42,16 @@ import {
 
 type StepId = "who" | "why" | "next";
 
-const STEPS: { id: StepId; label: string; question: string }[] = [
-  { id: "who", label: "Who to contact", question: "Who needs me first?" },
-  { id: "why", label: "Why now", question: "Why this one, today?" },
-  { id: "next", label: "What to send", question: "What do I actually send?" },
+const STEPS: {
+  id: StepId;
+  label: string;
+  question: string;
+  /** Selly's pose for this step. One drawn pose each — see components/brand/selly.tsx. */
+  pose: SellyPose;
+}[] = [
+  { id: "who", label: "Who to contact", question: "Who needs me first?", pose: "who" },
+  { id: "why", label: "Why now", question: "Why this one, today?", pose: "why" },
+  { id: "next", label: "What to send", question: "What do I actually send?", pose: "next" },
 ];
 
 export function ProductDemos() {
@@ -114,8 +121,13 @@ export function ProductDemos() {
         className="mt-5 overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] shadow-[var(--mkt-shadow-card)]"
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-4 py-2.5 sm:px-5">
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--mkt-muted)]">
-            {STEPS.find((s) => s.id === step)?.question}
+          {/* Selly changes pose with the step, so the character is doing the
+              same job the panel is rather than watching from the margin. */}
+          <span className="flex min-w-0 items-center gap-2.5">
+            <Selly pose={STEPS.find((s) => s.id === step)!.pose} size={34} />
+            <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--mkt-muted)]">
+              {STEPS.find((s) => s.id === step)?.question}
+            </span>
           </span>
           <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
             Sample data
@@ -517,7 +529,8 @@ function NextPanel({ deal }: { deal: DemoDealCard }) {
   if (approved) {
     return (
       <div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <Selly pose="cheer" size={34} float />
           <span className="flex size-5 items-center justify-center rounded-full bg-[var(--mkt-success)]/10 text-[var(--mkt-success)]">
             <Check className="size-3" strokeWidth={3} aria-hidden />
           </span>
