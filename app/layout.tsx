@@ -25,15 +25,15 @@ const brandNarrow = Archivo_Narrow({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Selryn — Catch deals slipping after demos and proposals",
+    default: "Selryn — Proposal follow-up for small B2B agencies",
     template: "%s · Selryn",
   },
   description:
-    "Selryn helps small B2B teams catch deals slipping away after demos and proposals, decide the next follow-up, and track what happens. It reads your deals and their email history, shows the evidence behind every alert, and never sends anything without your approval.",
+    "A lightweight follow-up assistant for small B2B agencies. Selryn reads the email history on your deals, finds the proposals that have gone quiet, says why each one needs you, and drafts the follow-up for you to approve. No CRM to replace, and nothing sends without you.",
   openGraph: {
-    title: "Selryn — Catch deals slipping after demos and proposals",
+    title: "Selryn — Proposal follow-up for small B2B agencies",
     description:
-      "A demo goes well, the proposal goes out, and weeks later nobody remembers who owes whom a reply. Selryn shows which deals have gone quiet and what the records say about why, tells you who to follow up today, and tracks what came back.",
+      "The demo went well, the proposal went out, and weeks later nobody remembers who owes whom a reply. Selryn finds those deals, says what the records show, and writes the follow-up for you to approve.",
     siteName: "Selryn",
   },
 };

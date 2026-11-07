@@ -71,8 +71,9 @@ export function Pricing({ startHref }: { startHref: string }) {
           Simple pricing that scales with your pipeline, not your headcount.
         </h2>
         <p className="mt-5 max-w-2xl text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
-          One meter: how many live deals Selryn is watching. Your whole team is
-          included on every plan, and we don&rsquo;t charge per connection.
+          One meter: how many live proposals Selryn is watching. Your whole
+          agency is included on every plan, and we don&rsquo;t charge per
+          connection.
         </p>
       </Reveal>
 

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   // brand up into "Request a Demo | Selryn · Selryn".
   title: { absolute: "Request a Demo | Selryn" },
   description:
-    "Tell us how your demos and proposals run today, and we will walk through what Selryn would have caught on them.",
+    "Tell us how your agency's proposals run today, and we will walk through what Selryn would have caught on them.",
 };
 
 /**
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 const POINTS = [
   "A walkthrough of your own follow-up process, not a slide deck",
-  "What Selryn would have flagged on your deals, and on what evidence",
+  "What Selryn would have flagged on your proposals, and on what evidence",
   "A straight answer on what is built, what needs setting up, and what is not written yet",
 ];
 
@@ -39,7 +39,16 @@ const POINTS = [
  * strip of invented marks is the exact kind of claim this product is built to
  * argue against. Saying who it is built for is true and costs nothing.
  */
-const AUDIENCE = ["B2B SaaS", "Sales Teams", "Revenue Operations", "Agencies"];
+// Kinds of agency, not a list of every market that might buy. "B2B SaaS,
+// Sales Teams, Revenue Operations, Agencies" named four audiences, three of
+// which the product is not aimed at, and a reader who is none of the first
+// three stops reading before the fourth.
+const AUDIENCE = [
+  "Design & brand",
+  "Marketing & growth",
+  "Development & product",
+  "Consulting",
+];
 
 export default function RequestDemoPage() {
   return (
@@ -64,13 +73,13 @@ export default function RequestDemoPage() {
           </p>
 
           <h1 className="mt-5 text-balance text-[2.4rem] font-medium leading-[1.08] tracking-tight text-[var(--mkt-ink)] sm:text-[2.9rem] lg:text-[3.1rem]">
-            Tell us which deals go quiet on you.
+            Tell us which proposals go quiet on you.
           </h1>
 
           <p className="mt-6 text-pretty text-[16.5px] leading-relaxed text-[var(--mkt-muted)]">
-            Describe how your demos and proposals actually run today, and
+            Describe how your pitches and proposals actually run today, and
             we&apos;ll walk through what Selryn would have caught on them
-            &mdash; which deals it would have flagged, on what evidence, and
+            &mdash; which ones it would have flagged, on what evidence, and
             what it would have suggested you send.
           </p>
 
@@ -108,7 +117,7 @@ export default function RequestDemoPage() {
 
           <div className="mt-10 border-t border-[var(--mkt-line)] pt-6">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--mkt-muted)]">
-              Built for B2B revenue teams
+              Built for small B2B agencies
             </p>
             <p className="mt-3 text-[14px] leading-relaxed text-[var(--mkt-muted)]">
               {AUDIENCE.join(" · ")}

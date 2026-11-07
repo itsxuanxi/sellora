@@ -120,7 +120,7 @@ export const PLAN_TIERS: PlanTier[] = [
     customPrice: false,
     selfServe: true,
     mostPopular: false,
-    audience: "For a founder or a small team chasing their own proposals.",
+    audience: "For an agency owner chasing their own proposals.",
     limits: { opportunities: 150, aiActions: 1_000 },
     headline: {
       label: "Active opportunities",
@@ -146,7 +146,7 @@ export const PLAN_TIERS: PlanTier[] = [
     customPrice: false,
     selfServe: true,
     mostPopular: true,
-    audience: "For a sales team where more than one person owns proposals.",
+    audience: "For an agency where more than one person owns proposals.",
     limits: { opportunities: 750, aiActions: 3_000 },
     headline: {
       label: "Active opportunities",
@@ -172,7 +172,7 @@ export const PLAN_TIERS: PlanTier[] = [
     selfServe: false,
     mostPopular: false,
     audience:
-      "For teams past 750 live opportunities, or with requirements of their own.",
+      "For agencies past 750 live proposals, or with requirements of their own.",
     limits: { opportunities: null, aiActions: null },
     headline: {
       label: "Active opportunities",

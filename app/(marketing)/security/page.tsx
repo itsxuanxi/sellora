@@ -101,10 +101,12 @@ export default function SecurityPage() {
         </h1>
 
         <p className="mt-6 text-pretty text-[16.5px] leading-relaxed text-[var(--mkt-muted)]">
-          Selryn reads your pipeline and your email history, which is some of
-          the most sensitive data a sales team has. This page is written from
-          the implementation rather than from a template, so it is shorter than
-          most security pages and the second half is the part worth reading.
+          Selryn reads your pipeline and the email history on it, which is
+          some of the most sensitive data an agency holds — your clients&apos;
+          names, what you quoted them, and who has gone quiet. This page is
+          written from the implementation rather than from a template, so it
+          is shorter than most security pages and the second half is the part
+          worth reading.
         </p>
 
         {/* ── In place ── */}

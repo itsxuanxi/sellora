@@ -87,12 +87,14 @@ export function Scenarios({
             How it works
           </p>
           <h2 className="mt-4 text-balance text-3xl font-medium leading-[1.12] tracking-tight text-[var(--mkt-ink)] sm:text-4xl md:text-[2.7rem]">
-            One place to see what is slipping. From record to follow-up.
+            One place for the proposals nobody has answered.
           </h2>
           <p className="mt-5 text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
-            Selryn reads your deal records and the email history on them,
-            names what is overdue and why, and drafts the follow-up for you to
-            approve.
+            Selryn reads your deal records and the email history on them —
+            who wrote, when, and whether anyone replied — names what is
+            overdue and why, and drafts the follow-up for you to approve. It
+            sits beside whatever you use to track work; there is nothing to
+            migrate.
           </p>
         </div>
 
@@ -297,6 +299,26 @@ export function Scenarios({
               A filled dot works now with nothing to configure. A hollow dot is
               built and tested but needs credentials or a connection first.
               Dashed is not built — we would rather say so than imply otherwise.
+            </p>
+
+            {/* What "email history" means here, stated before anyone pays for
+                it. Selryn reads who wrote, when, and whether a reply came
+                back — subjects, direction and timestamps, which is what a CRM
+                exposes. It does not read message bodies, so it cannot find a
+                question inside one; that is why open questions are marked
+                Inferred in the product and are something you record, not
+                something Selryn discovers. Writing the limit down is cheaper
+                than a pilot that ends on it. */}
+            <p className="mt-3 rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-3.5 text-[12px] leading-relaxed text-[var(--mkt-muted)]">
+              <span className="font-medium text-[var(--mkt-ink)]">
+                What Selryn reads from your email.
+              </span>{" "}
+              Who wrote, when, and whether a reply came back — the subject
+              line, the direction and the date, which is what a connected CRM
+              exposes. It does not open message bodies, so it will not find a
+              question buried in one; questions you have noted on a deal count,
+              and the product marks that difference on every card. Starting
+              from a spreadsheet instead works too, on the dates in it.
             </p>
 
             <h3 className="mt-9 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--mkt-muted)]">

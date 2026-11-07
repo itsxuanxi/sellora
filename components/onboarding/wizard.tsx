@@ -149,7 +149,7 @@ export function OnboardingWizard() {
                 id="ob-offering"
                 value={form.offering}
                 onChange={(e) => setForm((f) => ({ ...f, offering: e.target.value }))}
-                placeholder="e.g. We're a cybersecurity services firm — managed detection, compliance audits, and incident response for mid-market companies."
+                placeholder="e.g. We're a six-person brand studio — positioning, identity and website builds, usually a 6-10 week engagement."
                 rows={3}
               />
             </div>
@@ -161,7 +161,7 @@ export function OnboardingWizard() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, idealCustomer: e.target.value }))
                 }
-                placeholder="e.g. 20-200 person companies handling sensitive data — fintech, healthcare, legal — whose IT lead reports to the CEO. Our best deals come from firms that just failed an audit."
+                placeholder="e.g. Series A to B companies, 20-200 people, where a founder or a head of marketing owns the budget. Our best projects come from referrals and from teams about to launch something."
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">

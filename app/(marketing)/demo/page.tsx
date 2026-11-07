@@ -5,7 +5,7 @@ import { SandboxEntry } from "@/components/marketing/sandbox-entry";
 export const metadata: Metadata = {
   title: "Try the demo",
   description:
-    "Follow one deal from an unanswered proposal to a booked meeting, in a private sandbox running the real product. No sign-up, nothing sent.",
+    "Follow one deal from an unanswered proposal to a booked meeting, in a private sandbox running the real product on a sample agency pipeline. No sign-up, nothing sent.",
 };
 
 /**
@@ -60,9 +60,10 @@ export default function DemoPage() {
         </h1>
 
         <p className="mt-7 max-w-2xl text-pretty text-[17px] leading-[1.65] text-muted-foreground">
-          See how Selryn spots a proposal nobody answered, shows you the
-          records behind it, drafts the follow-up for your approval, and
-          records what the buyer does next.
+          A sample agency pipeline, with the real product on top of it. See
+          how Selryn spots a proposal nobody answered, shows the records behind
+          it, drafts the follow-up for your approval, and records what the
+          client does next.
         </p>
 
         <div className="mt-10">

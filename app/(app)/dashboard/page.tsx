@@ -51,7 +51,7 @@ export default async function TodayPage() {
   const header = (
     <PageHeader
       title="Today"
-      description="Deals slipping after a demo or proposal, why each needs you now, and the next follow-up to make. Ordered by what you can act on today — not by deal size."
+      description="Proposals going quiet, why each needs you now, and the next follow-up to send. Ordered by what you can act on today — not by deal size."
     />
   );
 
@@ -63,7 +63,7 @@ export default async function TodayPage() {
         <EmptyState
           icon={Plug}
           title="Bring your deals in to see what is slipping"
-          description="Selryn reads your open deals and their email history, then shows which ones have gone quiet after a demo or proposal — an unanswered pricing question, a meeting with no next step, a follow-up date that passed — with the records behind each one. Import a spreadsheet to start, or connect a CRM."
+          description="Selryn reads your open proposals and the email history on them, then shows which have gone quiet — a follow-up date that passed, a proposal nobody answered, a meeting with no next step — with the records behind each one. A spreadsheet is enough to start; connecting a CRM adds the email history."
         >
           <Button asChild>
             <Link href="/opportunities/import">Import a spreadsheet</Link>

@@ -58,34 +58,36 @@ export function Hero() {
             <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--mkt-brand-wash)] px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-brand-deep)]">
               Early access
             </span>
-            Run the guided demo on a sample pipeline
+            Run the guided demo on a sample agency pipeline
             <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
 
-          {/* Founder-led teams and lean sales teams are who we are chasing
-              first, so they are named. Not a restriction: nothing in the
-              product assumes SaaS, or a founder doing the selling. */}
+          {/* Named, because a small agency recognises itself here and a
+              sales org of forty does not. Nothing in the product stops a
+              lean in-house team using it — but a page that tries to address
+              both ends up addressing neither, and the agency case is the one
+              the product was shaped around: a handful of live proposals, no
+              sales ops, and whoever pitched it also chasing it. */}
           <p className="mt-10 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--mkt-brand-deep)]">
-            For founder-led and small B2B sales teams
+            For small B2B agencies
           </p>
 
           <h1 className="mt-3.5 text-balance text-[2.4rem] font-medium leading-[1.03] tracking-[-0.028em] text-[var(--mkt-ink)] sm:text-[3.2rem] sm:leading-[1.01] sm:tracking-[-0.032em] lg:text-[3.5rem] xl:text-[3.9rem]">
-            Catch the deals slipping away after your
-            <span className="text-[var(--mkt-brand-deep)]"> demos and proposals.</span>
+            The proposals that went quiet,
+            <span className="text-[var(--mkt-brand-deep)]"> and what to send them.</span>
           </h1>
 
-          {/* Three clauses, one per question a seller actually has: which
-              deals, why, what now. The previous version was six lines that
-              also covered the CRM, approval and outcome tracking — all true,
-              all answers to questions nobody has asked yet on the first
-              screen. They are two scrolls down, where they belong. */}
+          {/* Three clauses, one per question an agency owner actually has:
+              which proposals, why, what do I send. Everything else — the
+              CRM, approval, outcome tracking — answers a question nobody has
+              asked yet on the first screen, and is two scrolls down. */}
           <p className="mt-7 max-w-[30rem] text-pretty text-[17px] leading-[1.6] text-[var(--mkt-muted)]">
-            A demo goes well, the proposal goes out, and three weeks later
-            nobody remembers who owes whom a reply. Selryn reads your deals and
-            their email history and tells you{" "}
+            The pitch went well, the proposal went out, and three weeks later
+            nobody remembers who owes whom a reply. Selryn reads the email
+            history on your deals and tells you{" "}
             <span className="text-[var(--mkt-ink)]">
-              which ones have stalled, what the records say about why, and who
-              to follow up today.
+              which proposals have gone quiet, why each one needs you now, and
+              writes the follow-up for you to approve.
             </span>
           </p>
 
@@ -124,9 +126,9 @@ export function Hero() {
               and it has the advantage of being true. */}
           <ul className="mt-10 flex flex-col items-start gap-y-2 border-t border-[var(--mkt-line)] pt-6 font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--mkt-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
             {[
-              "A reason on every recommendation",
-              "Nothing sends without approval",
-              "Never trained on your data",
+              "Keep your CRM, or use none",
+              "A reason on every follow-up",
+              "Nothing sends without your approval",
             ].map((claim, i) => (
               <li key={claim} className="flex items-center gap-3">
                 {/* Stacked on a phone, so the interpuncts would sit at the

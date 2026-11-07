@@ -280,6 +280,43 @@ test("the outcome rail's meter measures something the product computes", () => {
   );
 });
 
+test("nothing claims Selryn reads what is inside an email", () => {
+  // The positioning says Selryn works from real email history, and it does —
+  // subject, direction and timestamp, which is what a CRM exposes. It never
+  // sees a message body: HubSpot's engagement sync requests
+  // hs_email_subject, hs_email_direction and hs_timestamp and nothing else,
+  // and no inbox connector exists. So "reads your email" has a boundary, and
+  // the boundary is the difference between finding a deal that went quiet
+  // (which it does) and finding a question inside a message (which it
+  // cannot). Marketing copy drifts toward the second claim because it sounds
+  // better.
+  const everything = [
+    ...HERO_SCENARIOS.flatMap((s) => [
+      s.panelLabel,
+      s.closing,
+      ...s.steps.map((x) => `${x.status} ${JSON.stringify(x.payload)}`),
+    ]),
+    ...SCENARIOS.flatMap((s) => [
+      s.title,
+      s.result,
+      ...s.steps.map((x) => `${x.label} ${x.note ?? ""}`),
+    ]),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  for (const banned of [
+    "reads your emails",
+    "reads their emails",
+    "email content",
+    "message body",
+    "understands the conversation",
+    "reads the conversation",
+  ]) {
+    assert.ok(!everything.includes(banned), `demo copy claims to read email content: "${banned}"`);
+  }
+});
+
 test("the integration catalog names each connector once", () => {
   const keys = INTEGRATION_CATALOG.map((i) => i.key);
   assert.equal(new Set(keys).size, keys.length, "a connector appears twice");
