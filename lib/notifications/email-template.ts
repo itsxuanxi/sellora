@@ -56,8 +56,15 @@ export function renderNotificationEmail(
             <strong>Next:</strong> ${escapeHtml(d.nextAction)} <span style="color:${MUTED};">(${escapeHtml(d.urgency)})</span>
           </div>
           <div style="margin-top:6px;font:400 13px/1.5 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${MUTED};">
-            ${money(d.dealValue, d.currency)} × ${d.winProbability}% =
-            <strong style="color:${INK};">${money(d.expectedValue, d.currency)} expected</strong>
+            <strong style="color:${INK};">${money(d.dealValue, d.currency)}</strong>${
+              d.risk ? ` · ${escapeHtml(d.risk)}` : ""
+            }${
+              d.basis ? ` <span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;">${escapeHtml(d.basis)}</span>` : ""
+            }${
+              d.daysOverdue != null && d.daysOverdue > 0
+                ? ` · ${d.daysOverdue}d overdue`
+                : ""
+            }
             · <a href="${d.url}" style="color:${BRAND};text-decoration:none;">Open deal</a>
           </div>
         </td>
@@ -84,7 +91,7 @@ export function renderNotificationEmail(
           ${escapeHtml(message.headline)}
         </td></tr>
         <tr><td style="padding-top:8px;font:400 13px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${MUTED};">
-          Ranked by expected revenue — deal value × win probability.
+          In the order Today ranks them: what is overdue first.
         </td></tr>
         <tr><td style="padding-top:8px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table></td></tr>
         <tr><td style="padding-top:18px;">
@@ -93,7 +100,7 @@ export function renderNotificationEmail(
           </a>
         </td></tr>
         <tr><td style="padding-top:18px;border-top:1px solid ${LINE};font:400 12px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${MUTED};">
-          ${escapeHtml(message.summary.revenueAtRisk)} at risk · ${escapeHtml(message.summary.openPipeline)} open pipeline across ${message.summary.openCount} deals.
+          ${escapeHtml(message.summary.openPipeline)} of open pipeline across ${message.summary.openCount} deals · ${escapeHtml(message.summary.revenueAtRisk)} estimated value at risk.
         </td></tr>
         <tr><td style="padding-top:12px;font:400 11px/1.6 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${MUTED};">
           <a href="${opts.unsubscribeUrl}" style="color:${MUTED};">Unsubscribe from Selryn notifications</a>
@@ -109,12 +116,12 @@ export function renderNotificationEmail(
     "",
     ...message.deals.map(
       (d) =>
-        `${d.company} — ${money(d.dealValue, d.currency)} x ${d.winProbability}% = ${money(d.expectedValue, d.currency)} expected\n` +
+        `${d.company} — ${money(d.dealValue, d.currency)}${d.risk ? ` · ${d.risk}` : ""}${d.basis ? ` (${d.basis})` : ""}\n` +
         `  ${d.stage} · ${d.reason}\n` +
         `  Next: ${d.nextAction} (${d.urgency})\n  ${d.url}`
     ),
     "",
-    `${message.summary.revenueAtRisk} at risk · ${message.summary.openPipeline} open pipeline across ${message.summary.openCount} deals.`,
+    `${message.summary.openPipeline} of open pipeline across ${message.summary.openCount} deals · ${message.summary.revenueAtRisk} estimated value at risk.`,
     "",
     `${message.primaryLabel}: ${message.primaryUrl}`,
     "",

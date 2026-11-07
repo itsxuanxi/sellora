@@ -496,7 +496,7 @@ function StepBody({
       return (
         <div className="rounded-xl border border-[var(--mkt-brand)]/30 bg-[var(--mkt-brand-wash)] p-3">
           <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-brand-deep)]">
-            Next best action
+            Recommended action
           </p>
           <p className="mt-1.5 text-[14px] font-medium leading-snug text-[var(--mkt-ink)]">
             {step.payload.headline}
@@ -547,7 +547,7 @@ function StepBody({
           )}
           {step.payload.atStake != null && (
             <p className="mt-2.5 border-t border-[var(--mkt-brand)]/20 pt-2.5 text-[13px] font-medium text-[var(--mkt-ink)]">
-              {formatMoney(step.payload.atStake, "USD")} of expected revenue at stake
+              {formatMoney(step.payload.atStake, "USD")} deal value, per your CRM
             </p>
           )}
         </div>
@@ -627,9 +627,16 @@ function StepBody({
 /**
  * The ranked pipeline, as a table.
  *
- * Shows deal value, win probability and expected revenue side by side so the
- * reordering claim is checkable rather than asserted: Brightcart is visibly
- * the larger deal and visibly ranks below Cloudmint.
+ * Shows deal value beside how long the buyer has been waiting and what the
+ * risk is, so the reordering claim is checkable rather than asserted:
+ * Brightcart is visibly the larger deal and visibly ranks below Cloudmint.
+ *
+ * The two columns this replaced were "Win" (a bare percentage) and
+ * "Expected" (deal value times that percentage). They made the panel's
+ * argument arithmetically, which was the problem — the percentage was an
+ * uncalibrated stage baseline, so the money derived from it was an estimate
+ * squared, and the table invited the reader to check the multiplication
+ * rather than the premise. Days waiting and a named risk are both records.
  */
 function RankTable({
   payload,
@@ -653,11 +660,11 @@ function RankTable({
       <div className="grid grid-cols-[1.5fr_0.9fr_0.6fr_1fr] gap-2 px-3 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-[var(--mkt-muted)] sm:grid-cols-[1.5fr_0.9fr_0.6fr_1fr_0.9fr]">
         <span>Opportunity</span>
         <span className="text-right">Deal value</span>
-        <span className="text-right">Win</span>
-        <span className="text-right">Expected</span>
-        {/* Risk is the reason a rank is actionable rather than merely sorted,
+        <span className="text-right">Waiting</span>
+        <span className="text-right">Reason</span>
+        {/* The action is what makes a rank useful rather than merely sorted,
             but it is the first thing to drop when the panel gets narrow. */}
-        <span className="hidden text-right sm:block">Risk</span>
+        <span className="hidden text-right sm:block">Do</span>
       </div>
 
       <ul>
@@ -690,14 +697,16 @@ function RankTable({
                 )}
               </span>
               <span className="text-right">{formatMoney(d.dealValue, "USD")}</span>
-              <span className="text-right">{d.probability}%</span>
+              <span className="text-right">
+                {d.waitingDays}d
+              </span>
               <span
                 className={cn(
-                  "text-right",
+                  "truncate text-right text-[11.5px]",
                   lead && "font-medium text-[var(--mkt-brand-deep)]"
                 )}
               >
-                {formatMoney(d.expected, "USD")}
+                {d.riskLabel}
               </span>
               <span
                 className={cn(

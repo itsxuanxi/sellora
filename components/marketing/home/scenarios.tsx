@@ -86,12 +86,12 @@ export function Scenarios({
             How it works
           </p>
           <h2 className="mt-4 text-balance text-3xl font-medium leading-[1.12] tracking-tight text-[var(--mkt-ink)] sm:text-4xl md:text-[2.7rem]">
-            One revenue brain. From signal to action.
+            One place to see what is slipping. From record to follow-up.
           </h2>
           <p className="mt-5 text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
-            Selryn connects pipeline activity, detects what changed, ranks
-            every opportunity by expected revenue, and recommends the next best
-            action.
+            Selryn reads your deal records and the email history on them,
+            names what is overdue and why, and drafts the follow-up for you to
+            approve.
           </p>
         </div>
 

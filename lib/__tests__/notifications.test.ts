@@ -187,17 +187,18 @@ const MESSAGE: NotificationMessage = {
   kind: "daily_digest",
   dedupeKey: "daily_digest:2026-08-28",
   subject: "Today's priorities",
-  headline: "$21,840 at risk across 2 deals.",
+  headline: "2 deals need a follow-up today.",
   deals: [
     {
       opportunityId: "opp1",
       company: "Cloudmint & Co <script>",
       stage: "Proposal",
       dealValue: 42_000,
-      winProbability: 52,
-      expectedValue: 21_840,
       currency: "USD",
       reason: "Proposal opened twice, then silence",
+      risk: "Proposal unanswered",
+      basis: "From your records",
+      daysOverdue: 4,
       nextAction: "Send a security follow-up",
       urgency: "Today",
       atRisk: 21_840,
@@ -218,6 +219,41 @@ test("the email renders both parts and escapes company names", () => {
   assert.ok(html.includes("Cloudmint &amp; Co &lt;script&gt;"));
   assert.ok(!html.includes("<script>"));
   assert.ok(text.includes("Cloudmint & Co <script>"));
+});
+
+test("no notification prints a win probability or an expected-revenue sum", () => {
+  // The digest told people which deal to open first, ordered it by deal
+  // value x an uncalibrated stage baseline, and printed that formula under
+  // every row — while the screen the button opened ordered by what was
+  // overdue. The two disagreed about which deal mattered most, and the mail
+  // was the one a customer read at 8am.
+  //
+  // The ordering now comes from `getFollowUps`. This guards the wording, so
+  // the renderers cannot quietly reintroduce the claim.
+  const { html, text } = renderNotificationEmail(MESSAGE, {
+    unsubscribeUrl: "https://example.com/unsub",
+    workspaceName: "Acme Labs",
+    simulated: false,
+  });
+
+  for (const surface of [html, text]) {
+    const lower = surface.toLowerCase();
+    for (const banned of [
+      "win probability",
+      "ranked by expected revenue",
+      "probability of closing",
+      "protected revenue",
+      "is leaking",
+    ]) {
+      assert.ok(!lower.includes(banned), `a notification says "${banned}"`);
+    }
+    // No bare "x NN%" arithmetic either, whatever it is called.
+    assert.equal(
+      /[×x]\s*\d{1,3}\s*%/.test(surface),
+      false,
+      "a notification multiplies by a percentage"
+    );
+  }
 });
 
 test("every email carries a working unsubscribe link", () => {

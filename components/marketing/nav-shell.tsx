@@ -62,9 +62,9 @@ export function NavShell({ children }: { children: React.ReactNode }) {
  * The strip every funded company uses to announce a raise.
  *
  * Selryn has no raise to announce, so it announces the only thing it can
- * honestly put there: the guided demo, which really does run one deal from a
- * revenue risk through to a booked meeting. It is a real link to a real page,
- * which is more than most of these strips manage.
+ * honestly put there: the guided demo, which really does run one deal from an
+ * unanswered proposal through to a booked meeting. It is a real link to a
+ * real page, which is more than most of these strips manage.
  */
 function Announcement() {
   return (
@@ -84,8 +84,8 @@ function Announcement() {
           See the guided demo
         </span>
         <span className="hidden truncate text-[13px] text-white/85 sm:inline">
-          The guided demo now runs one deal end to end — revenue risk to booked
-          meeting.
+          The guided demo now runs one deal end to end — unanswered proposal
+          to booked meeting.
         </span>
         <span className="hidden shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-medium underline decoration-white/40 underline-offset-4 group-hover:decoration-white sm:inline-flex">
           Try it

@@ -8,24 +8,25 @@ const MESSAGE: NotificationMessage = {
   kind: "daily_digest",
   dedupeKey: "daily_digest:2026-08-29",
   subject: "Today's priorities",
-  headline: "$26,040 at risk across 2 deals.",
+  headline: "2 deals need a follow-up today.",
   deals: [
     {
       opportunityId: "opp1",
       company: "Cloudmint",
       stage: "Proposal",
       dealValue: 42_000,
-      winProbability: 62,
-      expectedValue: 26_040,
       currency: "USD",
       reason: "They opened your proposal and nobody has followed up since.",
+      risk: "Proposal unanswered",
+      basis: "From your records",
+      daysOverdue: 4,
       nextAction: "Send Maya Chen a personal follow-up today",
       urgency: "Today",
       atRisk: 26_040,
       url: "https://app.example.com/opportunities/opp1",
     },
   ],
-  summary: { revenueAtRisk: "$26,040", openPipeline: "$108,500", openCount: 7 },
+  summary: { revenueAtRisk: "$18,400", openPipeline: "$108,500", openCount: 7 },
   primaryUrl: "https://app.example.com/dashboard",
   primaryLabel: "Open today's priorities",
 };
@@ -51,18 +52,25 @@ test("a message always carries fallback text, not only blocks", () => {
   assert.ok(Array.isArray(rendered.blocks) && rendered.blocks.length > 0);
 });
 
-test("the deal, its reason, the money and the next action all survive", () => {
+test("the deal, its reason, the risk and the next action all survive", () => {
   const json = JSON.stringify(
     renderSlackMessage(MESSAGE, { workspaceName: "Acme Labs", simulated: false })
   );
   assert.match(json, /Cloudmint/);
   assert.match(json, /nobody has followed up/);
+  // The CRM's own amount, which is a record.
   assert.match(json, /\$42,000/);
-  assert.match(json, /62%/);
-  assert.match(json, /\$26,040/);
+  // The risk and where the claim comes from, in the same words Today uses.
+  assert.match(json, /Proposal unanswered/);
+  assert.match(json, /From your records/);
   assert.match(json, /Send Maya Chen a personal follow-up/);
   // And the link back into Selryn.
   assert.match(json, /opportunities\/opp1/);
+
+  // What must not be there: the two figures this row used to carry were a
+  // win probability and deal value times it.
+  assert.equal(/62%/.test(json), false);
+  assert.equal(/\$26,040/.test(json), false);
 });
 
 test("a header longer than Slack allows is truncated rather than rejected", () => {

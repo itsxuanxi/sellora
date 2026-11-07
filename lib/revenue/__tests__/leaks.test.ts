@@ -221,7 +221,7 @@ test("the reopen fallback only applies to lost deals, not to live ones", () => {
   assert.equal(revenueAtRisk(14_000, 0, "critical", "going_cold"), 0);
 });
 
-// ── Next best action ──────────────────────────────────────────────────────
+// ── Recommended action ──────────────────────────────────────────────────
 
 test("a leak always drives the recommendation", () => {
   const leaks = detectLeaks(

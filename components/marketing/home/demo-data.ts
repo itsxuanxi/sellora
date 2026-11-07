@@ -8,16 +8,24 @@
  * watching Selryn do one piece of work, not flipping through four unrelated
  * screenshots.
  *
- * Because every surface reads from here, the arithmetic can only be wrong in
- * one place. Expected revenue is asserted below rather than hard-coded twice:
- *   Cloudmint  $42,000 × 68% = $28,560
- *   Brightcart $65,000 × 37% = $24,050
- *   Ledgerly   $30,000 × 52% = $15,600
+ * Because every surface reads from here, a claim can only be wrong in one
+ * place — and the claim that matters is the ordering one. The priority
+ * capsule ranks by what is overdue, in the rule order the product itself
+ * uses (RULE_ORDER in lib/followup/rules.ts): an unanswered proposal, then a
+ * missing next step, then plain silence.
+ *
+ * It used to rank by deal value × win probability, print that formula on
+ * screen and conclude "Cloudmint is the better hour". That is the mechanism
+ * the product was deliberately moved off, because it chose whom to call from
+ * a number nothing had calibrated. A homepage still demonstrating it was
+ * advertising a behaviour the application no longer has, which is the worst
+ * kind of stale copy: it reads as a specification.
+ *
+ * For the same reason, no percentage here is presented as a probability of
+ * closing.
  *
  * All figures are illustrative sample data for a fictional pipeline.
  */
-
-import { expectedRevenue, formatMoneyCompact } from "@/lib/revenue/money";
 
 export const DEMO_DATA_NOTE = "Sample data shown for illustration";
 
@@ -25,9 +33,16 @@ export interface DemoDeal {
   rank: string;
   company: string;
   dealValue: number;
-  probability: number;
-  /** Derived — never typed by hand, so the table can't contradict itself. */
-  expected: number;
+  /** Days since this buyer last replied. Shown as itself, never forecast from. */
+  waitingDays: number;
+  /** The risk the product would name here, in the product's own words. */
+  riskLabel: string;
+  /**
+   * Position under the product's follow-up rules: an unanswered proposal
+   * outranks a missing next step, which outranks plain silence. Lower goes
+   * first. Mirrors RULE_ORDER in lib/followup/rules.ts.
+   */
+  ruleRank: number;
   priority: string;
   priorityTone: "urgent" | "warn" | "watch";
   /** Behavioural evidence, newest first. */
@@ -41,18 +56,14 @@ export interface DemoDeal {
   lastActivity: string | null;
 }
 
-function deal(
-  d: Omit<DemoDeal, "expected">
-): DemoDeal {
-  return { ...d, expected: expectedRevenue(d.dealValue, d.probability) };
-}
-
 export const DEMO_DEALS: DemoDeal[] = [
-  deal({
+  {
     rank: "01",
     company: "Cloudmint",
     dealValue: 42_000,
-    probability: 68,
+    waitingDays: 4,
+    riskLabel: "Proposal unanswered",
+    ruleRank: 1,
     priority: "Call today",
     priorityTone: "urgent",
     signals: ["Proposal opened twice", "New stakeholder joined"],
@@ -61,12 +72,14 @@ export const DEMO_DEALS: DemoDeal[] = [
     readoutValue: "High",
     readoutTone: "high",
     lastActivity: "12 minutes ago",
-  }),
-  deal({
+  },
+  {
     rank: "02",
     company: "Brightcart",
     dealValue: 65_000,
-    probability: 37,
+    waitingDays: 1,
+    riskLabel: "No next step",
+    ruleRank: 2,
     priority: "Follow up",
     priorityTone: "warn",
     signals: ["Pricing page revisited", "Case studies reviewed"],
@@ -75,13 +88,15 @@ export const DEMO_DEALS: DemoDeal[] = [
     readoutValue: "Rising",
     readoutTone: "rising",
     lastActivity: "2 hours ago",
-  }),
-  deal({
+  },
+  {
     rank: "03",
     company: "Ledgerly",
     dealValue: 30_000,
-    probability: 52,
-    priority: "Recover",
+    waitingDays: 5,
+    riskLabel: "Quiet since the demo",
+    ruleRank: 3,
+    priority: "Re-engage",
     priorityTone: "watch",
     signals: ["Demo completed", "No reply for 5 days"],
     status: "No reply for 5 days",
@@ -89,86 +104,8 @@ export const DEMO_DEALS: DemoDeal[] = [
     readoutValue: "Increasing",
     readoutTone: "risk",
     lastActivity: "5 days ago",
-  }),
+  },
 ];
-
-/** The deal the whole story follows. */
-export const FOCUS_DEAL = DEMO_DEALS[0];
-
-/** Stage 1 — what the monitor is watching. */
-export const MONITORING = {
-  status: "Live · monitoring 248 open opportunities",
-  openOpportunities: 248,
-};
-
-/** Stage 2 — the ranking headline. */
-export const PRIORITIZATION = {
-  status: "14 opportunities ranked by expected revenue",
-  formula: "Expected revenue = deal value × probability of closing",
-  ranked: 14,
-};
-
-/** Stage 3 — the single recommended action on the focus deal. */
-export const NEXT_ACTION = {
-  company: FOCUS_DEAL.company,
-  expected: FOCUS_DEAL.expected,
-  whyNow: [
-    "Proposal opened twice in the last 24 hours",
-    "A second stakeholder joined the buying process",
-    "No follow-up has been sent since the demo",
-  ],
-  action: "Send a stakeholder-specific follow-up today.",
-  approvalNote: "Human approval required — Selryn never sends on its own.",
-  draft: {
-    subject: "Following up on the proposal — happy to bring in your finance lead",
-    body: "Hi Dana — I saw the proposal came back around your side, and that Priya from finance has joined the thread. Happy to put together a short breakdown of the commercial terms for her specifically, so she has what she needs without another call.\n\nWould Thursday work for a 15-minute walkthrough?",
-  },
-};
-
-/** Stage 4 — the command centre roll-up. */
-export const COMMAND = {
-  metrics: [
-    { label: "Pipeline monitored", value: "$1.24M", tone: "default" as const },
-    { label: "Expected revenue", value: "$427.5K", tone: "accent" as const },
-    { label: "Revenue needing attention", value: "$184.2K", tone: "risk" as const },
-    { label: "High-priority actions", value: "14", tone: "default" as const },
-  ],
-  /** Normalised 0–1 series for the expected-revenue sparkline. */
-  trend: [0.42, 0.46, 0.44, 0.52, 0.58, 0.55, 0.63, 0.68, 0.66, 0.74, 0.79, 0.86],
-  breakdown: [
-    { label: "Deals gaining momentum", value: "9", tone: "up" as const },
-    { label: "Deals at risk", value: "5", tone: "down" as const },
-    { label: "Actions completed today", value: "11", tone: "flat" as const },
-  ],
-  /**
-   * Names the three accounts rather than saying "the top three", so the deal
-   * the visitor followed through stages 1–3 is visibly still there in the
-   * roll-up. The figure is summed from those same deals — it cannot drift out
-   * of agreement with the table in stage 2.
-   */
-  get insight() {
-    const total = DEMO_DEALS.reduce((s, d) => s + d.expected, 0);
-    const names = DEMO_DEALS.map((d) => d.company);
-    const list = `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-    return `Following up with ${list} today protects an estimated ${formatMoneyCompact(
-      total
-    )} in expected revenue.`;
-  },
-};
-
-/** Tab definitions for the hero carousel. Short tab labels keep the strip on
- * one line at laptop widths; the fuller panel label carries the detail. */
-export const DEMO_STAGES = [
-  { id: "monitoring", tabLabel: "Signals", panelLabel: "Signal monitor" },
-  { id: "prioritization", tabLabel: "Priority", panelLabel: "Prioritized pipeline" },
-  { id: "action", tabLabel: "Next action", panelLabel: "Recommended action · Cloudmint" },
-  { id: "command", tabLabel: "Revenue command", panelLabel: "Revenue command center" },
-] as const;
-
-export type StageId = (typeof DEMO_STAGES)[number]["id"];
-
-/** How long each stage holds before advancing. */
-export const STAGE_DURATION_MS = 5600;
 
 // ── Screen 2: workflow scenarios ───────────────────────────────────────────
 
@@ -240,20 +177,20 @@ export const SCENARIOS: Scenario[] = [
     title: "Every open deal, ordered by size — and who to contact first.",
     account: "All open opportunities",
     steps: [
-      { label: "Selryn scans every open opportunity", note: "248 monitored continuously", delay: 700 },
-      { label: "Deal signals are scored", note: "Buying actions and silence both count", delay: 900 },
-      { label: "Expected revenue is calculated", note: "Deal value × probability of closing", delay: 1000 },
-      { label: "Accounts are ranked for today", note: "Highest expected value first", delay: 1100 },
+      { label: "Selryn reads every open opportunity", note: "248 monitored continuously", delay: 700 },
+      { label: "Follow-up commitments are checked", note: "Dates you agreed, against what was sent", delay: 900 },
+      { label: "Proposals with no reply are found", note: "Sent, opened, and still unanswered", delay: 1000 },
+      { label: "Today's list is ordered by what is overdue", note: "Not by which deal is biggest", delay: 1100 },
       { label: "One action is attached to each", note: "Not five options — one", delay: 950 },
     ],
     outcome: [
-      { label: "Accounts ranked", value: "14", tone: "accent" },
-      // Labelled as the estimate it is. "Expected revenue" unqualified reads
-      // as money coming in; it is deal value times an uncalibrated stage
-      // baseline.
-      { label: "Top 3 by est. expected revenue", value: "$89.6K", tone: "accent" },
+      { label: "Open deals read", value: "248", tone: "accent" },
+      // A count of deals, not a sum of money. The number this used to carry
+      // was deal value times an uncalibrated stage baseline, summed — an
+      // estimate of an estimate, printed to three figures.
+      { label: "Needing a follow-up today", value: "14", tone: "accent" },
     ],
-    result: "Rep time saved: measured against your baseline once connected",
+    result: "Ordered by what is overdue — the oldest broken promise first",
   },
   {
     id: "convert",
@@ -469,13 +406,14 @@ export interface ApproveStep extends DemoStepBase {
   payload: { label: string; state: "awaiting" | "approved"; note?: string };
 }
 
-/** The single next best action, with the evidence behind it. */
+/** The single recommended action, with the evidence behind it. */
 export interface RecommendStep extends DemoStepBase {
   action: "recommend";
   payload: {
     headline: string;
     why: string;
     evidence: string[];
+    /** The CRM's own amount on this deal. Not an estimate derived from it. */
     atStake?: number;
     /** The drafted message, shown as editable text before approval. */
     draft?: { subject: string; body: string };
@@ -593,8 +531,13 @@ export function railProgress(
   return { resolved, total, label: `${resolved} of ${total}` };
 }
 
-/** Ranked list used by the priority scenario. Derived, never hand-typed. */
-export const RANKED_DEALS = [...DEMO_DEALS].sort((a, b) => b.expected - a.expected);
+/**
+ * Ranked list used by the priority scenario. Derived, never hand-typed.
+ *
+ * By rule order, which is what the product sorts on — not by deal value and
+ * not by any estimate derived from it.
+ */
+export const RANKED_DEALS = [...DEMO_DEALS].sort((a, b) => a.ruleRank - b.ruleRank);
 
 /**
  * Every scenario holds the panel for the same fixed period.
@@ -761,16 +704,16 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         id: "p1",
         delay: 550,
         action: "analyze",
-        status: "Ranking 14 opportunities",
+        status: "Reading 248 open deals",
         payload: { label: "Reading the latest signal on every open deal" },
       },
       {
         id: "p2",
         delay: 700,
         action: "rank",
-        status: "Calculating win probability",
+        status: "Biggest deals first",
         payload: {
-          // Deal-size order, before expected revenue reorders it.
+          // Deal-size order, which is where most pipeline reviews stop.
           order: ["Brightcart", "Cloudmint", "Ledgerly"],
           caption: "Sorted by deal value",
         },
@@ -779,31 +722,27 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         id: "p3",
         delay: 850,
         action: "analyze",
-        status: "Calculating expected revenue",
-        payload: { label: "Expected revenue = deal value x win probability" },
+        status: "Checking what is overdue",
+        payload: { label: "Agreed follow-up dates, unanswered proposals, silence after a demo" },
       },
       {
         id: "p4",
         delay: 900,
         action: "rank",
-        status: "Re-ranked by expected revenue",
+        status: "Re-ordered by what is overdue",
         payload: {
           order: ["Cloudmint", "Brightcart", "Ledgerly"],
           highlight: "Cloudmint",
-          caption: "Sorted by expected revenue",
+          caption: "Sorted by what is overdue",
         },
       },
       {
         id: "p5",
         delay: 750,
         action: "outcome",
-        status: "Highest expected revenue",
+        status: "Cloudmint goes first",
         payload: {
-          label: "Cloudmint leads on expected revenue, not deal size",
-          metric: "Top expected revenue",
-          from: 0,
-          to: 28_560,
-          prefix: "$",
+          label: "Its proposal is unanswered, and they opened it again today",
         },
       },
     ],
@@ -811,22 +750,25 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       label: "Ranking run",
       fields: [
         { key: "opportunities", value: "248 open", after: 0 },
-        { key: "ranked_today", value: "14", after: 0 },
-        { key: "method", value: "value x win %", after: 3 },
+        { key: "needing_follow_up", value: "14", after: 0 },
+        { key: "method", value: "overdue first", after: 3 },
         { key: "top_account", value: "Cloudmint", after: 4, tone: "good" },
-        { key: "top_expected", value: "$28,560", after: 5, tone: "good" },
+        { key: "top_reason", value: "proposal unanswered", after: 5, tone: "risk" },
         { key: "largest_deal", value: "Brightcart", after: 4 },
       ],
       meter: {
-        label: "Top 3 share",
-        value: 50,
-        // 68,210 of 137,000 — asserted in the demo-data test, not eyeballed.
-        note: "$68.2K expected across $137K of open value",
+        // A count of deals against a count of deals. The figure this replaced
+        // was a sum of deal values times uncalibrated stage baselines,
+        // expressed as a share of open pipeline — two estimates deep, and
+        // printed as though it were a measurement.
+        label: "Share of the pipeline",
+        value: 6,
+        note: "14 of 248 open deals need a follow-up today",
         after: 4,
         tone: "good",
       },
     },
-    closing: "Brightcart is the bigger deal. Cloudmint is the better hour.",
+    closing: "Brightcart is the bigger deal. Cloudmint is the one you owe an answer.",
   },
   {
     id: "action",
@@ -862,7 +804,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         id: "a3",
         delay: 900,
         action: "recommend",
-        status: "Generating next best action",
+        status: "Drafting the follow-up",
         payload: {
           headline: "Send the scope and start date to their Head of Growth",
           why: "The new stakeholder has not been addressed, and an unanswered start date is what stalls deals at this stage.",
@@ -871,7 +813,11 @@ export const HERO_SCENARIOS: HeroScenario[] = [
             "Proposal opened twice, no reply",
             "4 days of silence after the demo",
           ],
-          atStake: 28_560,
+          // The deal value, which the CRM holds. It used to be $28,560 — that
+          // same figure times a stage baseline — captioned "of expected
+          // revenue at stake", which put an estimate of an estimate under the
+          // one real number on the panel.
+          atStake: 42_000,
           draft: {
             subject: "Scope and a start date",
             body: "Hi Priya \u2014 you\u2019ve had the proposal open a couple of times and I still haven\u2019t come back to you with a start date. I can put the scope and timing in front of you this week. Tuesday or Wednesday?",
@@ -921,7 +867,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
   {
     id: "outcome",
     tabLabel: "Measure outcome",
-    panelLabel: "Revenue outcome · Cloudmint",
+    panelLabel: "Outcome · Cloudmint",
     subject: {
       company: "Cloudmint",
       dealValue: 42_000,
@@ -969,13 +915,12 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         id: "o5",
         delay: 750,
         action: "score",
-        status: "Win probability updated",
+        status: "Risk cleared",
         payload: {
-          metric: "Win probability",
-          from: 68,
-          to: 71,
-          suffix: "%",
-          verdict: "Advanced a stage",
+          metric: "Days unanswered",
+          from: 4,
+          to: 0,
+          verdict: "They replied",
           tone: "good",
         },
       },
@@ -983,36 +928,36 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         id: "o6",
         delay: 700,
         action: "outcome",
-        status: "Expected revenue recalculated",
+        status: "Recorded, not counted as revenue",
         payload: {
-          label: "Protected revenue",
-          metric: "Protected revenue",
-          from: 28_560,
-          to: 29_820,
-          prefix: "$",
+          label: "Advanced one stage. Not won, and nothing booked.",
         },
       },
     ],
     rail: {
-      label: "Revenue ledger",
+      label: "What was recorded",
       fields: [
         { key: "approved_by", value: "Dana W. · 09:12", after: 0, tone: "good" },
         { key: "follow_up", value: "sent 09:14", after: 1, tone: "good" },
         { key: "reply", value: "41 min later", after: 2, tone: "good" },
         { key: "meeting", value: "tomorrow 14:00", after: 3, tone: "good" },
         { key: "stage", value: "Proposal", after: 4, tone: "good" },
-        { key: "win_probability", value: "68% → 71%", after: 5, tone: "good" },
-        { key: "expected_revenue", value: "$29,820", after: 6, tone: "good" },
+        { key: "recommendation", value: "accepted, edited", after: 5, tone: "good" },
+        { key: "revenue_booked", value: "none — still open", after: 6 },
       ],
       meter: {
-        label: "Win probability",
+        // A real Outcomes figure: of the recommendations this workspace was
+        // shown, the share somebody then acted on. It replaced a win
+        // probability, which measured nothing and moved three points because
+        // a stage field changed.
+        label: "Recommendations acted on",
         value: 71,
-        note: "Three points on a stage move Selryn can point at",
+        note: "Of those shown in this workspace — accepted, edited or dismissed",
         after: 5,
         tone: "good",
       },
     },
-    closing: "Signal → Recommendation → Action → Response → Revenue outcome",
+    closing: "Risk → Recommendation → Your approval → Their reply → Recorded",
   },
 ];
 
@@ -1038,7 +983,7 @@ export function scenarioStatus(scenario: HeroScenario): {
       };
     case "priority":
       return {
-        label: "Ranked by expected revenue",
+        label: "Ordered by what is overdue",
         count:
           ranked && ranked.action === "rank"
             ? `${ranked.payload.order.length} of ${DEMO_DEALS.length} deals`
@@ -1046,12 +991,12 @@ export function scenarioStatus(scenario: HeroScenario): {
       };
     case "action":
       return {
-        label: "Next best action · evidence attached",
+        label: "Recommended action · evidence attached",
         count: "1 of 1 action",
       };
     default:
       return {
-        label: "Outcome ledger · action to revenue",
+        label: "Outcome · what was recorded",
         count: `${scenario.steps.length} of ${scenario.steps.length} events`,
       };
   }

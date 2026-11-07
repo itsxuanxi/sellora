@@ -4,7 +4,7 @@ import { Logo } from "@/components/logo";
 import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-export const metadata = { title: "Set up your agent" };
+export const metadata = { title: "Set up your workspace" };
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {

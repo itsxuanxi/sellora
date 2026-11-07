@@ -10,6 +10,7 @@ import {
   RANKED_DEALS,
   SCENARIOS,
   scenarioDelays,
+  scenarioStatus,
   stepDelays,
 } from "@/components/marketing/home/demo-data";
 import { sequenceDuration } from "@/components/marketing/home/use-demo-sequence";
@@ -17,27 +18,42 @@ import { sequenceDuration } from "@/components/marketing/home/use-demo-sequence"
 // The demo is marketing copy that makes arithmetic claims on screen. These
 // guard the claims, not the styling.
 
-test("expected revenue is deal value × probability for every deal", () => {
+test("every deal states a record, not a forecast", () => {
+  // The two fields this replaced were `probability` (an uncalibrated stage
+  // baseline, printed as a percentage) and `expected` (deal value times it).
+  // Both are gone from the type, so a regression is a compile error rather
+  // than a number nobody rechecks. What is left has to be present and sane.
   for (const d of DEMO_DEALS) {
-    assert.equal(
-      d.expected,
-      Math.round(d.dealValue * (d.probability / 100)),
-      `${d.company} expected revenue disagrees with its own inputs`
-    );
+    assert.ok(d.waitingDays >= 0, `${d.company} waits a negative number of days`);
+    assert.ok(d.riskLabel.length > 0, `${d.company} names no risk`);
+    assert.ok(d.ruleRank >= 1, `${d.company} has no position under the rules`);
+    for (const key of Object.keys(d)) {
+      assert.ok(
+        !/probability|expected|forecast|protected/i.test(key),
+        `${d.company} carries a forecast field: ${key}`
+      );
+    }
   }
 });
 
 test("the deals match the figures the hero narrates", () => {
   const byName = Object.fromEntries(DEMO_DEALS.map((d) => [d.company, d]));
-  assert.equal(byName.Cloudmint.expected, 28_560);
-  assert.equal(byName.Brightcart.expected, 24_050);
-  assert.equal(byName.Ledgerly.expected, 15_600);
+  assert.equal(byName.Cloudmint.dealValue, 42_000);
+  assert.equal(byName.Brightcart.dealValue, 65_000);
+  assert.equal(byName.Ledgerly.dealValue, 30_000);
 });
 
-test("the ranking really is by expected revenue, not deal size", () => {
-  // The scenario's whole point: Brightcart is the bigger deal and still loses.
-  const expected = RANKED_DEALS.map((d) => d.expected);
-  assert.deepEqual(expected, [...expected].sort((a, b) => b - a));
+test("every deal has its own position under the rules", () => {
+  const ranks = DEMO_DEALS.map((d) => d.ruleRank);
+  assert.equal(new Set(ranks).size, ranks.length, "two deals claim the same rank");
+});
+
+test("the ranking is by rule order, not deal size", () => {
+  // The panel's whole point: Brightcart is the bigger deal and still loses.
+  // It loses on the rules now — an unanswered proposal outranks a missing
+  // next step — rather than on an arithmetic comparison of two estimates.
+  const ranks = RANKED_DEALS.map((d) => d.ruleRank);
+  assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b));
   assert.equal(RANKED_DEALS[0].company, "Cloudmint");
 
   const biggestDeal = [...DEMO_DEALS].sort((a, b) => b.dealValue - a.dealValue)[0];
@@ -45,22 +61,30 @@ test("the ranking really is by expected revenue, not deal size", () => {
   assert.notEqual(RANKED_DEALS[0].company, biggestDeal.company);
 });
 
-test("the outcome scenario's numbers follow from the deal it is about", () => {
+test("the outcome panel reports what happened and claims no revenue", () => {
+  // It used to close by turning a Pricing -> Proposal stage move into
+  // "Protected revenue $28,560 -> $29,820". A stage move is not money, and
+  // Selryn cannot measure how much of an outcome it caused, so the panel is
+  // not allowed to carry a money figure at all.
   const outcome = HERO_SCENARIOS.find((s) => s.id === "outcome")!;
-  const dealValue = outcome.subject.dealValue;
 
-  const winProb = outcome.steps.find((s) => s.action === "score");
-  assert.ok(winProb && winProb.action === "score");
-  // Matched on shape, not on the label: the panel's wording is copy and may
-  // change ("Expected" to "Protected"), but the arithmetic must not.
-  const revenue = outcome.steps.find(
-    (s) => s.action === "outcome" && s.payload.prefix === "$" && s.payload.from != null
-  );
-  assert.ok(revenue && revenue.action === "outcome");
+  for (const step of outcome.steps) {
+    const payload = JSON.stringify(step.payload);
+    assert.ok(
+      !payload.includes('"prefix":"$"'),
+      `the outcome panel still prints money: ${payload}`
+    );
+  }
 
-  // Both ends of the expected-revenue move must equal value × probability.
-  assert.equal(revenue.payload.from, Math.round(dealValue * (winProb.payload.from / 100)));
-  assert.equal(revenue.payload.to, Math.round(dealValue * (winProb.payload.to / 100)));
+  // And it says in words that nothing was won.
+  const prose = [
+    outcome.closing,
+    ...outcome.steps.map((x) => `${x.status} ${JSON.stringify(x.payload)}`),
+    ...outcome.rail.fields.map((f) => `${f.key} ${f.value}`),
+  ]
+    .join(" ")
+    .toLowerCase();
+  assert.ok(/not won|still open/.test(prose), "the outcome panel never says the deal is still open");
 });
 
 test("every hero step has a readable beat", () => {
@@ -131,20 +155,20 @@ test("the ranking really does reorder away from deal size", () => {
   // The panel's whole argument. If both orders matched, it would be showing
   // a sort that changes nothing.
   const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
-  const ranks = priority.steps.filter((s) => s.action === "rank");
-  const first = ranks[0];
-  const last = ranks[ranks.length - 1];
+  const rankSteps = priority.steps.filter((s) => s.action === "rank");
+  const first = rankSteps[0];
+  const last = rankSteps[rankSteps.length - 1];
   assert.ok(first.action === "rank" && last.action === "rank");
   assert.notDeepEqual(first.payload.order, last.payload.order);
 
-  // And the final order is genuinely by expected revenue.
-  const expected = last.payload.order.map(
-    (c) => DEMO_DEALS.find((d) => d.company === c)!.expected
+  // And the final order is genuinely the rule order the product sorts on.
+  const ruleRanks = last.payload.order.map(
+    (c) => DEMO_DEALS.find((d) => d.company === c)!.ruleRank
   );
-  assert.deepEqual(expected, [...expected].sort((a, b) => b - a));
+  assert.deepEqual(ruleRanks, [...ruleRanks].sort((a, b) => a - b));
 });
 
-test("the next-best-action panel keeps a human in the loop", () => {
+test("the recommendation panel keeps a human in the loop", () => {
   const action = HERO_SCENARIOS.find((s) => s.id === "action")!;
   const approvals = action.steps.filter((s) => s.action === "approve");
   assert.ok(approvals.length >= 2, "no awaiting-then-approved beat");
@@ -230,19 +254,30 @@ test("the rail never restates the header it sits beside", () => {
 });
 
 test("the priority rail's share figure is the arithmetic, not a round number", () => {
-  // "Top 3 share · 50%" is a claim about the sample pipeline, so it has to
-  // follow from the same three deals the table above it ranks.
+  // A share of deals, not of money: of the open pipeline the panel says it
+  // reads, the part needing a follow-up today. Both counts are stated in the
+  // rail beside it, so the percentage has to follow from them.
   const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
-  const expected = DEMO_DEALS.reduce((sum, d) => sum + d.expected, 0);
-  const open = DEMO_DEALS.reduce((sum, d) => sum + d.dealValue, 0);
-  assert.equal(priority.rail.meter.value, Math.round((expected / open) * 100));
+  const byKey = Object.fromEntries(priority.rail.fields.map((f) => [f.key, f.value]));
+  const open = parseInt(byKey.opportunities, 10);
+  const due = parseInt(byKey.needing_follow_up, 10);
+  assert.ok(open > 0 && due > 0, "the rail no longer states both counts");
+  assert.equal(priority.rail.meter.value, Math.round((due / open) * 100));
+  assert.match(priority.rail.meter.note, new RegExp(`${due} of ${open}`));
 });
 
-test("the outcome rail agrees with the outcome scenario's own steps", () => {
+test("the outcome rail's meter measures something the product computes", () => {
+  // It used to be the win probability, which is why it moved three points
+  // because a stage field changed. Outcomes really does compute the share of
+  // shown recommendations that someone acted on, so that is what it shows.
   const outcome = HERO_SCENARIOS.find((s) => s.id === "outcome")!;
-  const score = outcome.steps.find((s) => s.action === "score");
-  assert.ok(score && score.action === "score");
-  assert.equal(outcome.rail.meter.value, score.payload.to);
+  assert.match(outcome.rail.meter.label, /recommendations acted on/i);
+  assert.ok(
+    !/probability|expected revenue|protected/i.test(
+      `${outcome.rail.meter.label} ${outcome.rail.meter.note}`
+    ),
+    "the outcome meter is back to forecasting"
+  );
 });
 
 test("the integration catalog names each connector once", () => {
@@ -303,5 +338,50 @@ test("nothing claims a recommendation caused a win", () => {
 
   for (const banned of ["caused", "guaranteed", "proven to", "increases revenue by"]) {
     assert.ok(!prose.includes(banned), `demo copy makes a causal claim: "${banned}"`);
+  }
+});
+
+test("no marketing surface resurrects the vocabulary the product dropped", () => {
+  // These phrases all shipped on the homepage while the application had
+  // already stopped making the claims behind them: ranking by expected
+  // revenue, a two-figure win probability, and revenue "protected" by a
+  // reply. Marketing copy drifts back toward whatever sounds most impressive,
+  // so the guard lives in the test suite rather than in a review habit.
+  const everything = [
+    ...HERO_SCENARIOS.flatMap((s) => [
+      s.panelLabel,
+      s.tabLabel,
+      s.closing,
+      s.rail.label,
+      s.rail.meter.label,
+      s.rail.meter.note,
+      ...s.rail.fields.map((f) => `${f.key} ${f.value}`),
+      ...s.steps.map((x) => `${x.status} ${JSON.stringify(x.payload)}`),
+    ]),
+    ...SCENARIOS.flatMap((s) => [
+      s.title,
+      s.result,
+      ...s.steps.map((x) => `${x.label} ${x.note ?? ""}`),
+      ...s.outcome.map((o) => `${o.label} ${o.value}`),
+    ]),
+    // The status line above each panel is computed, not stored, which is how
+    // "Ranked by expected revenue" survived the first pass of this guard.
+    ...HERO_SCENARIOS.map((s) => scenarioStatus(s).label),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  for (const banned of [
+    "win probability",
+    "protected revenue",
+    "revenue protected",
+    "revenue recovered",
+    "revenue at risk",
+    "revenue leak",
+    "next best action",
+    "probability of closing",
+    "expected value first",
+  ]) {
+    assert.ok(!everything.includes(banned), `marketing copy says "${banned}" again`);
   }
 });

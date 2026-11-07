@@ -1,7 +1,8 @@
 /**
  * The guided story, as data.
  *
- * One deal — Cloudmint — from a revenue leak to a booked next meeting, told
+ * One deal — Cloudmint — from an unanswered proposal to a booked next
+ * meeting, told
  * through the real application. Every step points at a real control by its
  * `data-tour` attribute; the components carry the attribute and know nothing
  * else about the tour.
@@ -65,7 +66,7 @@ export const TOUR_STEPS: TourStep[] = [
     target: "score-summary",
     phase: "Decide",
     title: "Turn activity into a decision",
-    body: "Customer fit, engagement and buying signals each contribute points, and every line says which rule fired. The silence after a proposal that was opened twice is what puts this deal's expected revenue at risk.",
+    body: "Customer fit, engagement and buying signals each contribute points, and every line says which rule fired, including the ones that found nothing. The silence after a proposal that was opened twice is why this deal is on today's list.",
     instruction: "Read why the score is what it is, then continue.",
     advance: "read",
     placement: "bottom",
@@ -119,8 +120,8 @@ export const TOUR_STEPS: TourStep[] = [
     route: "/opportunities/",
     target: "score-summary",
     phase: "Learn",
-    title: "Connect the action to revenue",
-    body: "The reply re-scored the deal: the leak closed, win probability rose and expected revenue rose with it. Move the stage forward and the figures move again — because the evidence changed, not because a demo said so. The deal has advanced. It has not been won.",
+    title: "See what moved, and what did not",
+    body: "The reply re-scored the deal: the risk cleared, and the estimated likelihood rose with it. Move the stage forward and the figures move again — because the evidence changed, not because a demo said so. The deal has advanced one stage. It has not been won, and no revenue has been booked.",
     instruction: "That is the loop, closed.",
     advance: "read",
     placement: "bottom",

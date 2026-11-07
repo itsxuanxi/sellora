@@ -24,25 +24,40 @@ import {
 } from "@/app/onboarding/actions";
 import { loadSampleDataAction } from "@/app/(app)/sample-actions";
 
+/**
+ * What Selryn may do without being asked.
+ *
+ * Every mode here governs internal work only — researching an account and
+ * scoring it. None of them can send anything: `createAgentAction` executes
+ * exactly two action types, `research_account` and `score_account`, and no
+ * code path anywhere creates an outbound-email action. A follow-up reaches a
+ * buyer only when a person approves that specific draft on the deal.
+ *
+ * Which is why the third option is no longer called "Autopilot" and no
+ * longer says "the agent executes on its own within your limits". Read on
+ * this screen, that promised autonomous outbound — the one thing it could
+ * never mean, and the thing this product is not. The stored value is still
+ * "autopilot" so nobody's workspace needs migrating.
+ */
 const AUTONOMY_OPTIONS = [
   {
     value: "suggest" as const,
     icon: Eye,
     title: "Suggest only",
-    body: "The agent researches and drafts, but never acts. You review everything.",
+    body: "Selryn prepares research and scores, and runs nothing until you ask it to.",
   },
   {
     value: "approve" as const,
     icon: ShieldCheck,
     title: "Approval required",
-    body: "The agent queues actions; nothing executes until you approve. Recommended.",
+    body: "Research and scoring queue for you to approve first. Recommended.",
     recommended: true,
   },
   {
     value: "autopilot" as const,
     icon: Bot,
-    title: "Autopilot",
-    body: "The agent executes on its own within your limits. Every action is audited and reversible where possible.",
+    title: "Research without asking",
+    body: "Account research and scoring run as soon as a deal arrives. Follow-ups still wait for your approval — in every mode.",
   },
 ];
 
@@ -63,7 +78,7 @@ export function OnboardingWizard() {
     autonomy: "approve" as "suggest" | "approve" | "autopilot",
   });
 
-  const steps = ["What you sell", "Deal profile", "Agent permissions"];
+  const steps = ["What you sell", "Deal profile", "What runs on its own"];
 
   function next() {
     if (step === 0 && (!form.offering.trim() || !form.idealCustomer.trim())) {
@@ -124,8 +139,8 @@ export function OnboardingWizard() {
                 What does your business sell?
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                The agent uses this to research accounts and write outreach in
-                your context.
+                Selryn uses this to research accounts and draft follow-ups in
+                your words.
               </p>
             </div>
             <div className="space-y-1.5">
@@ -212,10 +227,11 @@ export function OnboardingWizard() {
           <div className="space-y-5">
             <div>
               <h2 className="text-xl font-semibold tracking-tight">
-                How much should the agent do on its own?
+                What should Selryn do without asking?
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                You can change this anytime in the ICP settings.
+                This covers research and scoring only. Nothing is ever sent to
+                a customer without your approval. Changeable at any time.
               </p>
             </div>
             <div className="space-y-2.5">
@@ -363,8 +379,8 @@ function DataSourceStep({
             <span className="min-w-0">
               <span className="block font-medium">Connect real data</span>
               <span className="mt-0.5 block text-sm text-muted-foreground">
-                Tell the agent what you sell and who you sell to, then import
-                your accounts or connect a CRM.
+                Tell Selryn what you sell and who you sell to, then import your
+                pipeline from a spreadsheet or connect a CRM.
               </span>
             </span>
           </button>

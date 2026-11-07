@@ -16,15 +16,22 @@ export interface NotifiedDeal {
   company: string;
   stage: string;
   dealValue: number;
-  winProbability: number;
-  expectedValue: number;
   currency: string;
   /** Why this deal is in the message at all. */
   reason: string;
+  /**
+   * The risk Today names on this deal, and whether that claim is read off
+   * the records or reasoned from them — the same two words the card shows.
+   * Null when the deal is in the message but not on today's list.
+   */
+  risk: string | null;
+  basis: string | null;
+  /** Days past the moment this deal needed an answer; null when not overdue. */
+  daysOverdue: number | null;
   /** The single recommended next step. */
   nextAction: string;
   urgency: string;
-  /** Expected revenue exposed by the leak; 0 when nothing is leaking. */
+  /** Estimated value at risk; 0 when nothing is at risk. An estimate. */
   atRisk: number;
   url: string;
 }

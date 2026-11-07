@@ -5,7 +5,7 @@ import { SandboxEntry } from "@/components/marketing/sandbox-entry";
 export const metadata: Metadata = {
   title: "Try Selryn",
   description:
-    "Follow one deal from revenue risk to the next meeting, in a private sandbox running the real product. No sign-up, nothing sent.",
+    "Follow one deal from an unanswered proposal to a booked meeting, in a private sandbox running the real product. No sign-up, nothing sent.",
 };
 
 /**
@@ -22,22 +22,22 @@ const STAGES = [
   {
     n: "01",
     phase: "Detect",
-    body: "Find the signal that puts revenue at risk.",
+    body: "Find the deal that went quiet after its proposal.",
   },
   {
     n: "02",
     phase: "Decide",
-    body: "Understand why the opportunity needs attention.",
+    body: "Read the emails and records that say why it needs attention.",
   },
   {
     n: "03",
     phase: "Act",
-    body: "Review and approve the next best action.",
+    body: "Edit the draft, then approve it yourself.",
   },
   {
     n: "04",
     phase: "Learn",
-    body: "See the buyer response and the revenue impact.",
+    body: "Log what the buyer did next, and watch the advice change.",
   },
 ];
 
@@ -55,13 +55,14 @@ export default function DemoPage() {
         </p>
 
         <h1 className="mt-7 text-balance text-[2.75rem] font-medium leading-[1.04] tracking-[-0.02em] sm:text-[3.4rem] lg:text-[3.9rem]">
-          Follow one deal from revenue risk
-          <span className="text-primary"> to the next meeting.</span>
+          Follow one deal from an unanswered proposal
+          <span className="text-primary"> to a booked meeting.</span>
         </h1>
 
         <p className="mt-7 max-w-2xl text-pretty text-[17px] leading-[1.65] text-muted-foreground">
-          See how Selryn detects a cooling opportunity, explains what changed,
-          recommends the next best action, and measures the revenue outcome.
+          See how Selryn spots a proposal nobody answered, shows you the
+          records behind it, drafts the follow-up for your approval, and
+          records what the buyer does next.
         </p>
 
         <div className="mt-10">

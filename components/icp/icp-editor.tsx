@@ -15,7 +15,7 @@ import { refineIcp, setAutonomy, updateIcp } from "@/app/(app)/icp/actions";
 const AUTONOMY = [
   { value: "suggest", icon: Eye, label: "Suggest only" },
   { value: "approve", icon: ShieldCheck, label: "Approval required" },
-  { value: "autopilot", icon: Bot, label: "Autopilot" },
+  { value: "autopilot", icon: Bot, label: "Research without asking" },
 ] as const;
 
 export function IcpEditor({ icp }: { icp: IcpProfile }) {
@@ -171,9 +171,10 @@ export function IcpEditor({ icp }: { icp: IcpProfile }) {
 
       {/* Autonomy */}
       <div className="rounded-2xl border border-border/70 bg-card p-6">
-        <h2 className="text-sm font-semibold">Agent permissions</h2>
+        <h2 className="text-sm font-semibold">What runs on its own</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Controls what the agent may do without you. Applies to all queued work.
+          Account research and scoring only. Nothing is ever sent to a customer
+          without your approval, whichever of these is selected.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {AUTONOMY.map((option) => (

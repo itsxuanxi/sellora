@@ -45,7 +45,7 @@ export function renderSlackMessage(
     type: "context",
     elements: [
       { type: "mrkdwn", text: `Selryn · ${opts.workspaceName}` },
-      { type: "mrkdwn", text: `${message.summary.revenueAtRisk} at risk` },
+      { type: "mrkdwn", text: `${message.summary.revenueAtRisk} est. value at risk` },
       {
         type: "mrkdwn",
         text: `${message.summary.openPipeline} open across ${message.summary.openCount}`,
@@ -66,7 +66,7 @@ export function renderSlackMessage(
         text: [
           `*<${deal.url}|${deal.company}>*${deal.atRisk > 0 ? "  :warning: needs attention" : ""}`,
           `${deal.stage} · ${truncate(deal.reason, 140)}`,
-          `${money.format(deal.dealValue)} × ${deal.winProbability}% = *${money.format(deal.expectedValue)} expected*`,
+          `*${money.format(deal.dealValue)}*${deal.risk ? ` · ${deal.risk}` : ""}${deal.basis ? ` · _${deal.basis}_` : ""}`,
           `*Next:* ${truncate(deal.nextAction, 140)} _(${deal.urgency})_`,
         ].join("\n"),
       },

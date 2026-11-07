@@ -191,7 +191,7 @@ export default async function OpportunitiesPage({
                     <Th align="right">Est. expected</Th>
                     <Th align="right">Est. at risk</Th>
                     <Th>Why it matters</Th>
-                    <Th>Next best action</Th>
+                    <Th>Recommended action</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
