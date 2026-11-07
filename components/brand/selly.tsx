@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -142,5 +145,93 @@ export function SellySays({
       <Selly pose={pose} size={size} float={float} />
       <span className="min-w-0 text-left">{children}</span>
     </span>
+  );
+}
+
+/**
+ * Selly, walking to whichever tab is active.
+ *
+ * She measures the live position of the selected tab and slides there, which
+ * is the only approach that survives this page: the hero's strip has
+ * unequal-width tabs and scrolls horizontally on a phone, so anything based
+ * on "one third of the width per tab" drifts out of alignment the moment a
+ * label wraps or the strip scrolls. A ResizeObserver re-measures rather than
+ * trusting the first paint.
+ *
+ * The lane is a fixed-height strip of its own so she never overlaps the
+ * panel below — a mascot that covers the product is the failure mode this
+ * whole placement is trying to avoid.
+ */
+export function SellyTrail({
+  containerRef,
+  active,
+  poses,
+  size = 64,
+  className,
+}: {
+  /** Wraps the tablist. Any `[role="tab"]` inside is a stop on her route. */
+  containerRef: React.RefObject<HTMLElement | null>;
+  active: number;
+  /** One drawn pose per tab, in tab order. */
+  poses: SellyPose[];
+  size?: number;
+  className?: string;
+}) {
+  const [x, setX] = useState<number | null>(null);
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    setReduced(
+      typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }, []);
+
+  useEffect(() => {
+    const host = containerRef.current;
+    if (!host) return;
+
+    const measure = () => {
+      const tabs = host.querySelectorAll<HTMLElement>('[role="tab"]');
+      const tab = tabs[active];
+      if (!tab) return;
+      const hr = host.getBoundingClientRect();
+      const tr = tab.getBoundingClientRect();
+      setX(tr.left - hr.left + tr.width / 2);
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(host);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [containerRef, active]);
+
+  // Until the first measurement there is nowhere honest to put her, and a
+  // mascot that starts at the left edge and jumps is worse than one that
+  // fades in already in place.
+  if (x === null) return <div style={{ height: size }} aria-hidden />;
+
+  return (
+    <div
+      className={cn("pointer-events-none relative", className)}
+      style={{ height: size }}
+      aria-hidden
+    >
+      <span
+        className="absolute bottom-0 left-0"
+        style={{
+          transform: `translateX(${Math.round(x)}px) translateX(-50%)`,
+          transition: reduced
+            ? "none"
+            : "transform 620ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        <Selly pose={poses[active] ?? poses[0]} size={size} float />
+      </span>
+    </div>
   );
 }

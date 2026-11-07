@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { RULE_ORDER, rankFollowUps, type FollowUpRule } from "@/lib/followup/rules";
 import { BASIS_HELP, BASIS_LABEL, RISK_LABEL } from "@/lib/risk/kinds";
 import { prefersReducedMotion } from "@/lib/motion";
-import { Selly, type SellyPose } from "@/components/brand/selly";
+import { Selly, SellyTrail, type SellyPose } from "@/components/brand/selly";
 import { formatMoney } from "@/lib/revenue/money";
 import {
   BY_DEAL_VALUE,
@@ -56,6 +56,8 @@ const STEPS: {
 
 export function ProductDemos() {
   const baseId = useId();
+  // Wraps the step rail so the mascot can measure where each step sits.
+  const railRef = useRef<HTMLOListElement | null>(null);
   const [step, setStep] = useState<StepId>("who");
   const [prioritized, setPrioritized] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("d_northwind");
@@ -71,8 +73,22 @@ export function ProductDemos() {
 
   return (
     <div className="mt-10">
+      {/* Selly walks the path with the reader: one drawn pose per step, and
+          she slides to whichever one is open. This is the movement the
+          static chip was standing in for. */}
+      <SellyTrail
+        containerRef={railRef}
+        active={STEPS.findIndex((s) => s.id === step)}
+        poses={STEPS.map((s) => s.pose)}
+        size={60}
+      />
+
       {/* ── The three questions, as a path rather than a tab bar ── */}
-      <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-2" role="tablist">
+      <ol
+        ref={railRef}
+        className="flex flex-wrap items-center gap-x-1.5 gap-y-2"
+        role="tablist"
+      >
         {STEPS.map((s, i) => {
           const active = s.id === step;
           const done = STEPS.findIndex((x) => x.id === step) > i;
@@ -121,13 +137,8 @@ export function ProductDemos() {
         className="mt-5 overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] shadow-[var(--mkt-shadow-card)]"
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-4 py-2.5 sm:px-5">
-          {/* Selly changes pose with the step, so the character is doing the
-              same job the panel is rather than watching from the margin. */}
-          <span className="flex min-w-0 items-center gap-2.5">
-            <Selly pose={STEPS.find((s) => s.id === step)!.pose} size={42} />
-            <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--mkt-muted)]">
-              {STEPS.find((s) => s.id === step)?.question}
-            </span>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--mkt-muted)]">
+            {STEPS.find((s) => s.id === step)?.question}
           </span>
           <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
             Sample data

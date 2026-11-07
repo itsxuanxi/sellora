@@ -1,11 +1,12 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useId, useMemo, useRef } from "react";
 import { useAutoRotate } from "@/components/marketing/home/use-auto-rotate";
 import { useDemoSequence } from "@/components/marketing/home/use-demo-sequence";
 import { StackedPanels, TabStrip } from "@/components/marketing/home/tab-strip";
 import { DemoStage } from "@/components/marketing/home/demo-stage";
-import { Selly } from "@/components/brand/selly";
+import { SellyTrail } from "@/components/brand/selly";
+import type { SellyPose } from "@/components/brand/selly";
 import {
   DEMO_DATA_NOTE,
   HERO_SCENARIOS,
@@ -38,6 +39,9 @@ import {
  */
 
 const IDS = HERO_SCENARIOS.map((s) => s.id);
+/** One drawn pose per hero capsule, in order. */
+const HERO_POSES: SellyPose[] = ["who", "why", "next"];
+
 const LABELS = HERO_SCENARIOS.map((s) => s.tabLabel);
 
 export function HeroDemo() {
@@ -45,6 +49,8 @@ export function HeroDemo() {
   // thing on every tab. A test asserts each scenario's steps finish inside it.
   const rotate = useAutoRotate(HERO_SCENARIOS.length, HERO_STAGE_DURATION_MS);
   const baseId = useId();
+  // Wraps the tablist so the mascot can measure where each tab actually is.
+  const stripRef = useRef<HTMLDivElement | null>(null);
 
   const activeScenario = HERO_SCENARIOS[rotate.active];
   const delays = useMemo(() => scenarioDelays(activeScenario), [activeScenario]);
@@ -59,6 +65,17 @@ export function HeroDemo() {
 
   return (
     <div ref={rotate.containerRef} {...rotate.interactionProps} className="w-full">
+      {/* Selly walks to whichever capsule is playing. The hero rotates on
+          its own, so she is the thing that makes the rotation feel like
+          somebody working rather than a slideshow advancing. */}
+      <SellyTrail
+        containerRef={stripRef}
+        active={rotate.active}
+        poses={HERO_POSES}
+        size={64}
+        className="mb-1"
+      />
+      <div ref={stripRef}>
       <TabStrip
         rotate={rotate}
         labels={LABELS}
@@ -68,6 +85,7 @@ export function HeroDemo() {
         size="xl"
         fill
       />
+      </div>
 
       <StackedPanels
         ids={IDS}
@@ -148,12 +166,7 @@ function PanelChrome({
 
       {/* Kept, but quiet: the disclosure has to be present and must not
           compete with the product surface above it. */}
-      <div className="flex items-center gap-2.5 border-t border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-2 sm:px-6">
-        {/* Selly's only appearance in the hero, and deliberately the
-            smallest thing in it. The panel above is the argument; she signs
-            it. A mascot large enough to compete with the product surface
-            would be answering a question nobody asked on the first screen. */}
-        <Selly pose="face" size={32} float priority />
+      <div className="flex items-center border-t border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-5 py-2 sm:px-6">
         <span className="text-[10px] text-[var(--mkt-muted)]/75">{DEMO_DATA_NOTE}</span>
       </div>
     </div>
