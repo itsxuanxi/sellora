@@ -1,10 +1,19 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { ArrowDown, Check, Pencil, ShieldCheck } from "lucide-react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRight,
+  Check,
+  Loader2,
+  Pencil,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { rankFollowUps } from "@/lib/followup/rules";
+import { RULE_ORDER, rankFollowUps, type FollowUpRule } from "@/lib/followup/rules";
 import { BASIS_HELP, BASIS_LABEL, RISK_LABEL } from "@/lib/risk/kinds";
+import { prefersReducedMotion } from "@/lib/motion";
 import { formatMoney } from "@/lib/revenue/money";
 import {
   BY_DEAL_VALUE,
@@ -43,10 +52,6 @@ export function ProductDemos() {
   const [step, setStep] = useState<StepId>("who");
   const [prioritized, setPrioritized] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("d_northwind");
-
-  // The product's own ranker, over the product's own type.
-  const ranked = useMemo(() => rankFollowUps(DEMO_PIPELINE), []);
-  const list = prioritized ? ranked : BY_DEAL_VALUE;
 
   const selected =
     DEMO_PIPELINE.find((d) => d.opportunityId === selectedId) ?? DEMO_PIPELINE[0];
@@ -120,10 +125,10 @@ export function ProductDemos() {
         <div className="p-4 sm:p-5">
           {step === "who" && (
             <WhoPanel
-              list={list}
               prioritized={prioritized}
               selectedId={selectedId}
               onPrioritize={() => setPrioritized(true)}
+              onReset={() => setPrioritized(false)}
               onChoose={choose}
             />
           )}
@@ -137,61 +142,221 @@ export function ProductDemos() {
 
 // ── 01 · Who to contact ────────────────────────────────────────────────────
 
+/**
+ * The checks Selryn runs, named from the rules it actually runs them with.
+ *
+ * Derived from RULE_ORDER rather than typed out, so the animation cannot
+ * show a sequence of checks the ranker does not perform, and cannot fall out
+ * of step with it later. The counts come from the sample pipeline the same
+ * way — nothing here is a number somebody chose to look good.
+ */
+const CHECK_COPY: Record<FollowUpRule, string> = {
+  followup_due: "A date you agreed, and missed",
+  quote_no_reply: "A proposal nobody answered",
+  no_next_step: "A meeting with nothing booked after it",
+  gone_quiet: "Silence, with nothing agreed",
+};
+
+const CHECKS = RULE_ORDER.map((rule) => ({
+  rule,
+  label: CHECK_COPY[rule],
+  hits: DEMO_PIPELINE.filter((d) => d.rule === rule && d.daysOverdue > 0).length,
+}));
+
+/** Long enough to read one line, short enough that four do not drag. */
+const CHECK_MS = 420;
+
+type Phase = "idle" | "analyzing" | "ranked";
+
 function WhoPanel({
-  list,
   prioritized,
   selectedId,
   onPrioritize,
+  onReset,
   onChoose,
 }: {
-  list: DemoDealCard[];
   prioritized: boolean;
   selectedId: string;
   onPrioritize: () => void;
+  onReset: () => void;
   onChoose: (deal: DemoDealCard) => void;
 }) {
+  const [reduced, setReduced] = useState(false);
+  const [phase, setPhase] = useState<Phase>(prioritized ? "ranked" : "idle");
+  const [checksShown, setChecksShown] = useState(0);
+
+  useEffect(() => setReduced(prefersReducedMotion()), []);
+
+  // The product's own ranker. Not a sort written for this page.
+  const ranked = useMemo(() => rankFollowUps(DEMO_PIPELINE), []);
+  const list = phase === "ranked" ? ranked : BY_DEAL_VALUE;
+  const top = ranked[0];
+
+  // ── The reorder, animated from where each card actually was ──
+  //
+  // FLIP: measure before the list changes, then start each card from its old
+  // offset and let one transition carry it home. A reflow rather than
+  // requestAnimationFrame to flush the first frame, because rAF does not run
+  // in a backgrounded tab and the cards would be left mid-flight.
+  const cards = useRef(new Map<string, HTMLLIElement>());
+  const before = useRef(new Map<string, number>());
+
+  function measure() {
+    const m = new Map<string, number>();
+    cards.current.forEach((el, id) => m.set(id, el.getBoundingClientRect().top));
+    before.current = m;
+  }
+
+  useLayoutEffect(() => {
+    if (reduced || before.current.size === 0) return;
+    cards.current.forEach((el, id) => {
+      const prev = before.current.get(id);
+      if (prev == null) return;
+      const delta = prev - el.getBoundingClientRect().top;
+      if (Math.abs(delta) < 1) return;
+      el.style.transition = "none";
+      el.style.transform = `translateY(${delta}px)`;
+      void el.offsetHeight;
+      el.style.transition = "transform 520ms cubic-bezier(0.22, 1, 0.36, 1)";
+      el.style.transform = "";
+    });
+    before.current = new Map();
+  }, [phase, reduced]);
+
+  function run() {
+    if (reduced) {
+      // No animation to watch, so no reason to make someone wait for one.
+      setChecksShown(CHECKS.length);
+      measure();
+      setPhase("ranked");
+      onPrioritize();
+      return;
+    }
+    setPhase("analyzing");
+    setChecksShown(0);
+    CHECKS.forEach((_, i) => {
+      window.setTimeout(() => setChecksShown(i + 1), CHECK_MS * (i + 1));
+    });
+    window.setTimeout(() => {
+      measure();
+      setPhase("ranked");
+      onPrioritize();
+    }, CHECK_MS * (CHECKS.length + 1));
+  }
+
+  function replay() {
+    setPhase("idle");
+    setChecksShown(0);
+    before.current = new Map();
+    cards.current.forEach((el) => {
+      el.style.transition = "none";
+      el.style.transform = "";
+    });
+    onReset();
+  }
+
   return (
     <div>
+      {/* ── The control, and what it is about to do ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13px] text-[var(--mkt-muted)]">
-          {prioritized ? (
+          {phase === "ranked" ? (
             <>
               Ordered by what is overdue. Brightcart is the biggest deal and
-              sits third: a meeting with no next step is real, and it ranks
-              below a date you agreed and missed.
+              sits third.
             </>
           ) : (
             <>Five open deals, as your CRM lists them — biggest first.</>
           )}
         </p>
-        {!prioritized && (
+
+        {phase === "ranked" ? (
           <button
             type="button"
-            onClick={onPrioritize}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--mkt-ink)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2"
+            onClick={replay}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--mkt-line)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--mkt-muted)] transition-colors hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2"
           >
-            <ArrowDown className="size-3.5" aria-hidden />
-            Order by what&rsquo;s overdue
+            <RotateCcw className="size-3" aria-hidden />
+            Replay
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={run}
+            disabled={phase === "analyzing"}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--mkt-ink)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2"
+          >
+            {phase === "analyzing" ? (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            ) : (
+              <Search className="size-3.5" aria-hidden />
+            )}
+            Find who needs follow-up
           </button>
         )}
       </div>
 
-      <ul className="mt-4 divide-y divide-[var(--mkt-line)] rounded-xl border border-[var(--mkt-line)]">
+      {/* ── The checks, as they land ──
+             Four lines, one per rule, each naming a real check and how many
+             deals it caught. Deliberately not "AI analysing…": these are
+             four comparisons against dates and records in sample data, and
+             dressing them as inference would be the one claim this page
+             spends its whole length arguing against. */}
+      {(phase === "analyzing" || phase === "ranked") && (
+        <ul
+          className="mt-3 space-y-1 border-l-2 border-[var(--mkt-brand)]/25 pl-3"
+          aria-live="polite"
+        >
+          {CHECKS.slice(0, phase === "ranked" ? CHECKS.length : checksShown).map((c) => (
+            <li
+              key={c.rule}
+              className={cn(
+                "flex flex-wrap items-baseline gap-x-2 text-[12.5px]",
+                !reduced && "animate-fade-up"
+              )}
+            >
+              <Check className="size-3 shrink-0 text-[var(--mkt-success)]" aria-hidden />
+              <span className="text-[var(--mkt-ink)]">{c.label}</span>
+              <span className="text-[var(--mkt-muted)]">
+                {c.hits === 0 ? "none" : c.hits === 1 ? "1 deal" : `${c.hits} deals`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* ── The deals, as cards ── */}
+      <ul className="mt-4 space-y-2">
         {list.map((deal, i) => {
+          const lead = phase === "ranked" && i === 0;
           const chosen = deal.opportunityId === selectedId;
           return (
-            <li key={deal.opportunityId}>
+            <li
+              key={deal.opportunityId}
+              ref={(el) => {
+                if (el) cards.current.set(deal.opportunityId, el);
+                else cards.current.delete(deal.opportunityId);
+              }}
+              className="will-change-transform"
+            >
               <button
                 type="button"
                 onClick={() => onChoose(deal)}
                 className={cn(
-                  "flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-3 text-left transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--mkt-brand)]",
-                  chosen ? "bg-[var(--mkt-brand-wash)]" : "hover:bg-[var(--mkt-surface-2)]"
+                  "flex w-full flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border px-3.5 py-3 text-left transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2",
+                  lead
+                    ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand-wash)] shadow-[var(--mkt-shadow-card)]"
+                    : chosen
+                      ? "border-[var(--mkt-brand)]/40 bg-[var(--mkt-surface-2)]"
+                      : "border-[var(--mkt-line)] bg-[var(--mkt-surface)] hover:border-[var(--mkt-brand)]/40"
                 )}
               >
                 <span
-                  className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-[var(--mkt-muted)]"
+                  className={cn(
+                    "w-5 shrink-0 font-mono text-[11px] tabular-nums",
+                    lead ? "text-[var(--mkt-brand-deep)]" : "text-[var(--mkt-muted)]"
+                  )}
                   aria-hidden
                 >
                   {String(i + 1).padStart(2, "0")}
@@ -206,18 +371,25 @@ function WhoPanel({
                   </span>
                 </span>
 
-                <span className="hidden min-w-0 flex-1 sm:block">
-                  <span className="block truncate text-[12.5px] text-[var(--mkt-ink)]">
-                    {RISK_LABEL[deal.risk]}
+                {phase === "ranked" && (
+                  <span className="hidden min-w-0 flex-1 sm:block">
+                    <span className="block truncate text-[12.5px] text-[var(--mkt-ink)]">
+                      {RISK_LABEL[deal.risk]}
+                    </span>
+                    <span className="block truncate text-[12px] text-[var(--mkt-muted)]">
+                      {deal.daysOverdue > 0
+                        ? `${deal.daysOverdue} days waiting`
+                        : "nothing overdue"}
+                    </span>
                   </span>
-                  <span className="block truncate text-[12px] text-[var(--mkt-muted)]">
-                    {deal.daysOverdue > 0
-                      ? `${deal.daysOverdue} days waiting`
-                      : "nothing overdue"}
-                  </span>
-                </span>
+                )}
 
-                <span className="shrink-0 text-right text-[13px] tabular-nums text-[var(--mkt-muted)]">
+                <span
+                  className={cn(
+                    "shrink-0 text-right text-[13px] tabular-nums",
+                    lead ? "text-[var(--mkt-ink)]" : "text-[var(--mkt-muted)]"
+                  )}
+                >
                   {formatMoney(deal.amount ?? 0, deal.currency)}
                 </span>
               </button>
@@ -226,20 +398,33 @@ function WhoPanel({
         })}
       </ul>
 
-      <p className="mt-3 text-[12px] leading-relaxed text-[var(--mkt-muted)]">
-        {prioritized ? (
-          <>
-            Sorted by the rules in the product, in this order: a date you
-            agreed and missed, then a proposal nobody answered, then a meeting
-            with no next step, then silence. Deal size only breaks a tie.{" "}
-            <span className="text-[var(--mkt-ink)]">
-              No score, and nothing here is predicted.
+      {/* ── The verdict, and the way into Why ── */}
+      {phase === "ranked" ? (
+        <div className="mt-4 rounded-xl border border-[var(--mkt-brand)]/25 bg-[var(--mkt-brand-wash)]/60 p-3.5">
+          <p className="text-[13.5px] leading-relaxed text-[var(--mkt-ink)]">
+            <span className="font-medium">{top.accountName} first.</span>{" "}
+            {top.because}
+          </p>
+          <div className="mt-2.5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onChoose(top)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--mkt-ink)] px-3.5 py-1.5 text-[13px] font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2"
+            >
+              See why
+              <ArrowRight className="size-3.5" aria-hidden />
+            </button>
+            <span className="text-[12px] text-[var(--mkt-muted)]">
+              Deal size only breaks a tie. No score, and nothing predicted.
             </span>
-          </>
-        ) : (
-          <>Pick any deal to see what Selryn has on it — or reorder them first.</>
-        )}
-      </p>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 text-[12px] leading-relaxed text-[var(--mkt-muted)]">
+          Pick any deal to see what Selryn has on it — or let it find the one
+          that needs you first.
+        </p>
+      )}
     </div>
   );
 }
