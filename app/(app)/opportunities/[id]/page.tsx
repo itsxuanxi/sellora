@@ -213,6 +213,13 @@ export default async function OpportunityDetailPage({
     recordIsSample: contactIsSample,
   });
 
+  // Whether a draft on this screen was written by a model or by the local
+  // template. Resolved the same way lib/followup/draft.ts resolves it, so
+  // the label and the behaviour cannot disagree.
+  const aiConfigured = Boolean(
+    session.org.settings?.openaiApiKey || process.env.OPENAI_API_KEY
+  );
+
   // The unified chain. Loaded after `enriched` so a missing opportunity has
   // already short-circuited above.
   const timeline = await loadOpportunityTimeline(session.orgId, enriched.id);
@@ -251,87 +258,148 @@ export default async function OpportunityDetailPage({
         </Button>
       </PageHeader>
 
-      {/* ── What is true about this deal ──
-             Three records, above the fold: what it is worth, what is wrong,
-             and when anyone last spoke to them.
+      {/* ── The verdict ──
+             One sentence, in the largest type on the page, with the records
+             that produced it set quietly underneath.
 
-             This was four panels of estimates — likelihood, estimated
-             expected revenue and estimated value at risk alongside the deal
-             value. Three of the first four numbers a seller saw were modelled,
-             two of them from the third, and the one thing they had come to the
-             page to find out (what is wrong and what to do) was below them.
-             The estimates still exist, under Estimates in the right rail,
-             where someone who wants them can open them. ── */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Panel label="Deal value">
-          <div className="text-2xl font-semibold tracking-tight tabular-nums">
-            {formatMoney(enriched.dealValue, enriched.currency)}
-          </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            {enriched.dealValueBasis === "user_entered"
-              ? "From your CRM"
-              : "Estimated — your CRM holds no amount for this deal"}
-          </p>
-        </Panel>
+             This was three equal panels — deal value, what is wrong, last
+             activity — and the two numbers were set at text-2xl while the
+             finding was at text-lg. So the first thing the eye landed on was
+             $42,000, and the thing the reader opened the deal to learn was
+             the smallest of the three. A work surface answers before it
+             reports: the seller already knows this deal exists and roughly
+             what it is worth.
 
-        <Panel label={enriched.primaryLeak ? "What is wrong" : "Status"}>
-          {enriched.primaryLeak ? (
-            <>
-              <div className="text-lg font-semibold leading-tight tracking-tight">
-                {riskLabelFor(enriched.primaryLeak.type) ??
-                  enriched.primaryLeak.category}
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
+             Only one large type size on the page, one coloured badge, and
+             (further down) one solid button. Visual fatigue on a screen like
+             this comes from too many things at the same rank, not from the
+             amount of information. ── */}
+      <section className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6">
+        {enriched.primaryLeak ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                title={
+                  riskBasisFor(enriched.primaryLeak.type)
+                    ? BASIS_HELP[riskBasisFor(enriched.primaryLeak.type)!]
+                    : undefined
+                }
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.07em]",
+                  riskBasisFor(enriched.primaryLeak.type) === "inferred"
+                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
                 {riskBasisFor(enriched.primaryLeak.type)
                   ? BASIS_LABEL[riskBasisFor(enriched.primaryLeak.type)!]
-                  : "From your records"}{" "}
+                  : "From your records"}
+              </span>
+              <span className="text-[11px] uppercase tracking-[0.07em] text-muted-foreground">
+                {riskLabelFor(enriched.primaryLeak.type) ??
+                  enriched.primaryLeak.category}{" "}
                 · open {enriched.primaryLeak.ageDays} day
                 {enriched.primaryLeak.ageDays === 1 ? "" : "s"}
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="text-lg font-semibold leading-tight tracking-tight">
-                Nothing specific in the way
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                No rule fired on this deal&apos;s records
-              </p>
-            </>
-          )}
-        </Panel>
+              </span>
+            </div>
 
-        {/* One clock, named for what it counts: the newest record of a contact
-            either way. The timeline below counts buyer signals, which move on
-            a different day — so both say which, rather than both saying
-            "days" and disagreeing. */}
-        <Panel label="Last activity">
-          <div className="text-2xl font-semibold tracking-tight tabular-nums">
-            {enriched.daysSinceContact != null
-              ? `${enriched.daysSinceContact}d`
-              : "—"}
-          </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+            <h2 className="mt-2.5 max-w-2xl text-balance text-xl font-semibold leading-snug tracking-tight sm:text-[1.6rem]">
+              {enriched.primaryLeak.summary}
+            </h2>
+          </>
+        ) : (
+          <>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.07em] text-muted-foreground">
+              From your records
+            </span>
+            <h2 className="mt-2.5 text-xl font-semibold leading-snug tracking-tight sm:text-[1.6rem]">
+              Nothing specific is in the way.
+            </h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              No rule fired on this deal&apos;s records.
+            </p>
+          </>
+        )}
+
+        {/* The facts that used to be headlines, demoted to one quiet line. */}
+        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
+          <span className="font-medium text-foreground tabular-nums">
+            {formatMoney(enriched.dealValue, enriched.currency)}
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            {enriched.dealValueBasis === "user_entered"
+              ? "from your CRM"
+              : "estimated — your CRM holds no amount"}
+          </span>
+          <span aria-hidden>·</span>
+          <StagePill stage={enriched.stage} />
+          <span aria-hidden>·</span>
+          <span>
             {enriched.lastInteractionAt
-              ? `Newest record of any kind · ${format(enriched.lastInteractionAt, "MMM d")}`
-              : "Never contacted"}
-          </p>
-        </Panel>
-      </div>
+              ? `last activity ${enriched.daysSinceContact}d ago, ${format(enriched.lastInteractionAt, "MMM d")}`
+              : "never contacted"}
+          </span>
+        </p>
+      </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
-          {/* ── Recommended Next Action (§7) ──
-                 First on the page. The facts table used to sit above it: six
-                 rows of mostly Unknown, between the reader and the one thing
-                 they opened the deal to find out. ── */}
+          {/* ── Band 2: what it is based on ──
+                 Records with dates, no cards and no icons. It has to read
+                 lighter than the verdict above it, or the eye stops here and
+                 works through the list instead of moving to the button —
+                 which is the whole cost of putting evidence in a box. */}
+          <section className="px-1">
+            <h3 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              Based on
+            </h3>
+            {evidenceSignals.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                No specific signals on record — this comes from the deal&apos;s
+                stage and how long it has been quiet.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {/* The signal's own title first, its category second.
+                    Rendering the category meant the same record read
+                    "Security page viewed" in the rationale (which uses the
+                    title) and "Pricing page viewed" here, on one screen. */}
+                {evidenceSignals.slice(0, 3).map((sig) => (
+                  <li key={sig.id} className="flex flex-wrap items-baseline gap-x-2 text-[13.5px]">
+                    <span className="text-foreground/90">
+                      {sig.title ||
+                        SIGNAL_LABELS[sig.signalType as SignalType] ||
+                        sig.signalType}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {format(sig.occurredAt, "MMM d")}
+                    </span>
+                    {sig.evidence && (
+                      <span className="text-muted-foreground">· {sig.evidence}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-[13.5px] text-muted-foreground">
+              {enriched.replySummary}
+            </p>
+            {evidenceSignals.length > 3 && (
+              <p className="mt-1.5 text-[12px] text-muted-foreground">
+                and {evidenceSignals.length - 3} more, in the timeline below.
+              </p>
+            )}
+          </section>
+
+          {/* ── Band 3: the work ── */}
           <section
             data-tour="next-action"
             className="rounded-2xl border border-primary/25 bg-accent/30 p-5"
           >
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Recommended next action
+                Your follow-up
               </span>
               <UrgencyPill urgency={action.urgency as Urgency} />
             </div>
@@ -356,54 +424,25 @@ export default async function OpportunityDetailPage({
               </p>
             )}
 
-            <div className="mt-3">
-              <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                Why
-              </div>
-              <p className="mt-1 text-sm leading-relaxed">{action.rationale}</p>
-              {/* The one sentence allowed to describe the buyer's silence,
-                  from the same shared facts the timeline below renders. */}
-              <p className="mt-1.5 text-xs text-muted-foreground">
-                {enriched.replySummary}
-              </p>
-            </div>
+            {/* The rationale is deliberately not repeated here. It is the
+                verdict at the top of the page and the records under "Based
+                on" — printing it a third time, four inches below itself,
+                made the screen look longer than it is and taught the reader
+                that these blocks restate each other. */}
 
-            {/* The evidence this advice rests on, resolved from the stored
-                signal ids rather than restated as prose. If the list is empty
-                the recommendation says so instead of implying evidence. */}
+            {/* Priority and confidence are Selryn's own numbers about its own
+                advice. They belong on the page and not on the first screen of
+                it: a seller deciding whether to send does not weigh them, and
+                set beside the draft they compete with it. */}
             {openRec && (
-              <div className="mt-3">
-                <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Evidence
-                </div>
-                {evidenceSignals.length === 0 ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    No specific signals recorded — this comes from the deal&apos;s
-                    stage and how long it has been quiet.
-                  </p>
-                ) : (
-                  <ul className="mt-1 space-y-1">
-                    {/* The signal's own title first, its category second.
-                        Rendering the category meant the same record read
-                        "Security page viewed" in the rationale above (which
-                        uses the title) and "Pricing page viewed" here, on one
-                        screen — the category is the bucket a signal was
-                        filed under, and the title is what actually
-                        happened. */}
-                    {evidenceSignals.map((sig) => (
-                      <li key={sig.id} className="text-sm">
-                        <span className="text-foreground/90">
-                          {sig.title ||
-                            SIGNAL_LABELS[sig.signalType as SignalType] ||
-                            sig.signalType}
-                        </span>
-                        {sig.evidence && (
-                          <span className="text-muted-foreground"> — {sig.evidence}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+              <details className="group mt-3">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground [&::-webkit-details-marker]:hidden">
+                  How Selryn rated this advice
+                  <ChevronDown
+                    className="size-3 transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
+                </summary>
                 <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <div className="flex gap-1">
                     <dt>Priority</dt>
@@ -429,12 +468,81 @@ export default async function OpportunityDetailPage({
                     {openRec.expectedImpact}
                   </p>
                 )}
-              </div>
+              </details>
             )}
 
+          </section>
+
+          {/* ── Human-controlled execution ── */}
+          <ActionConsole
+            // useState seeds once. Without a key tied to the action, preparing
+            // a draft re-renders the server component but leaves the editor
+            // holding the empty strings it mounted with.
+            key={pendingAction?.id ?? "none"}
+            opportunityId={enriched.id}
+            sandbox={sandboxSend}
+            canExecute={can(session.role, "action:execute")}
+            executionNote={executionSummary(
+              draftFor(
+                enriched,
+                (pendingAction?.actionType as ActionType | undefined) ?? undefined
+              ),
+              sandboxSend
+            )}
+            evidenceCount={evidenceSignals.length}
+            aiConfigured={aiConfigured}
+            choices={[
+              {
+                actionType: enriched.nextAction.actionType,
+                label: ACTION_LABELS[enriched.nextAction.actionType as ActionType],
+                recommended: true,
+              },
+              ...ALWAYS_AVAILABLE.filter(
+                (t) => t !== enriched.nextAction.actionType
+              ).map((t) => ({
+                actionType: t,
+                label: ACTION_LABELS[t],
+                recommended: false,
+              })),
+            ]}
+            action={
+              pendingAction
+                ? {
+                    id: pendingAction.id,
+                    actionType: pendingAction.actionType,
+                    subject:
+                      pendingAction.sentSubject ?? pendingAction.draftSubject ?? "",
+                    body: pendingAction.content ?? pendingAction.draftBody ?? "",
+                    // Both, separately, so the console can show what Selryn
+                    // proposed beside what the person actually sent.
+                    draftSubject: pendingAction.draftSubject,
+                    draftBody: pendingAction.draftBody,
+                    destination: pendingAction.destination,
+                    channel: pendingAction.channel,
+                    summary: pendingAction.summary,
+                    status: pendingAction.executionStatus,
+                    simulated: pendingAction.simulated,
+                    humanEdited: pendingAction.humanEdited,
+                    sentAt: pendingAction.executedAt?.toISOString() ?? null,
+                    decisionReason: pendingAction.decisionReason,
+                  }
+                : null
+            }
+          />
+
+          {/* ── Everything else you might record ──
+                 Below the console on purpose. These five used to sit between
+                 the recommendation and the button that acts on it, so the
+                 path to the one thing a seller opened the deal to do ran
+                 through five things they did not. They are real and they are
+                 used; they are just never the first move. */}
+          <section className="px-1">
+            <h3 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              Or record what already happened
+            </h3>
             <div
               data-tour="action-controls"
-              className="mt-4 flex flex-wrap items-center gap-2"
+              className="mt-2 flex flex-wrap items-center gap-2"
             >
               <span data-tour="approve-action" className="inline-flex items-center gap-1.5">
                 <RecommendationActions
@@ -458,64 +566,7 @@ export default async function OpportunityDetailPage({
                 </Button>
               )}
             </div>
-
-            {action.alternatives.length > 0 && (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Alternatives: {action.alternatives.map((a) => a.label).join(" · ")}
-              </p>
-            )}
           </section>
-
-          {/* ── Human-controlled execution ── */}
-          <ActionConsole
-            // useState seeds once. Without a key tied to the action, preparing
-            // a draft re-renders the server component but leaves the editor
-            // holding the empty strings it mounted with.
-            key={pendingAction?.id ?? "none"}
-            opportunityId={enriched.id}
-            sandbox={sandboxSend}
-            canExecute={can(session.role, "action:execute")}
-            executionNote={executionSummary(
-              draftFor(
-                enriched,
-                (pendingAction?.actionType as ActionType | undefined) ?? undefined
-              ),
-              sandboxSend
-            )}
-            choices={[
-              {
-                actionType: enriched.nextAction.actionType,
-                label: ACTION_LABELS[enriched.nextAction.actionType as ActionType],
-                recommended: true,
-              },
-              ...ALWAYS_AVAILABLE.filter(
-                (t) => t !== enriched.nextAction.actionType
-              ).map((t) => ({
-                actionType: t,
-                label: ACTION_LABELS[t],
-                recommended: false,
-              })),
-            ]}
-            action={
-              pendingAction
-                ? {
-                    id: pendingAction.id,
-                    actionType: pendingAction.actionType,
-                    subject:
-                      pendingAction.sentSubject ?? pendingAction.draftSubject ?? "",
-                    body: pendingAction.content ?? pendingAction.draftBody ?? "",
-                    destination: pendingAction.destination,
-                    channel: pendingAction.channel,
-                    summary: pendingAction.summary,
-                    status: pendingAction.executionStatus,
-                    simulated: pendingAction.simulated,
-                    humanEdited: pendingAction.humanEdited,
-                    sentAt: pendingAction.executedAt?.toISOString() ?? null,
-                    decisionReason: pendingAction.decisionReason,
-                  }
-                : null
-            }
-          />
 
           <DealFactsPanel
             opportunityId={enriched.id}

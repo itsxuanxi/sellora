@@ -363,6 +363,16 @@ export const RECORDED_STEPS: { step: string; detail: string }[] = [
 // a nine-step scenario given seven seconds gets cut off mid-sentence.
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Tab labels name the answer the panel contains, not the operation Selryn
+ * performs on it.
+ *
+ * They read "Detect signals", "Name the blocker", "Recommend action",
+ * "Measure outcome" — four verbs describing what the software does, which
+ * is the vendor's point of view. A visitor is asking what they get. The four
+ * questions below are parallel, so the strip reads as one chain rather than
+ * four features, and none of them needs translating.
+ */
 /** The kinds of work a step can represent, in loop order. */
 export type DemoActionKind =
   | "signal"
@@ -587,7 +597,7 @@ export const HERO_STAGE_TAIL_MS = 900;
 export const HERO_SCENARIOS: HeroScenario[] = [
   {
     id: "detection",
-    tabLabel: "Detect signals",
+    tabLabel: "What changed",
     panelLabel: "Signal monitor · Cloudmint",
     subject: {
       company: "Cloudmint",
@@ -720,7 +730,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
   },
   {
     id: "priority",
-    tabLabel: "Name the blocker",
+    tabLabel: "What's in the way",
     panelLabel: "Prioritized pipeline",
     subject: {
       company: "All open opportunities",
@@ -804,7 +814,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
   },
   {
     id: "action",
-    tabLabel: "Recommend action",
+    tabLabel: "What to send",
     panelLabel: "Recommended action · Cloudmint",
     subject: {
       company: "Cloudmint",
@@ -898,7 +908,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
   },
   {
     id: "outcome",
-    tabLabel: "Measure outcome",
+    tabLabel: "What came back",
     panelLabel: "Outcome · Cloudmint",
     subject: {
       company: "Cloudmint",

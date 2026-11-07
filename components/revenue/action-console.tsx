@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Pencil, Send, ShieldCheck, X } from "lucide-react";
+import { Check, ChevronDown, Copy, Loader2, Pencil, Send, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,9 @@ export interface PreparedAction {
   actionType: string;
   subject: string;
   body: string;
+  /** What Selryn wrote, kept beside what was sent. Null on older rows. */
+  draftSubject: string | null;
+  draftBody: string | null;
   destination: string | null;
   channel: string;
   summary: string;
@@ -46,6 +49,17 @@ export interface PreparedAction {
   humanEdited: boolean;
   sentAt: string | null;
   decisionReason: string | null;
+}
+
+/** Lines present in one version and not the other, counted once. */
+function changedLineCount(before: string, after: string): number {
+  const b = before.split("\n").map((l) => l.trim()).filter(Boolean);
+  const a = after.split("\n").map((l) => l.trim()).filter(Boolean);
+  const bSet = new Set(b);
+  const aSet = new Set(a);
+  const added = a.filter((l) => !bSet.has(l)).length;
+  const removed = b.filter((l) => !aSet.has(l)).length;
+  return Math.max(added, removed);
 }
 
 export interface ActionChoice {
@@ -61,6 +75,8 @@ export function ActionConsole({
   executionNote,
   canExecute,
   choices,
+  evidenceCount,
+  aiConfigured,
 }: {
   opportunityId: string;
   /** The PROPOSED action, or the most recent decided one. */
@@ -70,6 +86,17 @@ export function ActionConsole({
   canExecute: boolean;
   /** The recommended action first, then the always-available alternatives. */
   choices: ActionChoice[];
+  /** How many records on this deal the draft was written from. */
+  evidenceCount: number;
+  /**
+   * Whether this workspace has a model configured at all.
+   *
+   * Without one, drafts come from a local template. A reader is entitled to
+   * know which they are looking at before they decide how hard to read it,
+   * and a product that lets you assume "AI wrote this" when a template did
+   * has spent trust it did not earn.
+   */
+  aiConfigured: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -91,6 +118,24 @@ export function ActionConsole({
   const proposed = action?.status === "PROPOSED";
   const decided = action && !proposed;
   const isEmail = action?.channel === "email";
+
+  // Who wrote the words on screen, said before the reader decides how hard
+  // to read them.
+  const provenance = aiConfigured
+    ? `Selryn's draft${evidenceCount > 0 ? ` · written from ${evidenceCount} record${evidenceCount === 1 ? "" : "s"} on this deal` : ""}`
+    : "Written from a template — this workspace has no AI model configured";
+
+  async function copyDraft() {
+    const text = isEmail && subject ? `${subject}\n\n${body}` : body;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied.");
+    } catch {
+      // Clipboard access is refused in some contexts; say so rather than
+      // succeeding silently into nothing.
+      toast.error("Your browser would not let Selryn copy. Select the text instead.");
+    }
+  }
 
   // ── Already decided: show what happened, not another form ──
   if (decided) {
@@ -139,6 +184,58 @@ export function ActionConsole({
           <p className="mt-2 rounded-lg bg-background/60 px-3 py-2 text-sm text-muted-foreground">
             Reason given: {action.decisionReason}
           </p>
+        )}
+
+        {/* ── What Selryn wrote, and what you sent ──
+               The schema has stored both since the beginning — draftBody
+               beside content, with humanEdited as the flag — and nothing
+               ever showed it. It is the most convincing thing this product
+               can say about its own drafting: not "trust the AI", but here
+               is what it proposed, here is what you sent, judge for
+               yourself. It is also the only honest basis for ever claiming
+               the drafts are good. */}
+        {sent && action.draftBody && (
+          <div className="mt-3">
+            <p className="text-[12.5px] text-muted-foreground">
+              {action.humanEdited
+                ? `Selryn drafted this · you changed ${changedLineCount(
+                    action.draftBody,
+                    action.body
+                  )} line${
+                    changedLineCount(action.draftBody, action.body) === 1 ? "" : "s"
+                  } before sending`
+                : "Selryn drafted this · you sent it unchanged"}
+            </p>
+            {action.humanEdited && (
+              <details className="group mt-1.5">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-[12.5px] font-medium text-foreground underline decoration-border underline-offset-4 [&::-webkit-details-marker]:hidden">
+                  See what you changed
+                  <ChevronDown
+                    className="size-3 transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
+                </summary>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                      Selryn wrote
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap rounded-lg bg-background/60 p-2.5 text-[12.5px] leading-relaxed text-muted-foreground">
+                      {action.draftBody}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                      You sent
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap rounded-lg bg-background/60 p-2.5 text-[12.5px] leading-relaxed">
+                      {action.body}
+                    </p>
+                  </div>
+                </div>
+              </details>
+            )}
+          </div>
         )}
 
         {/* Rejecting one recommendation must not lock the opportunity. The
@@ -219,6 +316,7 @@ export function ActionConsole({
       </div>
 
       <p className="mt-2 text-[15px] font-medium">{action!.summary}</p>
+      <p className="mt-1 text-[12.5px] text-muted-foreground">{provenance}</p>
 
       <div className="mt-4 space-y-3">
         {/* A call has no subject line. Presenting one would imply Selryn is
@@ -251,6 +349,11 @@ export function ActionConsole({
       </div>
 
       <p className="mt-3 text-[13px] text-muted-foreground">{executionNote}</p>
+
+      {/* One solid button on the screen. Copy is for the seller who would
+          rather paste this into their own mail client — which, until Selryn
+          can send from their mailbox, is a perfectly reasonable preference
+          and should not be hidden. */}
 
       {rejecting ? (
         <div className="mt-4 space-y-2">
@@ -326,14 +429,22 @@ export function ActionConsole({
             {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
             {isEmail ? "Approve and send" : "Approve and log"}
           </Button>
-          <Button
-            variant="outline"
+          <Button variant="outline" disabled={pending} onClick={copyDraft}>
+            <Copy className="size-3.5" />
+            Copy
+          </Button>
+          {/* A text link, not a third button. Three controls of equal weight
+              make the reader choose between them; the rejection is rare and
+              only needs to be findable. */}
+          <button
+            type="button"
             disabled={pending || !canExecute}
             onClick={() => setRejecting(true)}
+            className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[13px] text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
           >
-            <X className="size-3.5" />
+            <X className="size-3" />
             Not this action
-          </Button>
+          </button>
         </div>
       )}
 
