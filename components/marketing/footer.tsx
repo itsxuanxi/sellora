@@ -7,13 +7,19 @@ import { Logo } from "@/components/logo";
  */
 const LINKS = [
   { label: "Product", href: "/#how-it-works" },
-  { label: "Try Selryn", href: "/demo" },
-  { label: "Request a demo", href: "/request-demo" },
+  { label: "Try the demo", href: "/demo" },
+  { label: "Book a demo", href: "/request-demo" },
   { label: "Pricing", href: "/#pricing" },
-  { label: "Security", href: "/#how-it-works" },
+  // Was "/#how-it-works", a marketing section with a one-paragraph note at the
+  // bottom of it. A buyer following a link labelled Security expects a page
+  // about security, and procurement expects to be able to send it to someone.
+  { label: "Security", href: "/security" },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
-  { label: "Contact", href: "mailto:itsxuanxi8@icloud.com" },
+  // Points at the form rather than a mailbox: the form routes somewhere and
+  // asks the questions that make a reply useful. There is no brand mailbox
+  // yet, and inventing hello@ would be a mailbox nobody reads.
+  { label: "Contact", href: "/request-demo" },
 ];
 
 export function MarketingFooter() {

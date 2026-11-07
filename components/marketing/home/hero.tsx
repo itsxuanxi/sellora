@@ -58,7 +58,7 @@ export function Hero() {
             <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--mkt-brand-wash)] px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--mkt-brand-deep)]">
               Early access
             </span>
-            Run the guided demo on a live deal
+            Run the guided demo on a sample pipeline
             <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
 
@@ -74,30 +74,44 @@ export function Hero() {
             <span className="text-[var(--mkt-brand-deep)]"> demos and proposals.</span>
           </h1>
 
+          {/* Three clauses, one per question a seller actually has: which
+              deals, why, what now. The previous version was six lines that
+              also covered the CRM, approval and outcome tracking — all true,
+              all answers to questions nobody has asked yet on the first
+              screen. They are two scrolls down, where they belong. */}
           <p className="mt-7 max-w-[30rem] text-pretty text-[17px] leading-[1.6] text-[var(--mkt-muted)]">
             A demo goes well, the proposal goes out, and three weeks later
             nobody remembers who owes whom a reply. Selryn reads your deals and
-            their email history, shows which ones have gone quiet and what the
-            records say about why, tells you who to follow up today, and tracks
-            what came back. It does not replace your CRM, and nothing reaches a
-            customer without you approving it.
+            their email history and tells you{" "}
+            <span className="text-[var(--mkt-ink)]">
+              which ones have stalled, what the records say about why, and who
+              to follow up today.
+            </span>
           </p>
 
+          {/* The demo is the primary action, and booking a call the fallback.
+              It used to be the other way round, which asked a visitor to give
+              their name and wait for a human before seeing anything — on a
+              page whose whole argument is a product surface they can open in
+              one click. */}
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <Link
-              href="/request-demo"
+              href="/demo"
               className="group inline-flex h-[52px] items-center gap-2 rounded-full bg-[var(--mkt-ink)] px-7 text-[15px] font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-black"
             >
-              Book a demo
+              Try the demo
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              href="/demo"
+              href="/request-demo"
               className="inline-flex h-[52px] items-center rounded-full border border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-7 text-[15px] font-medium text-[var(--mkt-ink)] transition-colors hover:border-[var(--mkt-brand)] hover:text-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] active:bg-[var(--mkt-surface-2)]"
             >
-              Try Selryn
+              Book a demo
             </Link>
           </div>
+          <p className="mt-3 text-[13px] text-[var(--mkt-muted)]">
+            No sign-up. Sample data. Nothing is sent to anyone.
+          </p>
 
           {/* Each clause is true of the product as built: recommendations
               carry their evidence, nothing customer-facing sends without a

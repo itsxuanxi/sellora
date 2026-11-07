@@ -185,7 +185,21 @@ export function useOptionalTour(): TourContextValue | null {
 }
 
 /**
- * Finds a step's target element, or null while the page is still settling.
+ * How long to wait for a step's target before admitting it is not coming.
+ *
+ * Eight seconds, not four. A heavy deal page streaming in behind a
+ * client-side navigation took longer than four on a cold dev server, so the
+ * card flashed "this part of the screen did not load" and then corrected
+ * itself a second later. Recovering is right; showing the failure first is
+ * not, and the cost of waiting longer is only that a genuinely missing anchor
+ * is admitted a few seconds later.
+ */
+export const TARGET_WAIT_MS = 8000;
+
+export type TargetPhase = "searching" | "found" | "missing";
+
+/**
+ * Finds a step's target element, and says whether it is still looking.
  *
  * Polled on a timer rather than watched with a MutationObserver.
  *
@@ -197,17 +211,30 @@ export function useOptionalTour(): TourContextValue | null {
  * A timer rather than requestAnimationFrame because rAF does not run while
  * the document is hidden: a tour that was mid-step when the tab was
  * backgrounded would come back with nothing anchored and never recover.
+ *
+ * The phase exists because "not found yet" and "not coming" need different
+ * screens and the caller cannot tell them apart from a null. Previously a
+ * step whose target had not streamed in yet rendered instantly as a floating
+ * card with a Next button — indistinguishable from a step whose anchor does
+ * not exist at all, and clicking Next on the first step of the story skipped
+ * the thing it was about. Now the card waits, and then says plainly that it
+ * cannot find the control, with a way to look again.
  */
 export function useTourTarget(target: string | undefined) {
   const [el, setEl] = useState<HTMLElement | null>(null);
+  const [phase, setPhase] = useState<TargetPhase>("searching");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!target) {
       setEl(null);
+      setPhase("searching");
       return;
     }
 
+    setPhase("searching");
     let current: HTMLElement | null = null;
+    const startedAt = Date.now();
 
     const tick = () => {
       const found = document.querySelector<HTMLElement>(`[data-tour="${target}"]`);
@@ -215,12 +242,22 @@ export function useTourTarget(target: string | undefined) {
         current = found;
         setEl(found);
       }
+      if (found) setPhase("found");
+      else if (Date.now() - startedAt > TARGET_WAIT_MS) setPhase("missing");
+      // Still inside the window and still nothing: stay "searching". The
+      // element may be two renders away.
     };
 
     tick();
     const timer = window.setInterval(tick, 120);
     return () => window.clearInterval(timer);
-  }, [target]);
+    // `attempt` is the retry handle: bumping it re-runs the whole search with
+    // a fresh clock.
+  }, [target, attempt]);
 
-  return el;
+  return {
+    el,
+    phase,
+    retry: () => setAttempt((n) => n + 1),
+  };
 }

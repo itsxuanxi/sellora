@@ -7,29 +7,27 @@ import { formatMoney } from "@/lib/revenue/money";
 /**
  * What the guided story actually achieved, read back from the record.
  *
- * Nothing here is remembered by the tour. The "before" figures are the
- * opportunity's earliest score snapshot — written when the sandbox was
- * seeded — and the "after" figures are its latest. If the visitor skipped
- * the actions, before and after are the same and the screen says so, which
- * is the honest outcome for someone who clicked through without doing
- * anything.
+ * Nothing here is remembered by the tour; it is all counted from the
+ * database. The visitor who clicked through without approving anything gets
+ * zeroes and a screen that says so, which is the honest outcome for them.
+ *
+ * It used to close on "Win probability 62% → 71%" and an expected-revenue
+ * delta — the payoff of the whole demo was two uncalibrated estimates and
+ * their difference, stated to the point. What a visitor actually did is
+ * countable: they approved a follow-up, they recorded what the buyer said,
+ * the deal is at a stage. Those are the three now, and the screen still says
+ * plainly that the deal has not been won.
  */
 
 export interface TourOutcome {
   company: string;
   dealValue: string;
-  winBefore: number;
-  winAfter: number;
-  expectedBefore: string;
-  expectedAfter: string;
-  upliftLabel: string;
-  upliftPositive: boolean;
-  stageBefore: string | null;
   stageAfter: string;
   /** Buyer reactions recorded during the session. */
   responsesLogged: number;
   /** Recommendations the visitor acted on. */
   actionsTaken: number;
+  /** Whether the visitor did anything, rather than whether a figure moved. */
   changed: boolean;
 }
 
@@ -43,18 +41,14 @@ export async function getTourOutcome(): Promise<TourOutcome | null> {
       dealValue: true,
       currency: true,
       stage: true,
-      winProbability: true,
       account: { select: { name: true } },
     },
   });
   if (!opportunity) return null;
 
-  const [snapshots, responsesLogged, actionsTaken] = await Promise.all([
-    db.opportunityScoreSnapshot.findMany({
-      where: { orgId: session.orgId, opportunityId: opportunity.id },
-      orderBy: { createdAt: "asc" },
-      select: { winProbability: true, expectedValue: true, createdAt: true },
-    }),
+  // The score snapshots used to be read here, for the before/after
+  // probability figures. Nothing needs them now.
+  const [responsesLogged, actionsTaken] = await Promise.all([
     db.response.count({ where: { orgId: session.orgId, opportunityId: opportunity.id } }),
     db.recommendation.count({
       where: {
@@ -65,26 +59,15 @@ export async function getTourOutcome(): Promise<TourOutcome | null> {
     }),
   ]);
 
-  const first = snapshots[0];
-  const last = snapshots[snapshots.length - 1];
-  if (!first || !last) return null;
-
-  const currency = opportunity.currency;
-  const uplift = last.expectedValue - first.expectedValue;
-
   return {
     company: opportunity.account.name,
-    dealValue: formatMoney(opportunity.dealValue, currency),
-    winBefore: first.winProbability,
-    winAfter: last.winProbability,
-    expectedBefore: formatMoney(first.expectedValue, currency),
-    expectedAfter: formatMoney(last.expectedValue, currency),
-    upliftLabel: `${uplift >= 0 ? "+" : "−"}${formatMoney(Math.abs(uplift), currency)}`,
-    upliftPositive: uplift > 0,
-    stageBefore: null,
+    dealValue: formatMoney(opportunity.dealValue, opportunity.currency),
     stageAfter: opportunity.stage,
     responsesLogged,
     actionsTaken,
-    changed: snapshots.length > 1 && uplift !== 0,
+    // Did the visitor do anything — not did a modelled number move. Those
+    // are different questions, and the second one answered "no" for someone
+    // who had approved a follow-up whose effect the score had not yet shown.
+    changed: actionsTaken > 0 || responsesLogged > 0,
   };
 }

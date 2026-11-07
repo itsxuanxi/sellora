@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo } from "react";
+import Link from "next/link";
 import { Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { IntegrationClaim } from "@/lib/marketing/capabilities";
@@ -12,7 +13,7 @@ import {
 import { TabStrip } from "@/components/marketing/home/tab-strip";
 import {
   DEMO_DATA_NOTE,
-  OUTCOME_METRICS,
+  RECORDED_STEPS,
   SCENARIOS,
   stepDelays,
   CAPABILITY_STATUS_HELP,
@@ -299,28 +300,31 @@ export function Scenarios({
             </p>
 
             <h3 className="mt-9 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--mkt-muted)]">
-              Customer outcomes
+              What gets written down
             </h3>
-            <dl className="mt-4 grid grid-cols-3 gap-3">
-              {OUTCOME_METRICS.map((m) => (
-                <div
-                  key={m}
-                  className="rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] px-3 py-3 text-center"
-                >
-                  <dd
-                    className="text-2xl font-medium text-[var(--mkt-muted)]"
-                    aria-label="Pending measurement"
+            <ol className="mt-4 space-y-2.5">
+              {RECORDED_STEPS.map((row, i) => (
+                <li key={row.step} className="flex gap-3">
+                  <span
+                    className="mt-0.5 font-mono text-[10.5px] tabular-nums text-[var(--mkt-brand-deep)]"
+                    aria-hidden
                   >
-                    &mdash;
-                  </dd>
-                  <dt className="mt-1 text-[11px] leading-tight text-[var(--mkt-muted)]">
-                    {m}
-                  </dt>
-                </div>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[14px] leading-snug text-[var(--mkt-ink)]">
+                      {row.step}
+                    </span>
+                    <span className="mt-0.5 block text-[12.5px] leading-snug text-[var(--mkt-muted)]">
+                      {row.detail}
+                    </span>
+                  </span>
+                </li>
               ))}
-            </dl>
-            <p className="mt-3 text-[12px] text-[var(--mkt-muted)]">
-              We publish these once measured with real customers, not before.
+            </ol>
+            <p className="mt-3 text-[12px] leading-relaxed text-[var(--mkt-muted)]">
+              You can walk all five in the demo. Selryn has no customer results
+              to publish yet and will not print a number it has not measured.
             </p>
           </div>
 
@@ -358,9 +362,16 @@ export function Scenarios({
               ))}
             </ul>
             <p className="mt-5 border-t border-[var(--mkt-line)] pt-4 text-[12px] leading-relaxed text-[var(--mkt-muted)]">
-              Selryn holds no third-party security certification at this time
-              and does not claim one. If your procurement needs a security
-              review, contact us and we will work through it directly.
+              Selryn holds no third-party security certification and does not
+              claim one.{" "}
+              <Link
+                href="/security"
+                className="font-medium text-[var(--mkt-ink)] underline decoration-[var(--mkt-line)] underline-offset-4 transition-colors hover:text-[var(--mkt-brand-deep)]"
+              >
+                The security page
+              </Link>{" "}
+              lists what is in place and what is not, in enough detail to send
+              to whoever asks.
             </p>
           </div>
         </div>

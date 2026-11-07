@@ -11,6 +11,7 @@ import { FollowUpCard } from "@/components/followup/follow-up-card";
 import { FollowUpList } from "@/components/followup/follow-up-list";
 import { RiskSummary } from "@/components/followup/risk-summary";
 import { summarizeRisks } from "@/lib/risk/map";
+import { TOUR_ACCOUNT, TOUR_CARD_ANCHOR } from "@/lib/tour/steps";
 
 export const metadata = { title: "Today" };
 
@@ -117,12 +118,19 @@ export default async function TodayPage() {
         <h2 className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
           Start here
         </h2>
-        {top.map((item, i) => (
+        {/* The guided demo anchors on its own deal by name, not on whichever
+            card is first. Pinning it to position sent the visitor into one
+            deal while the next seven steps described another. */}
+        {top.map((item) => (
           <FollowUpCard
             key={item.opportunityId}
             item={serialize(item)}
             featured
-            tourAnchor={i === 0 ? "follow-up-1" : undefined}
+            tourAnchor={
+              session.org.isSample && item.accountName === TOUR_ACCOUNT
+                ? TOUR_CARD_ANCHOR
+                : undefined
+            }
           />
         ))}
       </section>
@@ -130,6 +138,18 @@ export default async function TodayPage() {
       {rest.length > 0 && (
         <FollowUpList items={rest.map(serialize)} total={items.length} />
       )}
+
+      {/* If the tour's deal is not among the three featured cards, the tour
+          would anchor on nothing. Say where it is rather than letting the
+          coachmark float unanchored over a list. */}
+      {session.org.isSample &&
+        !top.some((i) => i.accountName === TOUR_ACCOUNT) &&
+        items.some((i) => i.accountName === TOUR_ACCOUNT) && (
+          <p className="mt-4 text-[12px] text-muted-foreground">
+            The guided demo follows {TOUR_ACCOUNT}, which is further down
+            today&apos;s list.
+          </p>
+        )}
 
       <p className="mt-8 text-[12px] leading-relaxed text-muted-foreground">
 Every risk above comes from your own deal records and their email history

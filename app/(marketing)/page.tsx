@@ -23,7 +23,10 @@ import { integrationClaims } from "@/lib/marketing/capabilities";
  */
 export default async function HomePage() {
   const { signedIn } = await getAuthState();
-  const startHref = signedIn ? "/dashboard" : "/sign-in";
+  // Sign-up, not sign-in. Every pricing button — including "Start free" —
+  // pointed a brand-new visitor at a form asking for a password they do not
+  // have yet.
+  const startHref = signedIn ? "/dashboard" : "/sign-up";
 
   // Resolved here rather than inside Scenarios: which integrations this
   // deployment can honestly offer depends on its credentials, and Scenarios is

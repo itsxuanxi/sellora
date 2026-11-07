@@ -308,11 +308,43 @@ export const TRUST_POINTS: { text: string; status: CapabilityStatus }[] = [
   { text: "Works alongside your existing CRM", status: "available" },
 ];
 
-/** Outcome metrics stay unfilled until measured with real customers. */
-export const OUTCOME_METRICS = [
-  "Follow-up speed improvement",
-  "Rep hours saved each week",
-  "Pipeline coverage",
+/**
+ * What Selryn records on every follow-up — shown where customer outcome
+ * metrics would normally go.
+ *
+ * That slot held three cards reading "—" above the labels "Follow-up speed
+ * improvement", "Rep hours saved each week" and "Pipeline coverage", under
+ * the heading "Customer outcomes", with a line promising to publish them once
+ * measured. The intent was honest and the effect was not: three empty boxes
+ * on a pricing-adjacent screen read as a product with no customers, which is
+ * the one thing a visitor cannot un-see. And they were the only part of the
+ * page a reader could not check.
+ *
+ * These five are checkable. Each is a column that exists and a step a visitor
+ * walks through in the demo, so the section now says what the product does
+ * instead of apologising for what has not been measured.
+ */
+export const RECORDED_STEPS: { step: string; detail: string }[] = [
+  {
+    step: "The risk, and where it came from",
+    detail: "Which rule fired, on which email or deal field, and its date.",
+  },
+  {
+    step: "The recommendation, when it was made",
+    detail: "Kept even after it is withdrawn, so advice cannot be rewritten later.",
+  },
+  {
+    step: "Selryn's draft, and the version you sent",
+    detail: "Both stored, with a flag for whether a human changed it.",
+  },
+  {
+    step: "Who approved it, and when",
+    detail: "Nothing customer-facing has a path that skips this.",
+  },
+  {
+    step: "What the buyer did next",
+    detail: "A reply, a meeting, a stage move — or nothing, which also counts.",
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════

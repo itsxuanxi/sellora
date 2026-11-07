@@ -120,8 +120,7 @@ export const PLAN_TIERS: PlanTier[] = [
     customPrice: false,
     selfServe: true,
     mostPopular: false,
-    audience:
-      "For founders and small teams running their first AI-assisted revenue workflow.",
+    audience: "For a founder or a small team chasing their own proposals.",
     limits: { opportunities: 150, aiActions: 1_000 },
     headline: {
       label: "Active opportunities",
@@ -129,11 +128,11 @@ export const PLAN_TIERS: PlanTier[] = [
         "Live deals Selryn is watching for you. Closed and archived deals don't count.",
     },
     features: [
-      { label: "Buying-signal monitoring" },
-      { label: "Deal prioritization" },
-      { label: "Next-best-action with the evidence attached" },
-      { label: "Human approval on every customer-facing send" },
-      { label: "Revenue analytics" },
+      { label: "Today's follow-ups, ordered by what is overdue" },
+      { label: "The records behind every risk, with dates" },
+      { label: "Drafted follow-ups you edit and approve" },
+      { label: "Spreadsheet import, re-importable without duplicates" },
+      { label: "Outcome history: advice, action, reply" },
       { label: "Email support" },
     ],
     cta: { label: "Get Starter", kind: "signup" },
@@ -147,20 +146,18 @@ export const PLAN_TIERS: PlanTier[] = [
     customPrice: false,
     selfServe: true,
     mostPopular: true,
-    audience:
-      "For growing teams running inbound and outbound from one revenue layer.",
+    audience: "For a sales team where more than one person owns proposals.",
     limits: { opportunities: 750, aiActions: 3_000 },
     headline: {
       label: "Active opportunities",
-      detail:
-        "Five times Starter's capacity, with alerts and workflows on top.",
+      detail: "Five times Starter's capacity, plus the daily digest and alerts.",
     },
     features: [
       { label: "Everything in Starter" },
-      { label: "All Selryn agents" },
-      { label: "Revenue-at-risk alerts" },
-      { label: "Automated workflows" },
-      { label: "Team revenue analytics" },
+      { label: "A daily digest of what is overdue, by email" },
+      { label: "An alert when a deal starts slipping" },
+      { label: "HubSpot sync", planned: true },
+      { label: "Slack delivery", planned: true },
       { label: "Priority support" },
     ],
     cta: { label: "Get Pro", kind: "signup" },
@@ -183,10 +180,11 @@ export const PLAN_TIERS: PlanTier[] = [
     },
     features: [
       { label: "Everything in Pro" },
-      { label: "Custom agents and workflows" },
-      { label: "Onboarding support" },
-      { label: "Service-level agreement" },
+      { label: "No cap on active opportunities" },
+      { label: "Onboarding help with your first import" },
       { label: "A named contact, not a queue" },
+      { label: "Service-level agreement", planned: true },
+      { label: "Single sign-on", planned: true },
     ],
     cta: { label: "Talk to us", kind: "sales" },
     ctaNote: "Annual contracts, priced to your volume.",
@@ -203,9 +201,14 @@ export const PLAN_TIERS: PlanTier[] = [
  * limit the product never enforced.
  */
 export const UNIVERSAL_CAPACITY = {
-  headline: "Unlimited team members · Unlimited data connections",
+  headline: "Unlimited team members · No per-connection charge",
+  // "connect your whole stack" promised integrations that are not open. Two
+  // connectors are built and waiting on their setup and four are not written,
+  // so the sentence was selling a capability the buyer could not use on the
+  // day they paid. The promise that survives is the pricing one: we do not
+  // meter seats or connections, now or as connectors ship.
   detail:
-    "On every plan, including Free. We don't charge per seat and we don't charge per integration — add your whole team, connect your whole stack.",
+    "On every plan, including Free. We don't charge per seat, and we won't charge per connection as connectors ship. Today that means spreadsheet import everywhere; HubSpot and Slack are built and need setting up, and are marked Planned where they appear.",
 };
 
 /**
@@ -230,7 +233,7 @@ export const FREE_PLAN = {
   summary:
     `Track ${capacityLabel(FREE_LIMITS.opportunities)} active opportunities and ` +
     `${capacityLabel(FREE_LIMITS.aiActions)} AI actions a month, with your whole ` +
-    `team and every data source included.`,
+    `team included. Spreadsheet import, same as every plan.`,
 };
 
 /** The three terms a buyer stalls on, answered where they stall. */
@@ -243,12 +246,20 @@ export const METRIC_DEFINITIONS: { term: string; definition: string }[] = [
   {
     term: "AI action",
     definition:
-      "One piece of work Selryn does — researching an account, scoring a deal, or drafting a message for you to approve.",
+      "One piece of work Selryn does for you — researching an account, scoring a deal, or drafting a follow-up. Reading your deals and ordering today's list are not AI actions and are never counted against the allowance; only work that calls a model is.",
   },
   {
     term: "Data connection",
     definition:
-      "Any source you plug in: your CRM, your inbox, a calendar, or a CSV. Unlimited on every plan.",
+      "A source Selryn reads from. Spreadsheet import works today on every plan. HubSpot and Slack are built and need setting up on this deployment. An inbox and a calendar are planned, not available. Connections are not metered on any plan.",
+  },
+  {
+    // The question every metered plan gets asked, and the one place a product
+    // is most tempted to invent a policy. There is no overage billing in
+    // lib/billing.ts, so the honest answer is that nothing is charged.
+    term: "What happens at the limit",
+    definition:
+      "Selryn stops taking on new active opportunities and says so in the app. Nothing is deleted, nothing you already have stops working, and there is no overage charge — there is no overage billing in the product at all. You upgrade, or you close some deals.",
   },
 ];
 

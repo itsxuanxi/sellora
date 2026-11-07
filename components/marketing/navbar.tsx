@@ -8,7 +8,7 @@ import { getAuthState, isClerkEnabled } from "@/lib/auth";
 /**
  * Destinations on the left, calls to action on the right.
  *
- * "Try Selryn" used to appear in both halves — twice in one bar, four words
+ * "Try the demo" used to appear in both halves — twice in one bar, four words
  * apart. It is an action, so it lives with the other actions.
  */
 const LINKS = [
@@ -26,7 +26,7 @@ const LINKS = [
  */
 const MOBILE_LINKS = [
   ...LINKS,
-  { href: "/demo", label: "Try Selryn" },
+  { href: "/demo", label: "Try the demo" },
   { href: "/request-demo", label: "Book a demo" },
 ];
 
@@ -62,7 +62,7 @@ export async function MarketingNavbar() {
           href="/demo"
           className="hidden rounded px-2 py-1 text-sm text-[var(--mkt-muted)] transition-colors hover:text-[var(--mkt-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)] md:block"
         >
-          Try Selryn
+          Try the demo
         </Link>
         <NavDemoCta />
         <MobileNavMenu links={MOBILE_LINKS} appHref={appHref} signedIn={signedIn} />

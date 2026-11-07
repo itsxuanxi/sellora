@@ -113,7 +113,8 @@ export function RequestDemoForm() {
         Tell us about your pipeline
       </h2>
       <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--mkt-muted)]">
-        Ten fields, about two minutes. Everything here shapes the walkthrough.
+        Four required fields, six optional ones that shape the walkthrough.
+        Skip anything you are not sure about.
       </p>
 
       <div className="mt-6 grid gap-4">
@@ -159,8 +160,7 @@ export function RequestDemoForm() {
             id={`${baseId}-role`}
             name="role"
             label="Role / job title"
-            required
-            value={values.role}
+            value={values.role ?? ""}
             error={errors.role}
             onChange={(v) => set("role", v)}
             onBlur={() => validateField("role")}
@@ -173,10 +173,9 @@ export function RequestDemoForm() {
             id={`${baseId}-teamSize`}
             name="teamSize"
             label="Sales team size"
-            required
             placeholder="Select a size"
             options={TEAM_SIZES}
-            value={values.teamSize}
+            value={values.teamSize ?? ""}
             error={errors.teamSize}
             onChange={(v) => set("teamSize", v)}
           />
@@ -205,7 +204,7 @@ export function RequestDemoForm() {
 
         <div className="grid gap-1.5">
           <Label htmlFor={`${baseId}-goal`} required>
-            What would you like Selryn to improve?
+            Which deals are slipping, and what have you tried?
           </Label>
           <textarea
             id={`${baseId}-goal`}
@@ -307,9 +306,13 @@ function SuccessState() {
       <h2 className="mt-5 text-2xl font-medium tracking-tight text-[var(--mkt-ink)]">
         Your request is in.
       </h2>
+      {/* No response-time promise. Selryn is one person; "within one business
+          day" was an SLA with nothing behind it, and the first time it slipped
+          it would have cost more trust than it ever bought. */}
       <p className="mt-3 text-[15px] leading-relaxed text-[var(--mkt-muted)]">
-        We&apos;ll review your sales motion and get back to you within one
-        business day.
+        It goes straight to the person who built Selryn, who will read it and
+        reply. In the meantime the guided demo runs the whole thing on sample
+        data — no sign-up, and nothing sent to anyone.
       </p>
 
       <div className="mt-7 flex flex-wrap gap-3">

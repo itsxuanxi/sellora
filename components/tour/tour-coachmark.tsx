@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Loader2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTour, useTourTarget } from "@/components/tour/tour-provider";
 
@@ -26,7 +27,7 @@ const PAD = 6;
 
 export function TourCoachmark() {
   const { step, index, total, running, reduced, advance, back, complete, skip } = useTour();
-  const target = useTourTarget(step?.target);
+  const { el: target, phase, retry } = useTourTarget(step?.target);
   const [rect, setRect] = useState<Rect | null>(null);
   const [mounted, setMounted] = useState(false);
   // The card's real height. Assuming one is how the card ends up sitting on
@@ -144,9 +145,18 @@ export function TourCoachmark() {
 
   if (!mounted || !running || !step) return null;
 
-  // With no visible target the step becomes a plain card: centred, and
-  // advanced by a button rather than by an interaction the visitor cannot see.
+  // Three cases, not two.
+  //
+  // `searching` is the one that was missing: a step whose target has not
+  // streamed in yet used to render immediately as a floating card with Next,
+  // identical to a step whose anchor does not exist. On the first step of the
+  // story that meant a visitor could click past the thing the step was about
+  // before it appeared. Now the card holds, and only after TARGET_WAIT_MS
+  // does it say it cannot find the control — with a button to look again,
+  // because the usual cause is a page that is still loading.
   const unanchored = rect === null;
+  const searching = unanchored && phase === "searching";
+  const missing = unanchored && phase === "missing";
   const placed = rect
     ? placeCard(rect, cardHeight, step.placement ?? "bottom")
     : {
@@ -248,6 +258,36 @@ export function TourCoachmark() {
           </p>
         )}
 
+        {searching && (
+          <p
+            className="mt-3 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-[13px] text-muted-foreground"
+            aria-live="polite"
+          >
+            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            Waiting for this screen to finish loading…
+          </p>
+        )}
+
+        {missing && (
+          <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-50/70 px-3 py-2.5 dark:bg-amber-950/30">
+            <p className="text-[13px] font-medium text-amber-900 dark:text-amber-200">
+              This part of the screen did not load.
+            </p>
+            <p className="mt-0.5 text-[12.5px] leading-relaxed text-amber-900/80 dark:text-amber-200/80">
+              {step.instruction} Nothing is broken in your workspace — the tour
+              just cannot find that control right now.
+            </p>
+            <button
+              type="button"
+              onClick={retry}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 px-2.5 py-1 text-[12px] font-medium text-amber-900 transition-colors hover:bg-amber-500/10 dark:text-amber-200"
+            >
+              <RotateCcw className="size-3" aria-hidden />
+              Look again
+            </button>
+          </div>
+        )}
+
         <div className="mt-4 flex items-center justify-between gap-2">
           <button
             type="button"
@@ -269,7 +309,7 @@ export function TourCoachmark() {
             {/* No Next on a click step: the highlighted control is the only
                 way forward, which is what makes this a tour of the product
                 rather than a slideshow about it. */}
-            {(step.advance === "read" || unanchored) && (
+            {(step.advance === "read" || missing) && (
               <button
                 type="button"
                 onClick={index === total - 1 ? complete : advance}

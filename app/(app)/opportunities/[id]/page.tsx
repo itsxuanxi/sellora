@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Building2, Mail } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, Mail } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { DealFactsPanel } from "@/components/deal-facts/deal-facts-panel";
 import { factsForOpportunity } from "@/lib/deal-facts/queries";
@@ -251,96 +251,80 @@ export default async function OpportunityDetailPage({
         </Button>
       </PageHeader>
 
-      {/* ── Money bar ── */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── What is true about this deal ──
+             Three records, above the fold: what it is worth, what is wrong,
+             and when anyone last spoke to them.
+
+             This was four panels of estimates — likelihood, estimated
+             expected revenue and estimated value at risk alongside the deal
+             value. Three of the first four numbers a seller saw were modelled,
+             two of them from the third, and the one thing they had come to the
+             page to find out (what is wrong and what to do) was below them.
+             The estimates still exist, under Estimates in the right rail,
+             where someone who wants them can open them. ── */}
+      <div className="grid gap-3 sm:grid-cols-3">
         <Panel label="Deal value">
           <div className="text-2xl font-semibold tracking-tight tabular-nums">
             {formatMoney(enriched.dealValue, enriched.currency)}
           </div>
-          {enriched.dealValueBasis !== "user_entered" && (
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Estimated — your CRM holds no amount for this deal
-            </p>
-          )}
-        </Panel>
-        {/* A band, not a percentage.
-            "62%" asserts a precision the derivation does not have: it is a
-            generic stage baseline multiplied by a hand-tuned score factor,
-            uncalibrated against this workspace's own win history. The band
-            keeps the ordering, which is the useful part, and drops the false
-            precision. The number itself is still available on hover for
-            anyone who wants it. */}
-        <Panel label="Estimated likelihood">
-          <div
-            className="text-2xl font-semibold tracking-tight"
-            title={`Model figure: ${enriched.winProbability}% — ${WIN_PROBABILITY_CAVEAT}`}
-          >
-            {likelihoodBand(enriched.winProbability).label}
-          </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Estimated from stage {enriched.stage.toLowerCase()} and score — not
-            calibrated to your history
+            {enriched.dealValueBasis === "user_entered"
+              ? "From your CRM"
+              : "Estimated — your CRM holds no amount for this deal"}
           </p>
         </Panel>
-        <Panel label={REVENUE_VOCABULARY.estimated_expected_revenue.label}>
-          <div className="text-2xl font-semibold tracking-tight tabular-nums text-primary">
-            {formatMoney(enriched.expectedValue, enriched.currency)}
-          </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Deal value × estimated likelihood. An estimate.
-          </p>
-        </Panel>
-        <Panel
-          label={
-            enriched.primaryLeak
-              ? REVENUE_VOCABULARY.value_at_risk.label
-              : "Days since contact"
-          }
-        >
+
+        <Panel label={enriched.primaryLeak ? "What is wrong" : "Status"}>
           {enriched.primaryLeak ? (
             <>
-              <div className="text-2xl font-semibold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
-                {formatMoney(enriched.atRisk, enriched.currency)}
+              <div className="text-lg font-semibold leading-tight tracking-tight">
+                {riskLabelFor(enriched.primaryLeak.type) ??
+                  enriched.primaryLeak.category}
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                {enriched.primaryLeak.category} · estimated share of estimated
-                expected revenue
+                {riskBasisFor(enriched.primaryLeak.type)
+                  ? BASIS_LABEL[riskBasisFor(enriched.primaryLeak.type)!]
+                  : "From your records"}{" "}
+                · open {enriched.primaryLeak.ageDays} day
+                {enriched.primaryLeak.ageDays === 1 ? "" : "s"}
               </p>
             </>
           ) : (
             <>
-              <div className="text-2xl font-semibold tracking-tight tabular-nums">
-                {enriched.daysSinceContact ?? "—"}
+              <div className="text-lg font-semibold leading-tight tracking-tight">
+                Nothing specific in the way
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                {enriched.lastInteractionAt
-                  ? format(enriched.lastInteractionAt, "MMM d")
-                  : "Never contacted"}
+                No rule fired on this deal&apos;s records
               </p>
             </>
           )}
+        </Panel>
+
+        {/* One clock, named for what it counts: the newest record of a contact
+            either way. The timeline below counts buyer signals, which move on
+            a different day — so both say which, rather than both saying
+            "days" and disagreeing. */}
+        <Panel label="Last activity">
+          <div className="text-2xl font-semibold tracking-tight tabular-nums">
+            {enriched.daysSinceContact != null
+              ? `${enriched.daysSinceContact}d`
+              : "—"}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {enriched.lastInteractionAt
+              ? `Newest record of any kind · ${format(enriched.lastInteractionAt, "MMM d")}`
+              : "Never contacted"}
+          </p>
         </Panel>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
-          <DealFactsPanel
-            opportunityId={enriched.id}
-            canEdit={can(session.role, "action:approve")}
-            facts={dealFacts
-              .filter((f) => !f.rejectedAt)
-              .map((f) => ({
-                id: f.id,
-                kind: f.kind,
-                value: f.value,
-                status: f.status,
-                sourceKind: f.sourceKind,
-                correctedFrom: f.correctedFrom,
-                stale: isStale(f, new Date()),
-              }))}
-          />
-
-          {/* ── Recommended Next Action (§7) ── */}
+          {/* ── Recommended Next Action (§7) ──
+                 First on the page. The facts table used to sit above it: six
+                 rows of mostly Unknown, between the reader and the one thing
+                 they opened the deal to find out. ── */}
           <section
             data-tour="next-action"
             className="rounded-2xl border border-primary/25 bg-accent/30 p-5"
@@ -399,10 +383,19 @@ export default async function OpportunityDetailPage({
                   </p>
                 ) : (
                   <ul className="mt-1 space-y-1">
+                    {/* The signal's own title first, its category second.
+                        Rendering the category meant the same record read
+                        "Security page viewed" in the rationale above (which
+                        uses the title) and "Pricing page viewed" here, on one
+                        screen — the category is the bucket a signal was
+                        filed under, and the title is what actually
+                        happened. */}
                     {evidenceSignals.map((sig) => (
                       <li key={sig.id} className="text-sm">
                         <span className="text-foreground/90">
-                          {SIGNAL_LABELS[sig.signalType as SignalType] ?? sig.signalType}
+                          {sig.title ||
+                            SIGNAL_LABELS[sig.signalType as SignalType] ||
+                            sig.signalType}
                         </span>
                         {sig.evidence && (
                           <span className="text-muted-foreground"> — {sig.evidence}</span>
@@ -524,6 +517,22 @@ export default async function OpportunityDetailPage({
             }
           />
 
+          <DealFactsPanel
+            opportunityId={enriched.id}
+            canEdit={can(session.role, "action:approve")}
+            facts={dealFacts
+              .filter((f) => !f.rejectedAt)
+              .map((f) => ({
+                id: f.id,
+                kind: f.kind,
+                value: f.value,
+                status: f.status,
+                sourceKind: f.sourceKind,
+                correctedFrom: f.correctedFrom,
+                stale: isStale(f, new Date()),
+              }))}
+          />
+
           {/* ── AI summary (§11) ── */}
           <Section title="Summary">
             <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
@@ -614,7 +623,14 @@ export default async function OpportunityDetailPage({
           </Section>
 
           {/* ── Conversation history ── */}
-          <Section title="Conversation history">
+          <Collapsed
+            title="Conversation history"
+            hint={
+              emails.length === 0
+                ? "No emails recorded against this account yet"
+                : `${emails.length} message${emails.length === 1 ? "" : "s"}, with what happened to each`
+            }
+          >
             {emails.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No emails recorded against this account yet.
@@ -643,11 +659,14 @@ export default async function OpportunityDetailPage({
                 ))}
               </ul>
             )}
-          </Section>
+          </Collapsed>
 
           {/* ── Recommendation history: the learning loop, visible ── */}
           {recommendations.length > 0 && (
-            <Section title="What Selryn recommended">
+            <Collapsed
+              title="What Selryn recommended"
+              hint={`${recommendations.length} piece${recommendations.length === 1 ? "" : "s"} of advice on this deal, and what became of each`}
+            >
               <ul className="divide-y divide-border/60">
                 {recommendations.map((r) => (
                   <li key={r.id} className="flex items-baseline justify-between gap-3 py-2.5">
@@ -675,7 +694,7 @@ export default async function OpportunityDetailPage({
                   </li>
                 ))}
               </ul>
-            </Section>
+            </Collapsed>
           )}
         </div>
 
@@ -706,25 +725,89 @@ export default async function OpportunityDetailPage({
             </div>
 
             {snapshot && (
-              <div className="mt-5 border-t border-border/60 pt-4">
-                <div className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              <details className="group mt-5 border-t border-border/60 pt-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground [&::-webkit-details-marker]:hidden">
                   Full breakdown
+                  <ChevronDown
+                    className="size-3.5 transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
+                </summary>
+                <div className="mt-3">
+                  <ScoreBreakdown factors={snapshot.factors} total={snapshot.score} />
+                  <p className="mt-4 text-[11px] text-muted-foreground">
+                    Scored {formatDistanceToNow(snapshot.createdAt, { addSuffix: true })} ·
+                    model v{snapshot.version}
+                  </p>
                 </div>
-                <ScoreBreakdown factors={snapshot.factors} total={snapshot.score} />
-                <p className="mt-4 text-[11px] text-muted-foreground">
-                  Scored {formatDistanceToNow(snapshot.createdAt, { addSuffix: true })} ·
-                  model v{snapshot.version}
-                </p>
-              </div>
+              </details>
             )}
           </Section>
+
+          {/* ── The modelled numbers, together and labelled ──
+                 These were the first three things on the page. Gathered here
+                 instead, behind one disclosure, because they are all derived
+                 from the same uncalibrated stage baseline and reading them
+                 beside the deal value invited them to be read as equally
+                 solid. Nothing is hidden: the section names what is inside
+                 before it is opened. ── */}
+          <Collapsed
+            title="Estimates"
+            hint="Modelled, not measured — likelihood, expected revenue, value at risk"
+          >
+            <dl className="space-y-4">
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  Estimated likelihood
+                </dt>
+                <dd
+                  className="mt-1 text-xl font-semibold tracking-tight"
+                  title={`Model figure: ${enriched.winProbability}% — ${WIN_PROBABILITY_CAVEAT}`}
+                >
+                  {likelihoodBand(enriched.winProbability).label}
+                </dd>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  From stage {enriched.stage.toLowerCase()} and score. Not
+                  calibrated against your own win history, so treat it as an
+                  ordering, not a probability.
+                </p>
+              </div>
+
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  {REVENUE_VOCABULARY.estimated_expected_revenue.label}
+                </dt>
+                <dd className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
+                  {formatMoney(enriched.expectedValue, enriched.currency)}
+                </dd>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Deal value × the estimate above. An estimate of an estimate.
+                </p>
+              </div>
+
+              {enriched.primaryLeak && (
+                <div>
+                  <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    {REVENUE_VOCABULARY.value_at_risk.label}
+                  </dt>
+                  <dd className="mt-1 text-xl font-semibold tracking-tight tabular-nums text-rose-600 dark:text-rose-400">
+                    {formatMoney(enriched.atRisk, enriched.currency)}
+                  </dd>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    An estimated share of the estimate above. Not money lost,
+                    and not money Selryn can recover.
+                  </p>
+                </div>
+              )}
+            </dl>
+          </Collapsed>
 
           <Section title="Deal">
             <dl className="space-y-2.5 text-sm">
               <Row label="Stage">
                 <StagePill stage={enriched.stage} />
               </Row>
-              <Row label="Last interaction">
+              <Row label="Last activity">
                 {enriched.lastInteractionAt
                   ? formatDistanceToNow(enriched.lastInteractionAt, { addSuffix: true })
                   : "Never"}
@@ -773,6 +856,46 @@ export default async function OpportunityDetailPage({
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * A section that starts shut.
+ *
+ * `<details>` rather than a client component on purpose: the reference
+ * material on this page — the full score arithmetic, the mail history, the
+ * recommendation log — is worth keeping and is not worth the first screen.
+ * Native disclosure works with no JavaScript, survives a failed bundle, and
+ * is keyboard- and screen-reader-navigable without any work from us.
+ */
+function Collapsed({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  /** What is inside, so the closed state is not a mystery box. */
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group rounded-2xl border border-border/70 bg-card">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">{title}</span>
+          {hint && (
+            <span className="mt-0.5 block text-[12px] text-muted-foreground">
+              {hint}
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="border-t border-border/60 p-5">{children}</div>
+    </details>
   );
 }
 

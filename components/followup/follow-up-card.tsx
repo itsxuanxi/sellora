@@ -217,7 +217,11 @@ export function FollowUpCard({
             <p className="mt-1 text-sm text-muted-foreground">
               {item.stage}
               {item.contact && <> · {item.contact.name}</>}
-              {" · Last contact: "}
+              {/* "Last activity", not "Last contact": this is the newest
+                  record of any kind, including the buyer opening something.
+                  The rationale below says "you last wrote", which is a
+                  different date, and both used the word contact. */}
+              {" · Last activity: "}
               {relative(item.lastActivityAt)}
             </p>
           </div>

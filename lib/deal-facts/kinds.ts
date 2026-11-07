@@ -33,14 +33,26 @@ export const FACT_LABEL: Record<FactKind, string> = {
   service: "Service proposed",
 };
 
-/** What an empty slot should say — never a blank that might be a zero. */
-export const FACT_UNKNOWN: Record<FactKind, string> = {
-  decision_maker: "Not established yet",
-  budget: "Never discussed on record",
-  objection: "None recorded",
-  scope_question: "None open",
-  decision_date: "No date given",
-  service: "Not specified",
+/**
+ * What an empty slot should say — never a blank that might be a zero.
+ *
+ * One word, and the word is "Unknown", for all six. The previous labels read
+ * as findings: "Never discussed on record", "None recorded", "None open".
+ * Nothing extracts these from a conversation yet, so an empty slot means
+ * nobody has written it down — not that the buyer never raised it. Saying
+ * "None open" about a deal Selryn has never read is the same mistake that
+ * made `missing_decision_maker` fire on every open proposal.
+ */
+export const FACT_UNKNOWN = "Unknown";
+
+/** The second line under an Unknown: what would put something there. */
+export const FACT_UNKNOWN_HINT: Record<FactKind, string> = {
+  decision_maker: "Nobody recorded who signs this off.",
+  budget: "No budget has been written down on this deal.",
+  objection: "No objection has been written down on this deal.",
+  scope_question: "No open question has been written down on this deal.",
+  decision_date: "No decision date has been written down on this deal.",
+  service: "Nobody recorded what was proposed.",
 };
 
 /**

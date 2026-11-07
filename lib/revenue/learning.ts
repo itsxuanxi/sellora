@@ -149,16 +149,36 @@ export async function getActionEffectiveness(
 }
 
 /**
- * Historical hit rate per action type as a 0-1 multiplier, for the priority
- * score. Types without enough history return `null` rather than 0 — never
- * having been tried is not the same as having failed, and scoring an untried
- * action as useless would stop it ever being tried.
+ * What history there is for each action type: the 0-1 multiplier the priority
+ * score wants, and the two counts it came from.
+ *
+ * The counts travel with the rate on purpose. MIN_SLICE_SAMPLE is 8, so a
+ * rate here can be one reply either side of a ten-point swing, and every
+ * surface that printed `Math.round(rate * 100)` was publishing a precision it
+ * did not have. "5 of 8" is the same information without the false precision,
+ * and a reader can judge it for themselves.
+ *
+ * Types without enough history are absent rather than zero — never having
+ * been tried is not the same as having failed, and scoring an untried action
+ * as useless would stop it ever being tried.
  */
+export interface ActionHistory {
+  /** 0-1, for arithmetic. Never render this as a percentage. */
+  rate: number;
+  attempts: number;
+  positive: number;
+}
+
 export async function getActionHitRates(
   orgId: string
-): Promise<Map<string, number>> {
+): Promise<Map<string, ActionHistory>> {
   const effectiveness = await getActionEffectiveness(orgId);
-  return new Map(effectiveness.map((e) => [e.actionType, e.positiveRate / 100]));
+  return new Map(
+    effectiveness.map((e) => [
+      e.actionType,
+      { rate: e.positiveRate / 100, attempts: e.attempts, positive: e.positive },
+    ])
+  );
 }
 
 // ── Which signals precede wins ────────────────────────────────────────────

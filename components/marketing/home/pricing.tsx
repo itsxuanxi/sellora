@@ -41,6 +41,19 @@ import {
 // conversation would open with anyway, and the page still offers email as the
 // fallback.
 const SALES_HREF = "/request-demo";
+
+/**
+ * Carries the chosen plan to the sign-up page.
+ *
+ * All three buttons used to land on the same URL, so a visitor who
+ * deliberately pressed Pro arrived somewhere with no idea which card they
+ * chose and was started on Free without comment. Only applied when the
+ * destination is sign-up: a signed-in reader goes to their dashboard, where a
+ * plan parameter would mean nothing.
+ */
+function withPlan(href: string, plan: string): string {
+  return href === "/sign-up" ? `${href}?plan=${plan}` : href;
+}
 const DEMO_HREF = "/request-demo";
 
 export function Pricing({ startHref }: { startHref: string }) {
@@ -58,9 +71,8 @@ export function Pricing({ startHref }: { startHref: string }) {
           Simple pricing that scales with your pipeline, not your headcount.
         </h2>
         <p className="mt-5 max-w-2xl text-pretty text-[16px] leading-relaxed text-[var(--mkt-muted)]">
-          Every plan includes your whole team and every data source you&rsquo;ve
-          got. You only pay for how many opportunities Selryn is actively
-          working.
+          One meter: how many live deals Selryn is watching. Your whole team is
+          included on every plan, and we don&rsquo;t charge per connection.
         </p>
       </Reveal>
 
@@ -364,7 +376,7 @@ function FreeStrip({ startHref }: { startHref: string }) {
 
       <div className="shrink-0 sm:text-right">
         <Link
-          href={startHref}
+          href={withPlan(startHref, "free")}
           className="group inline-flex h-11 items-center gap-2 rounded-full bg-[var(--mkt-ink)] px-6 text-sm font-medium text-[var(--mkt-page)] transition-colors hover:bg-[var(--mkt-brand-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-page)]"
         >
           {FREE_PLAN.cta}
@@ -445,15 +457,15 @@ function ClosingCta({ startHref }: { startHref: string }) {
 
       <div className="relative">
         <h3 className="mx-auto max-w-2xl text-balance text-3xl font-medium leading-[1.12] tracking-tight text-[#F7F8F5] sm:text-4xl">
-          Find the revenue already hiding in your pipeline.
+          Find out which of your proposals went quiet.
         </h3>
         <p className="mx-auto mt-5 max-w-xl text-pretty text-[16px] leading-relaxed text-[#C9CCC7]">
-          See which deals need attention, why they matter, and what your team
-          should do next.
+          The demo runs the whole thing on sample data in about three minutes.
+          No sign-up, and nothing is sent to anyone.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <Link
-            href={startHref}
+            href={withPlan(startHref, "free")}
             className="group inline-flex h-12 items-center gap-2 rounded-full bg-[#F7F8F5] px-7 text-[15px] font-medium text-[var(--mkt-dark)] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
           >
             Start free
@@ -463,7 +475,7 @@ function ClosingCta({ startHref }: { startHref: string }) {
             href="/demo"
             className="inline-flex h-12 items-center rounded-full border border-white/20 px-7 text-[15px] font-medium text-[#F7F8F5] transition-colors hover:border-[#A99BFF] hover:text-[#CFC6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A99BFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-dark)]"
           >
-            Try Selryn
+            Try the demo
           </Link>
           <Link
             href={DEMO_HREF}

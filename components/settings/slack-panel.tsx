@@ -103,12 +103,12 @@ export function SlackPanel({
       {!configured && (
         <p className="mt-4 rounded-xl border border-dashed border-border bg-muted/30 p-4 text-xs leading-relaxed text-muted-foreground">
           <span className="font-medium text-foreground">
-            Slack is not configured on this deployment.
+            Slack is not set up on this deployment yet.
           </span>{" "}
-          Set <code className="rounded bg-muted px-1">SLACK_CLIENT_ID</code> and{" "}
-          <code className="rounded bg-muted px-1">SLACK_CLIENT_SECRET</code> from
-          your Slack app, then restart. Until then this cannot be connected, and
-          Selryn will not pretend otherwise.
+          The connector is built and tested; it needs its Slack app credentials
+          configured on the server before it can be offered. Until then digests
+          and alerts go to email only, and Selryn says so rather than showing a
+          button that cannot work.
         </p>
       )}
 

@@ -24,6 +24,13 @@ import {
  * Rejection asks for a reason. It costs the user a sentence and it is the
  * highest-signal feedback the learning layer ever receives: a recommendation
  * a human refused, with the refusal explained.
+ *
+ * Three states, each named for where it sits in the sequence — not drafted,
+ * drafted and waiting on you, decided. They used to be headed
+ * "Human-controlled execution", "Awaiting your approval" and "Action
+ * executed", which describe the same three things in three unrelated
+ * vocabularies, so nothing told the reader there were three steps or which
+ * one they were in.
  */
 
 export interface PreparedAction {
@@ -103,7 +110,7 @@ export function ActionConsole({
             <X className="size-4 text-muted-foreground" />
           )}
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            {sent ? "Action executed" : "Recommendation rejected"}
+            {sent ? "Step 3 of 3 · Done" : "Step 3 of 3 · Not sent"}
           </span>
           {action.simulated && isEmail && (
             <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
@@ -150,7 +157,7 @@ export function ActionConsole({
             ) : (
               <Pencil className="size-3.5" />
             )}
-            Draft a different action
+            Draft a different follow-up
           </Button>
         )}
       </div>
@@ -167,17 +174,17 @@ export function ActionConsole({
         <div className="flex items-center gap-2">
           <ShieldCheck className="size-4 text-primary" />
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Human-controlled execution
+            Step 1 of 3 · Draft it
           </span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Selryn will draft the recommended action from the evidence above. You
-          review and edit it before anything happens — nothing customer-facing
-          is sent without your approval.
+          Selryn writes the follow-up from the evidence above. You read and edit
+          it (step 2), then approve it (step 3) — nothing reaches the customer
+          before that.
         </p>
         <Button className="mt-4" disabled={pending || !canExecute} onClick={() => prepare()}>
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Pencil className="size-3.5" />}
-          Draft the action
+          Draft follow-up
         </Button>
 
         <ActionPicker
@@ -202,7 +209,7 @@ export function ActionConsole({
     >
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-primary">
-          Awaiting your approval
+          Step 2 of 3 · Your review
         </span>
         {sandbox && isEmail && (
           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">

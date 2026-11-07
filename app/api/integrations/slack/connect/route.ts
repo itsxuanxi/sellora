@@ -39,7 +39,7 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Slack is not configured on this deployment. Set SLACK_CLIENT_ID and SLACK_CLIENT_SECRET.",
+            "Slack is not set up on this deployment yet. An administrator needs to configure its credentials on the server before this connection can be made.",
         },
         { status: 503 }
       );
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "ENCRYPTION_KEY is not set, so the Slack token could not be stored safely. Refusing to start.",
+            "This deployment has no encryption key configured, so the Slack token could not be stored safely. Refusing to start the connection.",
         },
         { status: 503 }
       );

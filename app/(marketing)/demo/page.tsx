@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SandboxEntry } from "@/components/marketing/sandbox-entry";
 
 export const metadata: Metadata = {
-  title: "Try Selryn",
+  title: "Try the demo",
   description:
     "Follow one deal from an unanswered proposal to a booked meeting, in a private sandbox running the real product. No sign-up, nothing sent.",
 };

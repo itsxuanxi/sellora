@@ -46,7 +46,7 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "HubSpot is not configured on this deployment. Set HUBSPOT_CLIENT_ID and HUBSPOT_CLIENT_SECRET.",
+            "HubSpot is not set up on this deployment yet. An administrator needs to configure its credentials on the server before this connection can be made.",
         },
         { status: 503 }
       );
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "ENCRYPTION_KEY is not set, so OAuth tokens cannot be stored safely. Refusing to start.",
+            "This deployment has no encryption key configured, so a CRM token cannot be stored safely. Refusing to start the connection.",
         },
         { status: 503 }
       );

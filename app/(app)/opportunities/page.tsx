@@ -97,7 +97,12 @@ export default async function OpportunitiesPage({
           return true;
       }
     })
-    .sort((a, b) => b.expectedValue - a.expectedValue);
+    // By deal value, which is a record, with the estimate as a tiebreak only.
+    // It used to sort by estimated expected revenue while the page described
+    // itself as ordering "by size" — two different orderings in one sentence,
+    // and the one it actually used was deal value times an uncalibrated
+    // likelihood. Size is what a browse list is for; who to contact is Today.
+    .sort((a, b) => b.dealValue - a.dealValue || b.expectedValue - a.expectedValue);
 
   const totalExpected = filtered.reduce((s, o) => s + o.expectedValue, 0);
   const totalValue = filtered.reduce((s, o) => s + o.dealValue, 0);
@@ -107,7 +112,7 @@ export default async function OpportunitiesPage({
     <>
       <PageHeader
         title="Deals"
-        description="Every open deal by estimated expected revenue — deal value × an estimated close likelihood. This orders deals by size, not by who to contact today; for that, see Today."
+        description="Every open deal, largest first. This is the browse list, ordered by the amount your CRM holds — not by who to contact today. For that, see Today."
       >
         <Button asChild variant="outline" size="sm">
           <Link href="/opportunities/import">

@@ -11,7 +11,8 @@ import {
   type ImportPreview,
   type ImportResult,
 } from "@/app/(app)/opportunities/import-actions";
-import { DEAL_COLUMNS } from "@/lib/import/deals";
+import Link from "next/link";
+import { DEAL_COLUMNS, REQUIRED_COLUMNS } from "@/lib/import/deals";
 
 /**
  * Bringing a pipeline in from a spreadsheet.
@@ -91,9 +92,40 @@ export function DealImportPanel({ templateCsv }: { templateCsv: string }) {
         {fileName && <span className="text-[13px] text-muted-foreground">{fileName}</span>}
       </div>
 
-      <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
-        Columns: {DEAL_COLUMNS.join(", ")}. Common alternatives such as
-        “Deal ID”, “Account Name” and “Deal Value” are recognised automatically.
+      {/* Required and optional, told apart.
+          This was one line listing all nine column names in a row, which left
+          the reader to guess which ones their export had to have — and the
+          answer is three of them. The rest improve what Selryn can say about
+          a deal; without them it still imports. */}
+      <dl className="mt-4 grid gap-3 rounded-xl border border-border/60 bg-muted/20 p-3.5 text-[12px] sm:grid-cols-2">
+        <div>
+          <dt className="font-medium text-foreground">Required</dt>
+          <dd className="mt-1 font-mono text-[11.5px] leading-relaxed text-muted-foreground">
+            {REQUIRED_COLUMNS.join(" · ")}
+          </dd>
+          <dd className="mt-1 leading-relaxed text-muted-foreground">
+            A row missing any of these is skipped and listed with its line
+            number.
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-foreground">Optional, and worth having</dt>
+          <dd className="mt-1 font-mono text-[11.5px] leading-relaxed text-muted-foreground">
+            {DEAL_COLUMNS.filter(
+              (c) => !(REQUIRED_COLUMNS as string[]).includes(c)
+            ).join(" · ")}
+          </dd>
+          <dd className="mt-1 leading-relaxed text-muted-foreground">
+            <span className="text-foreground">last_contacted_at</span> is the
+            one that matters most: without a date, Selryn cannot tell which
+            deals have gone quiet.
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
+        Common alternatives such as “Deal ID”, “Account Name”, “Deal Value”
+        and “Last Activity” are recognised automatically, so a raw CRM export
+        usually works unchanged.
       </p>
 
       {/* ── What the file says, before anything is written ── */}
@@ -195,6 +227,38 @@ export function DealImportPanel({ templateCsv }: { templateCsv: string }) {
               </li>
             )}
           </ul>
+
+          {/* The import is a means, not the end. Without this the page just
+              reported counts and left the reader on an upload form. */}
+          {result.created + result.updated > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Button asChild size="sm">
+                <Link href="/dashboard">See what needs a follow-up</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/opportunities">View all deals</Link>
+              </Button>
+            </div>
+          ) : (
+            <p className="mt-3 text-[13px]">
+              Nothing changed, so Today looks the same as before.{" "}
+              <Link href="/dashboard" className="font-medium underline underline-offset-4">
+                Open Today
+              </Link>
+              .
+            </p>
+          )}
+
+          {result.failures.length > 0 && (
+            <ul className="mt-3 space-y-1 border-t border-emerald-600/20 pt-3">
+              {result.failures.slice(0, 20).map((f, i) => (
+                <li key={i} className="text-[12.5px] leading-snug">
+                  <span className="font-medium tabular-nums">Row {f.row}</span> —{" "}
+                  {f.message}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </section>

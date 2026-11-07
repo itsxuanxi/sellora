@@ -10,6 +10,7 @@ import {
   FACT_KINDS,
   FACT_LABEL,
   FACT_UNKNOWN,
+  FACT_UNKNOWN_HINT,
   SOURCE_LABEL,
   type FactKind,
   type FactSource,
@@ -28,6 +29,13 @@ import {
  * reads as settled, a suggestion reads as a question with the controls to
  * answer it, and an unknown says plainly that nothing has been recorded —
  * never an empty cell that might be a zero or might be a bug.
+ *
+ * An unknown reads "Unknown", with a second line saying nothing has been
+ * written down. It used to read "None open" and "Never discussed on record",
+ * which are findings about the buyer rather than about the record: reading
+ * these out of a conversation is not implemented, so an empty row means
+ * nobody has typed it in. The rows are a place for a seller to keep what they
+ * know, and the panel now says so instead of implying Selryn read the thread.
  */
 
 export interface FactRow {
@@ -54,12 +62,17 @@ export function DealFactsPanel({
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card p-5">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 className="text-sm font-semibold">What we know about this proposal</h2>
         <span className="text-[11px] text-muted-foreground">
           Confirmed · Suggested · Unknown
         </span>
       </div>
+      <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+        Kept by hand for now. Selryn does not yet read these out of your email,
+        so anything it has not been told stays Unknown rather than being
+        guessed at.
+      </p>
 
       <dl className="mt-4 divide-y divide-border/60">
         {FACT_KINDS.map((kind) => (
@@ -115,7 +128,7 @@ function FactLine({
               value={value}
               autoFocus
               onChange={(e) => setValue(e.target.value)}
-              placeholder={FACT_UNKNOWN[kind]}
+              placeholder={FACT_UNKNOWN_HINT[kind]}
               className="h-8 max-w-sm"
             />
             <Button
@@ -166,9 +179,14 @@ function FactLine({
             )}
           </div>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-            <CircleHelp className="size-3.5" />
-            {FACT_UNKNOWN[kind]}
+          <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+              <CircleHelp className="size-3.5" />
+              {FACT_UNKNOWN}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {FACT_UNKNOWN_HINT[kind]}
+            </span>
           </span>
         )}
       </dd>

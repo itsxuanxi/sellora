@@ -7,6 +7,7 @@ import { RISK_BASIS } from "@/lib/risk/kinds";
 import { syncRecommendations } from "@/lib/revenue/recommendations";
 import { rescoreAllOpportunities } from "@/lib/revenue/opportunities";
 import { loadEnrichedOpportunities } from "@/lib/revenue/queries";
+import { OPEN_STAGES } from "@/lib/revenue/config";
 import { findContradiction } from "@/lib/revenue/contradiction";
 import { getImpactSummary } from "@/lib/revenue/queries";
 
@@ -95,6 +96,26 @@ async function main() {
   check("every item carries a basis",
     items.every((i) => i.basis === RISK_BASIS[i.risk]));
   console.log("     risks: " + risks.map((r) => `${r.label}=${r.count}(${r.basis})`).join(", "));
+
+  // One clock, one meaning. Today read "last activity" off its own merge of
+  // events and the CRM field; the deal page read it off the shared facts
+  // module, which also counts the buyer's opens. On the sample pipeline that
+  // produced "Last contact: 5 days ago" on the card and "4d" in the deal
+  // header for the same deal, a click apart.
+  const enrichedForClocks = await loadEnrichedOpportunities(orgId, {
+    stages: [...OPEN_STAGES],
+  });
+  const clockMismatches = items
+    .map((i) => {
+      const e = enrichedForClocks.find((o) => o.id === i.opportunityId);
+      if (!e || !i.lastActivityAt || !e.lastInteractionAt) return null;
+      const a = Math.floor((Date.now() - i.lastActivityAt.getTime()) / 86_400_000);
+      const b = Math.floor((Date.now() - e.lastInteractionAt.getTime()) / 86_400_000);
+      return a === b ? null : `${i.accountName}: Today ${a}d vs deal page ${b}d`;
+    })
+    .filter(Boolean);
+  check("Today and the deal page agree on last activity",
+    clockMismatches.length === 0, clockMismatches.join("; "));
 
   const stale = items.find((i) => i.accountName === "Orrery Group");
   check("the 70-day-old deal discloses its staleness",

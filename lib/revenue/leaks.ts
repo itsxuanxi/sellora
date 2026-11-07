@@ -194,7 +194,7 @@ export function detectLeaks(input: LeakInput, now: Date = new Date()): DetectedL
           neverReplied
             ? `${plural(sent, "message")} sent, no reply`
             : `Last replied ${plural(input.daysSinceReply ?? 0, "day")} ago · ${plural(sent, "message")} since`,
-          `Last contacted ${plural(Math.floor(sinceOutbound), "day")} ago`,
+          `You last wrote ${plural(Math.floor(sinceOutbound), "day")} ago`,
         ],
         sinceOutbound
       )

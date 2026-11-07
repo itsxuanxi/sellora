@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { isOpenStage, type Urgency } from "@/lib/revenue/config";
 import { loadEnrichedOpportunities, type EnrichedOpportunity } from "@/lib/revenue/queries";
 import { findContradiction, premiseContradictedNow } from "@/lib/revenue/contradiction";
-import { getActionHitRates } from "@/lib/revenue/learning";
+import { getActionHitRates, type ActionHistory } from "@/lib/revenue/learning";
 import {
   computeActionPriority,
   recommendationConfidence,
@@ -33,7 +33,7 @@ const URGENCY_TTL_HOURS: Record<Urgency, number> = {
 function buildRecommendationFields(
   opp: EnrichedOpportunity,
   maxExpectedValue: number,
-  hitRates: Map<string, number>
+  hitRates: Map<string, ActionHistory>
 ) {
   const action = opp.nextAction;
 
@@ -45,7 +45,8 @@ function buildRecommendationFields(
     ? Math.max(...supporting.map((sig) => sig.importanceScore))
     : 0;
 
-  const actionHitRate = hitRates.get(action.actionType) ?? null;
+  const history = hitRates.get(action.actionType) ?? null;
+  const actionHitRate = history?.rate ?? null;
 
   const priority = computeActionPriority({
     expectedValue: action.expectedValue,
@@ -54,6 +55,7 @@ function buildRecommendationFields(
     score: opp.score ?? 0,
     signalStrength,
     actionHitRate,
+    actionHistory: history,
   });
 
   const ttlHours = URGENCY_TTL_HOURS[action.urgency as Urgency] ?? 168;
@@ -67,7 +69,7 @@ function buildRecommendationFields(
     expectedValue: action.expectedValue,
     dealValue: opp.dealValue,
     supportingSignals: JSON.stringify(supporting.map((sig) => sig.id)),
-    expectedImpact: describeImpact(opp, actionHitRate),
+    expectedImpact: describeImpact(opp, history),
     // Deliberately never written.
     //
     // This was `expectedValue × actionHitRate`, presented as the money this
@@ -94,11 +96,21 @@ function buildRecommendationFields(
  * The expected-impact sentence. Says "we have no basis for a number yet" when
  * that is the truth, rather than dressing the deal value up as a forecast.
  */
-function describeImpact(opp: EnrichedOpportunity, hitRate: number | null): string {
-  if (hitRate == null) {
+function describeImpact(
+  opp: EnrichedOpportunity,
+  history: ActionHistory | null
+): string {
+  if (history == null) {
     return `${opp.nextAction.headline}. No history for this action type in your workspace yet, so there is no basis for estimating what it is worth.`;
   }
-  return `Similar actions in this workspace drew a customer reaction ${Math.round(hitRate * 100)}% of the time. That is a reaction rate, not a close rate.`;
+  // Counts, not a percentage. The reporting threshold is 8 attempts, where
+  // one more reply moves a rounded rate by twelve points, so the percentage
+  // this used to print claimed a precision the sample could not carry.
+  return (
+    `${history.positive} of the last ${history.attempts} actions like this one drew ` +
+    `a reaction from the customer. That is a reaction, not a close, and your reps ` +
+    `chose which advice to act on — so it is not a controlled comparison.`
+  );
 }
 
 /**

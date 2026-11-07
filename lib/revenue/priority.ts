@@ -60,6 +60,15 @@ export interface PriorityInput {
    * action type, 0-1. Null when there is not enough history — see below.
    */
   actionHitRate: number | null;
+  /**
+   * The counts behind that rate, when there are any.
+   *
+   * Carried so the reason line can say "5 of 8" rather than rounding to a
+   * percentage. The threshold for reporting at all is 8 attempts, which is a
+   * sample where one extra reply moves the figure by twelve points — so a
+   * rendered "62%" was asserting a precision the data never had.
+   */
+  actionHistory?: { attempts: number; positive: number } | null;
 }
 
 export interface PriorityBreakdownRow {
@@ -163,7 +172,9 @@ export function computeActionPriority(input: PriorityInput): PriorityResult {
     reason:
       input.actionHitRate == null
         ? "Not enough history for this action type yet — scored neutral."
-        : `This action drew a customer reaction ${Math.round(input.actionHitRate * 100)}% of the time here.`,
+        : input.actionHistory
+          ? `${input.actionHistory.positive} of ${input.actionHistory.attempts} of these drew a customer reaction here.`
+          : "There is some history for this action type here.",
   });
 
   const score = Math.max(

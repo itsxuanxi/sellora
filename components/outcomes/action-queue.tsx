@@ -134,7 +134,7 @@ export async function ActionQueue({ filter: rawFilter }: { filter?: string }) {
           }
           description={
             filter === "needs-approval"
-              ? "No recommendation is waiting for approval. Selryn surfaces one the moment a deal starts leaking revenue."
+              ? "No recommendation is waiting for approval. Selryn raises one as soon as a deal goes quiet after a demo or a proposal."
               : "Actions appear here once Selryn has recommended something and you have decided what to do about it."
           }
         >

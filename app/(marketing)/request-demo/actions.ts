@@ -109,8 +109,12 @@ export async function submitDemoRequest(
         fullName: values.fullName,
         workEmail: values.workEmail,
         company: values.company,
-        role: values.role,
-        teamSize: values.teamSize,
+        // Both are optional on the form now, and both columns are non-null.
+        // Stored empty rather than migrated: an empty string and a null both
+        // mean "they did not say", and a migration on a shared database is a
+        // heavier change than this distinction is worth.
+        role: values.role || "",
+        teamSize: values.teamSize || "",
         crm: values.crm || null,
         opportunityVolume: values.opportunityVolume || null,
         goal: values.goal,
@@ -174,8 +178,8 @@ function formatNotification(v: {
   fullName: string;
   workEmail: string;
   company: string;
-  role: string;
-  teamSize: string;
+  role?: string;
+  teamSize?: string;
   crm?: string;
   opportunityVolume?: string;
   goal: string;
@@ -187,13 +191,13 @@ function formatNotification(v: {
     `Name:            ${v.fullName}`,
     `Work email:      ${v.workEmail}`,
     `Company:         ${v.company}`,
-    `Role:            ${v.role}`,
+    `Role:            ${v.role || "Not provided"}`,
     `Sales team size: ${labelFor(TEAM_SIZES, v.teamSize)}`,
     `Current CRM:     ${labelFor(CRM_OPTIONS, v.crm)}`,
     `Monthly active opportunities: ${labelFor(OPPORTUNITY_VOLUMES, v.opportunityVolume)}`,
     `Heard about us:  ${v.heardFrom || "Not provided"}`,
     "",
-    "What they want Selryn to improve:",
+    "Which deals are slipping, and what they have tried:",
     v.goal,
     "",
     `Reply directly to ${v.workEmail}.`,

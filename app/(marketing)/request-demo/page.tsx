@@ -8,16 +8,18 @@ export const metadata: Metadata = {
   // brand up into "Request a Demo | Selryn · Selryn".
   title: { absolute: "Request a Demo | Selryn" },
   description:
-    "See where your pipeline is leaking revenue. Tell us how your sales team works today and we will build the walkthrough around it.",
+    "Tell us how your demos and proposals run today, and we will walk through what Selryn would have caught on them.",
 };
 
 /**
  * The demo request page.
  *
  * Replaces a mailto link, which asked a visitor to open a mail client, invent
- * a subject line and guess what we needed to know. The form asks the ten
- * things that actually shape a useful walkthrough, and the answers arrive in
- * one structured place rather than as free prose in an inbox.
+ * a subject line and guess what we needed to know. Four fields are required
+ * — name, work email, company, and which deals are slipping — and six more
+ * are optional because they shape a useful walkthrough without being worth
+ * losing a request over. Role and team size used to be required, and they are
+ * the two a founder is least sure how to answer.
  *
  * Two columns on desktop at roughly 48/52: the value proposition earns the
  * scroll, the form takes the slightly larger half because it is the work.
@@ -25,9 +27,9 @@ export const metadata: Metadata = {
  */
 
 const POINTS = [
-  "A walkthrough tailored to your sales motion",
-  "Sample recommendations based on your use case",
-  "Clear pricing and implementation next steps",
+  "A walkthrough of your own follow-up process, not a slide deck",
+  "What Selryn would have flagged on your deals, and on what evidence",
+  "A straight answer on what is built, what needs setting up, and what is not written yet",
 ];
 
 /**
@@ -62,18 +64,20 @@ export default function RequestDemoPage() {
           </p>
 
           <h1 className="mt-5 text-balance text-[2.4rem] font-medium leading-[1.08] tracking-tight text-[var(--mkt-ink)] sm:text-[2.9rem] lg:text-[3.1rem]">
-            See where your pipeline is leaking revenue.
+            Tell us which deals go quiet on you.
           </h1>
 
           <p className="mt-6 text-pretty text-[16.5px] leading-relaxed text-[var(--mkt-muted)]">
-            Tell us how your sales team works today. We&apos;ll show you which
-            buying signals Selryn can detect, how it prioritizes opportunities,
-            and what actions could move your deals forward.
+            Describe how your demos and proposals actually run today, and
+            we&apos;ll walk through what Selryn would have caught on them
+            &mdash; which deals it would have flagged, on what evidence, and
+            what it would have suggested you send.
           </p>
 
           <p className="mt-4 text-pretty text-[15px] leading-relaxed text-[var(--mkt-ink)]">
-            You&apos;ll get a focused walkthrough built around your
-            pipeline&mdash;not a generic product tour.
+            If you would rather just look first, the{" "}
+            <span className="font-medium">guided demo</span> runs the whole
+            thing on sample data with no sign-up.
           </p>
 
           <ul className="mt-8 space-y-3">

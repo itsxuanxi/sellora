@@ -42,9 +42,26 @@ test("every required field reports its own error", () => {
   assert.equal(result.ok, false);
   if (result.ok) return;
 
-  for (const field of ["fullName", "workEmail", "company", "role", "teamSize", "goal"] as const) {
+  // Four, not six. Role and sales-team size became optional: they shape the
+  // walkthrough and are not worth losing a request over, and they are the two
+  // a founder running every function is least sure how to answer.
+  for (const field of ["fullName", "workEmail", "company", "goal"] as const) {
     assert.ok(result.errors[field], `${field} produced no error message`);
   }
+});
+
+test("role and team size do not block a request", () => {
+  // The whole point of the change. Someone who leaves both blank still gets a
+  // demo; the form asks four things it genuinely needs.
+  const result = validateDemoRequest({
+    fullName: "Dana Reeve",
+    workEmail: "dana@northwind.example",
+    company: "Northwind",
+    role: "",
+    teamSize: "",
+    goal: "Two proposals from last month have gone quiet and I keep forgetting to chase them.",
+  });
+  assert.equal(result.ok, true, JSON.stringify(result));
 });
 
 test("optional fields really are optional", () => {

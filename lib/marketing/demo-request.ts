@@ -108,15 +108,19 @@ export const demoRequestSchema = z.object({
     .min(1, "Company is required.")
     .max(160, "That company name is too long."),
 
+  // Optional. It shapes the walkthrough and does not need to gate it — and
+  // "role" is an awkward question for a founder who does nine jobs.
   role: z
     .string()
     .trim()
-    .min(2, "Role or job title is required.")
-    .max(120, "That title is too long."),
+    .max(120, "That title is too long.")
+    .optional()
+    .or(z.literal("")),
 
-  teamSize: z.enum(values(TEAM_SIZES), {
-    message: "Select the size of your sales team.",
-  }),
+  teamSize: z
+    .enum(values(TEAM_SIZES))
+    .optional()
+    .or(z.literal("")),
 
   // Optional: someone evaluating Selryn may not have picked a CRM yet, and
   // forcing a choice would make them guess.

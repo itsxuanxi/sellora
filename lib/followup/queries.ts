@@ -295,14 +295,30 @@ export async function getFollowUps(
           sourceEventId: "",
           kind: "crm_field",
           occurredAt: opp.lastInteractionAt,
-          summary: "Last contacted, from the deal record",
+          summary: "Last activity, from the deal record",
         }
       : null;
 
     const lastOutbound = newerOf(eventOutbound, refFromFacts(shared?.lastOutboundAt ?? null, "email_outbound", shared?.lastOutboundVia ?? null, shared?.lastOutboundSummary ?? null));
     const lastInbound = newerOf(eventInbound, refFromFacts(shared?.lastReplyAt ?? null, "email_inbound", shared?.lastReplyVia ?? null, null));
-    const lastActivity =
-      newerOf(newerOf(newerOf(evidence[0] ?? null, lastInbound), lastOutbound), crmTouch);
+    // The shared facts module's own answer to "when did anything last happen
+    // on this deal", included so Today and the deal page cannot disagree.
+    //
+    // They did. The deal page reads `facts.lastActivityAt`, which counts the
+    // buyer's opens and page views; this layer counted only mail, events and
+    // the CRM field. On the sample pipeline that showed "Last contact: 5 days
+    // ago" on the card and "4d" in the deal header, two numbers for one
+    // phrase on two screens a click apart.
+    const factsActivity = refFromFacts(
+      shared?.lastActivityAt ?? null,
+      "crm_field",
+      null,
+      "Most recent record on this deal"
+    );
+    const lastActivity = newerOf(
+      newerOf(newerOf(newerOf(evidence[0] ?? null, lastInbound), lastOutbound), crmTouch),
+      factsActivity
+    );
 
     const facts: DealFacts = {
       opportunityId: opp.id,

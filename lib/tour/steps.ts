@@ -17,6 +17,25 @@
  * input to the engine rather than an output of it.
  */
 
+/**
+ * The account the story follows, and the anchor its card carries on Today.
+ *
+ * The tour used to anchor its first step on whichever card happened to be
+ * first ("follow-up-1") and tell the visitor to "open the deal at the top".
+ * That worked while Today ranked by expected revenue and the sample seed made
+ * this deal the largest — a comment in lib/sample-data.ts still says so. Today
+ * now ranks by what is overdue, which puts a different deal first, so the
+ * tour sent the visitor into one deal and then narrated another one's
+ * proposal opens, stakeholder and security-page view. Every step after the
+ * first was about a deal they were not looking at.
+ *
+ * Anchoring on the account by name cannot drift with the ranking.
+ */
+export const TOUR_ACCOUNT = "Cloudmint";
+
+/** `data-tour` value the card for TOUR_ACCOUNT carries. */
+export const TOUR_CARD_ANCHOR = "tour-deal";
+
 export interface TourStep {
   id: string;
   /** Route prefix this step lives on. */
@@ -41,11 +60,11 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: "find",
     route: "/dashboard",
-    target: "follow-up-1",
+    target: TOUR_CARD_ANCHOR,
     phase: "Detect",
-    title: "Start with the deal that is most overdue",
-    body: "Deals waiting on you, with the reason stated and the emails and CRM records behind it one click away. The order comes from how overdue each one is — not from a win rate Selryn guessed.",
-    instruction: "Open the deal at the top.",
+    title: "Deals that are waiting on you",
+    body: `Each card states the reason, the records behind it and how old they are. The order comes from how overdue each one is — not from a win rate Selryn guessed. We will follow ${TOUR_ACCOUNT}, where a proposal went out and nothing came back.`,
+    instruction: `Open the ${TOUR_ACCOUNT} card.`,
     advance: "click",
     placement: "bottom",
   },
@@ -55,7 +74,7 @@ export const TOUR_STEPS: TourStep[] = [
     target: "signal-timeline",
     phase: "Detect",
     title: "See what changed",
-    body: "The demo, the proposal, the two opens, the VP Finance joining the evaluation, the security page view — and then nothing for four days. Selryn reads them together rather than one at a time.",
+    body: "The demo, the proposal, the two opens, the VP Finance joining the evaluation, the security page view — and then nothing. Every row here is a record with a date on it; Selryn reads them together rather than one at a time.",
     instruction: "Look at the signals on this deal, then continue.",
     advance: "read",
     placement: "bottom",
@@ -89,7 +108,7 @@ export const TOUR_STEPS: TourStep[] = [
     phase: "Act",
     title: "Keep the human in control",
     body: "Selryn recommends; a person decides. It will write the action from the evidence above, and nothing customer-facing leaves without your approval — in this sandbox nothing leaves at all, whatever you click.",
-    instruction: "Click “Draft the action”.",
+    instruction: "Click “Draft follow-up”.",
     advance: "click",
     placement: "top",
   },

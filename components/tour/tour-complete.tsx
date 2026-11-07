@@ -81,41 +81,47 @@ export function TourComplete({
             <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
               {moved ? (
                 <>
-                  {outcome.company} · {outcome.dealValue}. Every figure below was
-                  computed by the same scoring engine a customer runs, from the
-                  evidence you recorded.
+                  {outcome.company} · {outcome.dealValue}. Everything below was
+                  counted from the record you just created — not remembered by
+                  the tour.
                 </>
               ) : (
                 <>
-                  You moved through the story without recording an action, so
-                  nothing changed on {outcome.company} — which is exactly what
-                  the record shows. Restart and approve the follow-up to see the
-                  figures move.
+                  You moved through the story without approving anything, so
+                  nothing was recorded against {outcome.company} — which is
+                  exactly what the counts below show. Restart and approve the
+                  follow-up to see them move.
                 </>
               )}
             </p>
 
+            {/* Three counts, not three estimates. This closed on "Win
+                probability 62% → 71%" and an expected-revenue delta, so the
+                payoff of the whole demo was two uncalibrated numbers and
+                their difference, printed to the point. What a visitor did is
+                countable, and counting it is a better argument. */}
             <dl className="mt-7 grid gap-3 sm:grid-cols-3">
               <Metric
-                label="Win probability"
-                value={`${outcome.winBefore}% → ${outcome.winAfter}%`}
-                positive={outcome.winAfter > outcome.winBefore}
+                label="Follow-ups you approved"
+                value={String(outcome.actionsTaken)}
+                positive={outcome.actionsTaken > 0}
               />
               <Metric
-                label="Expected revenue"
-                value={`${outcome.expectedBefore} → ${outcome.expectedAfter}`}
-                positive={outcome.upliftPositive}
+                label="Buyer responses recorded"
+                value={String(outcome.responsesLogged)}
+                positive={outcome.responsesLogged > 0}
               />
               <Metric
-                label="Change"
-                value={moved ? outcome.upliftLabel : "No change"}
-                positive={outcome.upliftPositive}
+                label="Deal stage now"
+                value={outcome.stageAfter}
+                positive={false}
               />
             </dl>
 
             <p className="mt-4 text-[13px] text-muted-foreground">
-              The deal advanced. It has not been won — Selryn reports movement,
-              never a result it cannot see.
+              The deal advanced. It has not been won, and no revenue has been
+              booked — Selryn reports what happened, never a result it cannot
+              see.
             </p>
           </>
         ) : (
