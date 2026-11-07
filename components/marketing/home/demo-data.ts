@@ -141,78 +141,6 @@ export function stepDelays(scenario: Scenario): number[] {
   return scenario.steps.map((s) => s.delay ?? STEP_DEFAULT_DELAY_MS);
 }
 
-export const SCENARIOS: Scenario[] = [
-  {
-    id: "recover",
-    tabLabel: "Recover a cooling deal",
-    title: "A deal goes quiet after the demo — and comes back.",
-    account: "Ledgerly",
-    steps: [
-      { label: "Demo completed", note: "Discovery call held with the champion", delay: 650 },
-      { label: "Four days without a reply", note: "No outbound sent since", delay: 1000 },
-      { label: "Risk level increases", note: "Silence at this stage is the top loss cause", delay: 1100 },
-      { label: "Selryn identifies the missing stakeholder", note: "No finance contact on the thread", delay: 1000 },
-      { label: "A targeted follow-up is prepared", note: "Draft written against the actual gap", delay: 950 },
-      { label: "Sales rep approves", note: "Nothing sends without a human", delay: 1150 },
-      { label: "CRM is updated", note: "Stage, next step and activity written back", delay: 900 },
-    ],
-    outcome: [
-      { label: "Buyer", value: "Replied", tone: "good" },
-      { label: "Next meeting", value: "Scheduled", tone: "good" },
-    ],
-    // Deliberately not a money figure.
-    //
-    // This said "Estimated expected revenue protected: $43.2K", which is a
-    // revenue claim twice over: "protected" says Selryn saved the money, and
-    // the number came from deal value times an uncalibrated probability. A
-    // reply and a booked meeting are what actually happened, so those are
-    // what the scenario reports.
-    result: "Outcome: they replied, and a next meeting is on the calendar.",
-  },
-  {
-    id: "prioritize",
-    tabLabel: "Prioritize today's pipeline",
-    // Not "what the next hour is worth" — that prices an hour of selling
-    // from an estimate. The list orders by deal size and says so.
-    title: "Every open deal, ordered by size — and who to contact first.",
-    account: "All open opportunities",
-    steps: [
-      { label: "Selryn reads every open opportunity", note: "248 monitored continuously", delay: 700 },
-      { label: "Follow-up commitments are checked", note: "Dates you agreed, against what was sent", delay: 900 },
-      { label: "Proposals with no reply are found", note: "Sent, opened, and still unanswered", delay: 1000 },
-      { label: "Today's list is ordered by what is overdue", note: "Not by which deal is biggest", delay: 1100 },
-      { label: "One action is attached to each", note: "Not five options — one", delay: 950 },
-    ],
-    outcome: [
-      { label: "Open deals read", value: "248", tone: "accent" },
-      // A count of deals, not a sum of money. The number this used to carry
-      // was deal value times an uncalibrated stage baseline, summed — an
-      // estimate of an estimate, printed to three figures.
-      { label: "Needing a follow-up today", value: "14", tone: "accent" },
-    ],
-    result: "Ordered by what is overdue — the oldest broken promise first",
-  },
-  {
-    id: "convert",
-    tabLabel: "Convert a high-intent buyer",
-    title: "Intent rises, and the right next step is obvious.",
-    account: "Brightcart",
-    steps: [
-      { label: "Pricing page revisited", note: "Second visit this week" },
-      { label: "Case studies reviewed", note: "Three in one session — not a browse" },
-      { label: "Second stakeholder appears", note: "New contact from the same domain" },
-      { label: "Intent changes from Medium to High", note: "Score moves on evidence, not a guess" },
-      { label: "Selryn recommends technical validation", note: "The usual blocker at this stage" },
-      { label: "Meeting link is prepared", note: "Ready for the rep to send" },
-      { label: "Opportunity advances", note: "Stage updated on approval" },
-    ],
-    outcome: [
-      { label: "Buying committee", value: "Identified", tone: "good" },
-      { label: "Momentum", value: "High", tone: "accent" },
-    ],
-    result: "Recommended next step: technical validation with the new stakeholder",
-  },
-];
 
 export type IntegrationKey =
   | "csv"
@@ -692,12 +620,12 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         id: "s8",
         delay: 660,
         action: "score",
-        status: "Intent score updated",
+        status: "Read together, not one at a time",
         payload: {
-          metric: "Intent score",
-          from: 64,
-          to: 87,
-          verdict: "High buying intent",
+          metric: "Records on this deal",
+          from: 0,
+          to: 6,
+          verdict: "Six, from three systems",
           tone: "good",
         },
       },
@@ -722,14 +650,17 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         { key: "last_reply", value: "4 days ago", after: 6, tone: "risk" },
       ],
       meter: {
-        label: "Intent score",
-        value: 87,
-        note: "Up from 64 — six signals, weighted by stage",
+        // A share of the records this deal has, not a score out of a
+        // hundred. The difference is that a reader can check it against the
+        // rail directly above, which lists them.
+        label: "Records read",
+        value: 100,
+        note: "All six, from email, calendar and the CRM",
         after: 8,
         tone: "good",
       },
     },
-    closing: "6 signals on this deal, read together rather than one by one",
+    closing: "6 records on this deal, read together rather than one by one",
   },
   {
     id: "priority",

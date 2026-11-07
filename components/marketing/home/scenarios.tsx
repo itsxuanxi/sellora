@@ -1,21 +1,12 @@
 "use client";
 
-import { useId, useMemo } from "react";
 import Link from "next/link";
 import { Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { IntegrationClaim } from "@/lib/marketing/capabilities";
-import { useAutoRotate } from "@/components/marketing/home/use-auto-rotate";
+import { ProductDemos } from "@/components/marketing/home/product-demos";
 import {
-  sequenceDuration,
-  useDemoSequence,
-} from "@/components/marketing/home/use-demo-sequence";
-import { TabStrip } from "@/components/marketing/home/tab-strip";
-import {
-  DEMO_DATA_NOTE,
   RECORDED_STEPS,
-  SCENARIOS,
-  stepDelays,
   CAPABILITY_STATUS_HELP,
   TRUST_POINTS,
 } from "@/components/marketing/home/demo-data";
@@ -38,16 +29,6 @@ import {
  * risk step is marked with a small amber dot rather than tinting the row.
  */
 
-const IDS = SCENARIOS.map((s) => s.id);
-const LABELS = SCENARIOS.map((s) => s.tabLabel);
-
-/** Steps that describe a risk, marked with a small amber dot. */
-const RISK_STEPS: Record<string, number[]> = {
-  recover: [1, 2],
-  prioritize: [],
-  convert: [],
-};
-
 export function Scenarios({
   integrations,
 }: {
@@ -55,27 +36,6 @@ export function Scenarios({
    *  lib/marketing/capabilities.ts for why this is not a constant. */
   integrations: IntegrationClaim[];
 }) {
-  // Each scenario's dwell time is summed from its own steps: these run 7, 5
-  // and 7 steps, and one shared constant either rushed the long ones or left
-  // the short one sitting finished for seconds.
-  const durations = useMemo(
-    () => SCENARIOS.map((sc) => sequenceDuration(stepDelays(sc), 1600)),
-    []
-  );
-  const rotate = useAutoRotate(SCENARIOS.length, durations);
-
-  const activeScenario = SCENARIOS[rotate.active];
-  const delays = useMemo(() => stepDelays(activeScenario), [activeScenario]);
-
-  const sequence = useDemoSequence({
-    stepCount: activeScenario.steps.length,
-    delays,
-    paused: rotate.contentPaused,
-    reduced: rotate.reduced,
-    resetKey: activeScenario.id,
-  });
-  const baseId = useId();
-
   return (
     <section
       id="how-it-works"
@@ -98,154 +58,14 @@ export function Scenarios({
           </p>
         </div>
 
-        {/* ── Left rail: tabs + timeline · Right: product surface ── */}
-        <div
-          ref={rotate.containerRef}
-          {...rotate.interactionProps}
-          className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10"
-        >
-          <div className="min-w-0">
-            <TabStrip
-              rotate={rotate}
-              labels={LABELS}
-              ids={IDS}
-              baseId={baseId}
-              ariaLabel="Selryn workflow scenarios"
-              size="lg"
-              orientation="vertical"
-            />
-
-            {/* All three timelines stay mounted, stacked in one grid cell, so
-                the rail is permanently as tall as the longest scenario.
-                Scenarios have 7, 5 and 7 steps — rendering only the active one
-                moved the whole page 94px on every auto-advance. */}
-            <div className="mt-5 grid grid-cols-[minmax(0,1fr)]">
-              {SCENARIOS.map((sc, sIdx) => {
-                const shown = sIdx === rotate.active;
-                return (
-                  <div
-                    key={sc.id}
-                    aria-hidden={!shown}
-                    inert={!shown}
-                    className={cn(
-                      "col-start-1 row-start-1 transition-[opacity,transform] duration-300 ease-out",
-                      shown
-                        ? "opacity-100 translate-y-0"
-                        : "pointer-events-none opacity-0 translate-y-1.5"
-                    )}
-                  >
-                    <p className="text-[15px] font-medium leading-snug text-[var(--mkt-ink)]">
-                      {sc.title}
-                    </p>
-
-                    {/* Every step stays mounted and is revealed by opacity
-                        and translate, never by mounting — that is what keeps
-                        the rail exactly as tall as its finished state while
-                        the steps land one at a time. */}
-                    <ol className="mt-5 space-y-3">
-                      {sc.steps.map((step, i) => {
-                        // Live position from the sequence clock. Inactive
-                        // scenarios read as un-started so they replay from
-                        // the first step when they come back round.
-                        const reached = shown ? sequence.revealed : 0;
-                        const focus = shown && i === reached - 1 && !sequence.complete;
-                        const done = i < reached && !focus;
-                        const risk = RISK_STEPS[sc.id]?.includes(i);
-                        return (
-                          <li
-                            key={step.label}
-                            className={cn(
-                              "relative pl-7 transition-[opacity,transform] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
-                              shown && i < reached
-                                ? "opacity-100 translate-y-0"
-                                : "opacity-0 translate-y-2"
-                            )}
-                            aria-hidden={!(shown && i < reached)}
-                          >
-                    <span
-                      className={cn(
-                        "absolute left-0 top-[2px] flex size-4 items-center justify-center rounded-full border",
-                        done
-                          ? "border-[var(--mkt-success)]/30 bg-[var(--mkt-success)]/10 text-[var(--mkt-success)]"
-                          : focus
-                            ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand)]"
-                            : "border-[var(--mkt-line)] bg-[var(--mkt-surface)]"
-                      )}
-                      aria-hidden
-                    >
-                      {done ? (
-                        <Check className="size-2.5" strokeWidth={3} />
-                      ) : focus ? (
-                        <span className="size-1.5 rounded-full bg-white" />
-                      ) : null}
-                    </span>
-
-                    {i < sc.steps.length - 1 && (
-                      <span
-                        className="absolute left-[7.5px] top-[19px] h-[calc(100%+4px)] w-px bg-[var(--mkt-line)]"
-                        aria-hidden
-                      />
-                    )}
-
-                    <span
-                      className={cn(
-                        "flex flex-wrap items-center gap-x-2 text-[13px] leading-snug",
-                        focus || done
-                          ? "font-medium text-[var(--mkt-ink)]"
-                          : "text-[var(--mkt-muted)]"
-                      )}
-                    >
-                      {step.label}
-                      {risk && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-normal text-[var(--mkt-warn-ink)]">
-                          <span
-                            className="size-1.5 rounded-full bg-[var(--mkt-warn)]"
-                            aria-hidden
-                          />
-                          risk
-                        </span>
-                      )}
-                    </span>
-                    {step.note && (
-                      <span className="mt-0.5 block text-[11px] leading-snug text-[var(--mkt-muted)]">
-                        {step.note}
-                      </span>
-                    )}
-                  </li>
-                        );
-                      })}
-                    </ol>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── Product surface. One stacked container so height never moves. ── */}
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] shadow-[var(--mkt-shadow-panel)] lg:sticky lg:top-24 lg:self-start">
-            {SCENARIOS.map((sc, i) => {
-              const selected = i === rotate.active;
-              return (
-                <div
-                  key={sc.id}
-                  role="tabpanel"
-                  id={`${baseId}-panel-${sc.id}`}
-                  aria-labelledby={`${baseId}-tab-${sc.id}`}
-                  aria-hidden={!selected}
-                  inert={!selected}
-                  className={cn(
-                    "col-start-1 row-start-1 transition-[opacity,transform] duration-300 ease-out",
-                    selected
-                      ? "opacity-100 translate-y-0"
-                      : "pointer-events-none opacity-0 translate-y-1.5"
-                  )}
-                >
-                  <ScenarioSurface index={i} />
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* ── Who → Why → What, interactive ──
+               This replaced a scripted three-scenario panel that played a
+               fixed sequence on a timer. Nothing in it was computed, so a
+               visitor could not disagree with it and it went on
+               demonstrating an ordering the product had already stopped
+               using. The reorder below calls `rankFollowUps`, which is what
+               Today calls. ── */}
+        <ProductDemos />
 
         {/* ── Trust, folded in rather than given its own screen ── */}
         <div className="mt-16 grid gap-10 border-t border-[var(--mkt-line)] pt-12 lg:grid-cols-2 lg:gap-14">
@@ -399,65 +219,5 @@ export function Scenarios({
         </div>
       </div>
     </section>
-  );
-}
-
-// ── The changing product surface ───────────────────────────────────────────
-
-function ScenarioSurface({ index }: { index: number }) {
-  const s = SCENARIOS[index];
-
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-4 py-2.5 sm:px-5">
-        <span className="flex gap-1.5" aria-hidden>
-          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
-          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
-          <span className="size-2 rounded-full bg-[var(--mkt-line)]" />
-        </span>
-        <span className="text-[11px] font-medium tracking-[0.05em] text-[var(--mkt-ink)]">
-          {s.account}
-        </span>
-        <span className="ml-auto text-[10px] uppercase tracking-[0.1em] text-[var(--mkt-muted)]">
-          Workflow
-        </span>
-      </div>
-
-      <div className="flex-1 space-y-4 px-4 py-5 sm:px-5">
-        <div>
-          <span className="text-[10px] font-medium uppercase tracking-[0.11em] text-[var(--mkt-muted)]">
-            Outcome
-          </span>
-          <dl className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-            {s.outcome.map((o) => (
-              <div
-                key={o.label}
-                className="rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-3 py-2.5"
-              >
-                <dt className="text-[11px] text-[var(--mkt-muted)]">{o.label}</dt>
-                <dd
-                  className={cn(
-                    "mt-0.5 text-[15px] font-medium",
-                    o.tone === "good"
-                      ? "text-[var(--mkt-success)]"
-                      : "text-[var(--mkt-brand-deep)]"
-                  )}
-                >
-                  {o.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-
-        <p className="rounded-xl border border-[var(--mkt-brand)]/25 bg-[var(--mkt-brand-wash)] px-3 py-2.5 text-[12px] leading-snug text-[var(--mkt-brand-deep)]">
-          {s.result}
-        </p>
-      </div>
-
-      <div className="border-t border-[var(--mkt-line)] bg-[var(--mkt-surface-2)] px-4 py-2 sm:px-5">
-        <span className="text-[10px] text-[var(--mkt-muted)]">{DEMO_DATA_NOTE}</span>
-      </div>
-    </div>
   );
 }

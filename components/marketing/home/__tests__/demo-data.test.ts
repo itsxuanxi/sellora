@@ -8,12 +8,15 @@ import {
   HERO_STAGE_DURATION_MS,
   HERO_STAGE_TAIL_MS,
   RANKED_DEALS,
-  SCENARIOS,
   scenarioDelays,
   scenarioStatus,
   stepDelays,
 } from "@/components/marketing/home/demo-data";
 import { sequenceDuration } from "@/components/marketing/home/use-demo-sequence";
+import {
+  DEMO_EVIDENCE,
+  DEMO_PIPELINE,
+} from "@/components/marketing/home/product-demo-data";
 
 // The demo is marketing copy that makes arithmetic claims on screen. These
 // guard the claims, not the styling.
@@ -116,12 +119,27 @@ test("the shared dwell is long enough to read but short enough to cycle", () => 
   assert.ok(HERO_STAGE_DURATION_MS >= 5000 && HERO_STAGE_DURATION_MS <= 10_000);
 });
 
-test("a scrollytelling scenario always outlasts its own steps", () => {
-  // Screen 2 still derives its dwell per scenario: those run 5 to 7 steps of
-  // very different lengths.
-  for (const scenario of SCENARIOS) {
-    const delays = stepDelays(scenario);
-    assert.ok(sequenceDuration(delays, 1600) > delays.reduce((a, b) => a + b, 0));
+test("the interactive demo's deals carry a reason and records to back it", () => {
+  // Screen 2's scripted scenarios are gone; this is what replaced them, and
+  // a card with no evidence behind it would be the thing the product spends
+  // every screen arguing against.
+  for (const deal of DEMO_PIPELINE) {
+    assert.ok(deal.because.length > 0, `${deal.accountName} states no reason`);
+    const records = DEMO_EVIDENCE[deal.opportunityId] ?? [];
+    assert.ok(records.length >= 2, `${deal.accountName} has ${records.length} records`);
+    assert.ok(
+      records.some((r) => r.basis === "observed"),
+      `${deal.accountName} rests entirely on inference`
+    );
+  }
+});
+
+test("the demo's draft is addressed to the deal it belongs to", () => {
+  // A draft that named the wrong company would be the single most damaging
+  // detail a visitor could notice on this page.
+  for (const deal of DEMO_PIPELINE) {
+    assert.ok(deal.draft.subject.length > 0);
+    assert.ok(deal.draft.body.includes(deal.contactName.split(" ")[0]));
   }
 });
 
@@ -296,10 +314,12 @@ test("nothing claims Selryn reads what is inside an email", () => {
       s.closing,
       ...s.steps.map((x) => `${x.status} ${JSON.stringify(x.payload)}`),
     ]),
-    ...SCENARIOS.flatMap((s) => [
-      s.title,
-      s.result,
-      ...s.steps.map((x) => `${x.label} ${x.note ?? ""}`),
+    ...DEMO_PIPELINE.flatMap((d) => [
+      d.headline,
+      d.because,
+      d.action,
+      d.draft.subject,
+      d.draft.body,
     ]),
   ]
     .join(" ")
@@ -378,7 +398,7 @@ test("a trust point is stated once, with a status", () => {
 test("nothing claims a recommendation caused a win", () => {
   const prose = [
     ...HERO_SCENARIOS.flatMap((s) => [s.closing, ...s.steps.map((x) => JSON.stringify(x.payload))]),
-    ...SCENARIOS.map((s) => s.result),
+    ...DEMO_PIPELINE.map((d) => `${d.headline} ${d.because}`),
   ].join(" ").toLowerCase();
 
   for (const banned of ["caused", "guaranteed", "proven to", "increases revenue by"]) {
@@ -403,12 +423,15 @@ test("no marketing surface resurrects the vocabulary the product dropped", () =>
       ...s.rail.fields.map((f) => `${f.key} ${f.value}`),
       ...s.steps.map((x) => `${x.status} ${JSON.stringify(x.payload)}`),
     ]),
-    ...SCENARIOS.flatMap((s) => [
-      s.title,
-      s.result,
-      ...s.steps.map((x) => `${x.label} ${x.note ?? ""}`),
-      ...s.outcome.map((o) => `${o.label} ${o.value}`),
+    ...DEMO_PIPELINE.flatMap((d) => [
+      d.headline,
+      d.because,
+      d.action,
+      d.draft.subject,
+      d.draft.body,
+      d.staleness ?? "",
     ]),
+    ...Object.values(DEMO_EVIDENCE).flat().map((r) => `${r.label} ${r.source}`),
     // The status line above each panel is computed, not stored, which is how
     // "Ranked by expected revenue" survived the first pass of this guard.
     ...HERO_SCENARIOS.map((s) => scenarioStatus(s).label),
@@ -417,6 +440,13 @@ test("no marketing surface resurrects the vocabulary the product dropped", () =>
     .toLowerCase();
 
   for (const banned of [
+    // No 0-100 score anywhere on this page. The deal screens stopped
+    // presenting one because it is a stage baseline times hand-tuned
+    // weights with no calibration behind it, and a visitor who has never
+    // seen the product has even less basis to judge one.
+    "intent score",
+    "lead score",
+    "priority score",
     "win probability",
     "protected revenue",
     "revenue protected",

@@ -950,17 +950,6 @@ function Collapsed({
   );
 }
 
-function Panel({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-card p-4">
-      <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-1.5">{children}</div>
-    </div>
-  );
-}
-
 function Section({
   title,
   children,
