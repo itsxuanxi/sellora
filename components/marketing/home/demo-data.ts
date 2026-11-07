@@ -29,84 +29,6 @@
 
 export const DEMO_DATA_NOTE = "Sample data shown for illustration";
 
-export interface DemoDeal {
-  rank: string;
-  company: string;
-  dealValue: number;
-  /** Days since this buyer last replied. Shown as itself, never forecast from. */
-  waitingDays: number;
-  /** The risk the product would name here, in the product's own words. */
-  riskLabel: string;
-  /**
-   * Position under the product's follow-up rules: an unanswered proposal
-   * outranks a missing next step, which outranks plain silence. Lower goes
-   * first. Mirrors RULE_ORDER in lib/followup/rules.ts.
-   */
-  ruleRank: number;
-  priority: string;
-  priorityTone: "urgent" | "warn" | "watch";
-  /** Behavioural evidence, newest first. */
-  signals: string[];
-  /** The silence or risk note shown under the signals. */
-  status: string;
-  /** HIGH / RISING / INCREASING — the read on this account. */
-  readoutLabel: string;
-  readoutValue: string;
-  readoutTone: "high" | "rising" | "risk";
-  lastActivity: string | null;
-}
-
-export const DEMO_DEALS: DemoDeal[] = [
-  {
-    rank: "01",
-    company: "Cloudmint",
-    dealValue: 42_000,
-    waitingDays: 4,
-    riskLabel: "Proposal unanswered",
-    ruleRank: 1,
-    priority: "Call today",
-    priorityTone: "urgent",
-    signals: ["Proposal opened twice", "New stakeholder joined"],
-    status: "Last activity: 12 minutes ago",
-    readoutLabel: "Intent",
-    readoutValue: "High",
-    readoutTone: "high",
-    lastActivity: "12 minutes ago",
-  },
-  {
-    rank: "02",
-    company: "Brightcart",
-    dealValue: 65_000,
-    waitingDays: 1,
-    riskLabel: "No next step",
-    ruleRank: 2,
-    priority: "Follow up",
-    priorityTone: "warn",
-    signals: ["Pricing page revisited", "Case studies reviewed"],
-    status: "Last activity: 2 hours ago",
-    readoutLabel: "Intent",
-    readoutValue: "Rising",
-    readoutTone: "rising",
-    lastActivity: "2 hours ago",
-  },
-  {
-    rank: "03",
-    company: "Ledgerly",
-    dealValue: 30_000,
-    waitingDays: 5,
-    riskLabel: "Quiet since the demo",
-    ruleRank: 3,
-    priority: "Re-engage",
-    priorityTone: "watch",
-    signals: ["Demo completed", "No reply for 5 days"],
-    status: "No reply for 5 days",
-    readoutLabel: "Risk",
-    readoutValue: "Increasing",
-    readoutTone: "risk",
-    lastActivity: "5 days ago",
-  },
-];
-
 // ── Screen 2: workflow scenarios ───────────────────────────────────────────
 
 export interface ScenarioStep {
@@ -505,14 +427,6 @@ export function railProgress(
 }
 
 /**
- * Ranked list used by the priority scenario. Derived, never hand-typed.
- *
- * By rule order, which is what the product sorts on — not by deal value and
- * not by any estimate derived from it.
- */
-export const RANKED_DEALS = [...DEMO_DEALS].sort((a, b) => a.ruleRank - b.ruleRank);
-
-/**
  * Every scenario holds the panel for the same fixed period.
  *
  * A shared dwell is what makes the tab progress line honest - four bars that
@@ -661,90 +575,6 @@ export const HERO_SCENARIOS: HeroScenario[] = [
       },
     },
     closing: "6 records on this deal, read together rather than one by one",
-  },
-  {
-    id: "priority",
-    tabLabel: "What's in the way",
-    panelLabel: "Prioritized pipeline",
-    subject: {
-      company: "All open opportunities",
-      dealValue: 0,
-      stage: "Ranking",
-      owner: "Revenue team",
-      // The three ranked deals add to $137,000 of open value. Stated rather
-      // than left blank so the header carries a figure like the others.
-      amountLabel: "$137,000 open",
-    },
-    steps: [
-      {
-        id: "p1",
-        delay: 550,
-        action: "analyze",
-        status: "Reading 248 open deals",
-        payload: { label: "Reading the latest signal on every open deal" },
-      },
-      {
-        id: "p2",
-        delay: 700,
-        action: "rank",
-        status: "Biggest deals first",
-        payload: {
-          // Deal-size order, which is where most pipeline reviews stop.
-          order: ["Brightcart", "Cloudmint", "Ledgerly"],
-          caption: "Sorted by deal value",
-        },
-      },
-      {
-        id: "p3",
-        delay: 850,
-        action: "analyze",
-        status: "Checking what is overdue",
-        payload: { label: "Agreed follow-up dates, unanswered proposals, silence after a demo" },
-      },
-      {
-        id: "p4",
-        delay: 900,
-        action: "rank",
-        status: "Re-ordered by what is overdue",
-        payload: {
-          order: ["Cloudmint", "Brightcart", "Ledgerly"],
-          highlight: "Cloudmint",
-          caption: "Sorted by what is overdue",
-        },
-      },
-      {
-        id: "p5",
-        delay: 750,
-        action: "outcome",
-        status: "Cloudmint goes first",
-        payload: {
-          label: "Its proposal is unanswered, and they opened it again today",
-        },
-      },
-    ],
-    rail: {
-      label: "Ranking run",
-      fields: [
-        { key: "opportunities", value: "248 open", after: 0 },
-        { key: "needing_follow_up", value: "14", after: 0 },
-        { key: "method", value: "overdue first", after: 3 },
-        { key: "top_account", value: "Cloudmint", after: 4, tone: "good" },
-        { key: "top_reason", value: "proposal unanswered", after: 5, tone: "risk" },
-        { key: "largest_deal", value: "Brightcart", after: 4 },
-      ],
-      meter: {
-        // A count of deals against a count of deals. The figure this replaced
-        // was a sum of deal values times uncalibrated stage baselines,
-        // expressed as a share of open pipeline — two estimates deep, and
-        // printed as though it were a measurement.
-        label: "Share of the pipeline",
-        value: 6,
-        note: "14 of 248 open deals need a follow-up today",
-        after: 4,
-        tone: "good",
-      },
-    },
-    closing: "Brightcart is the bigger deal. Cloudmint is the one you owe an answer.",
   },
   {
     id: "action",
@@ -949,21 +779,12 @@ export function scenarioStatus(scenario: HeroScenario): {
   count: string;
 } {
   const signals = scenario.steps.filter((s) => s.action === "signal").length;
-  const ranked = scenario.steps.find((s) => s.action === "rank");
 
   switch (scenario.id) {
     case "detection":
       return {
         label: "Signal detection · one open deal",
         count: `${signals} of ${signals} signals`,
-      };
-    case "priority":
-      return {
-        label: "Ordered by what is overdue",
-        count:
-          ranked && ranked.action === "rank"
-            ? `${ranked.payload.order.length} of ${DEMO_DEALS.length} deals`
-            : `${DEMO_DEALS.length} deals`,
       };
     case "action":
       return {

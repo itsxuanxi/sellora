@@ -1,19 +1,10 @@
 "use client";
 
-import {
-  ArrowUp,
-  Check,
-  CircleDashed,
-  Pencil,
-  Radio,
-  Sparkles,
-  TriangleAlert,
-} from "lucide-react";
+import { Check, CircleDashed, Pencil, Radio, Sparkles, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/revenue/money";
 import { useCountUp } from "@/components/marketing/home/use-count-up";
 import {
-  DEMO_DEALS,
   railProgress,
   type DemoStep,
   type HeroScenario,
@@ -425,8 +416,6 @@ function StepBody({
         />
       );
 
-    case "rank":
-      return <RankTable payload={step.payload} reduced={reduced} />;
 
     case "approve": {
       const approved = step.payload.state === "approved";
@@ -622,110 +611,6 @@ function StepBody({
         />
       );
   }
-}
-
-/**
- * The ranked pipeline, as a table.
- *
- * Shows deal value beside how long the buyer has been waiting and what the
- * risk is, so the reordering claim is checkable rather than asserted:
- * Brightcart is visibly the larger deal and visibly ranks below Cloudmint.
- *
- * The two columns this replaced were "Win" (a bare percentage) and
- * "Expected" (deal value times that percentage). They made the panel's
- * argument arithmetically, which was the problem — the percentage was an
- * uncalibrated stage baseline, so the money derived from it was an estimate
- * squared, and the table invited the reader to check the multiplication
- * rather than the premise. Days waiting and a named risk are both records.
- */
-function RankTable({
-  payload,
-  reduced,
-}: {
-  payload: { order: string[]; highlight?: string; caption?: string };
-  reduced: boolean;
-}) {
-  const rows = payload.order
-    .map((company) => DEMO_DEALS.find((d) => d.company === company))
-    .filter((d): d is (typeof DEMO_DEALS)[number] => Boolean(d));
-
-  return (
-    <div className="rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-surface)] p-1">
-      {payload.caption && (
-        <p className="px-3 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.11em] text-[var(--mkt-muted)]">
-          {payload.caption}
-        </p>
-      )}
-
-      <div className="grid grid-cols-[1.5fr_0.9fr_0.6fr_1fr] gap-2 px-3 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-[var(--mkt-muted)] sm:grid-cols-[1.5fr_0.9fr_0.6fr_1fr_0.9fr]">
-        <span>Opportunity</span>
-        <span className="text-right">Deal value</span>
-        <span className="text-right">Waiting</span>
-        <span className="text-right">Reason</span>
-        {/* The action is what makes a rank useful rather than merely sorted,
-            but it is the first thing to drop when the panel gets narrow. */}
-        <span className="hidden text-right sm:block">Do</span>
-      </div>
-
-      <ul>
-        {rows.map((d, i) => {
-          const lead = d.company === payload.highlight;
-          return (
-            <li
-              key={d.company}
-              className={cn(
-                "grid grid-cols-[1.5fr_0.9fr_0.6fr_1fr] items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] tabular-nums sm:grid-cols-[1.5fr_0.9fr_0.6fr_1fr_0.9fr]",
-                // Rows re-key on their position so a reorder re-runs the
-                // entrance; movement is opacity only, never height.
-                !reduced && "animate-fade-up",
-                lead
-                  ? "bg-[var(--mkt-brand-wash)] font-medium text-[var(--mkt-ink)]"
-                  : "text-[var(--mkt-muted)]"
-              )}
-              style={reduced ? undefined : { animationDelay: `${i * 60}ms` }}
-            >
-              <span className="flex items-center gap-2 truncate">
-                <span className="font-mono text-[11.5px] text-[var(--mkt-muted)]">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="truncate text-[var(--mkt-ink)]">{d.company}</span>
-                {lead && (
-                  <ArrowUp
-                    className="size-3.5 shrink-0 text-[var(--mkt-brand)]"
-                    aria-hidden
-                  />
-                )}
-              </span>
-              <span className="text-right">{formatMoney(d.dealValue, "USD")}</span>
-              <span className="text-right">
-                {d.waitingDays}d
-              </span>
-              <span
-                className={cn(
-                  "truncate text-right text-[11.5px]",
-                  lead && "font-medium text-[var(--mkt-brand-deep)]"
-                )}
-              >
-                {d.riskLabel}
-              </span>
-              <span
-                className={cn(
-                  "hidden text-right text-[11.5px] font-medium sm:block",
-                  d.priorityTone === "urgent"
-                    ? "text-[var(--mkt-danger)]"
-                    : d.priorityTone === "warn"
-                      ? "text-[var(--mkt-warn-ink)]"
-                      : "text-[var(--mkt-muted)]"
-                )}
-              >
-                {d.priority}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
 }
 
 const TONE_MARK = {

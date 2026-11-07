@@ -1,13 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  DEMO_DEALS,
   INTEGRATION_CATALOG,
   TRUST_POINTS,
   HERO_SCENARIOS,
   HERO_STAGE_DURATION_MS,
   HERO_STAGE_TAIL_MS,
-  RANKED_DEALS,
   scenarioDelays,
   scenarioStatus,
   stepDelays,
@@ -20,49 +18,6 @@ import {
 
 // The demo is marketing copy that makes arithmetic claims on screen. These
 // guard the claims, not the styling.
-
-test("every deal states a record, not a forecast", () => {
-  // The two fields this replaced were `probability` (an uncalibrated stage
-  // baseline, printed as a percentage) and `expected` (deal value times it).
-  // Both are gone from the type, so a regression is a compile error rather
-  // than a number nobody rechecks. What is left has to be present and sane.
-  for (const d of DEMO_DEALS) {
-    assert.ok(d.waitingDays >= 0, `${d.company} waits a negative number of days`);
-    assert.ok(d.riskLabel.length > 0, `${d.company} names no risk`);
-    assert.ok(d.ruleRank >= 1, `${d.company} has no position under the rules`);
-    for (const key of Object.keys(d)) {
-      assert.ok(
-        !/probability|expected|forecast|protected/i.test(key),
-        `${d.company} carries a forecast field: ${key}`
-      );
-    }
-  }
-});
-
-test("the deals match the figures the hero narrates", () => {
-  const byName = Object.fromEntries(DEMO_DEALS.map((d) => [d.company, d]));
-  assert.equal(byName.Cloudmint.dealValue, 42_000);
-  assert.equal(byName.Brightcart.dealValue, 65_000);
-  assert.equal(byName.Ledgerly.dealValue, 30_000);
-});
-
-test("every deal has its own position under the rules", () => {
-  const ranks = DEMO_DEALS.map((d) => d.ruleRank);
-  assert.equal(new Set(ranks).size, ranks.length, "two deals claim the same rank");
-});
-
-test("the ranking is by rule order, not deal size", () => {
-  // The panel's whole point: Brightcart is the bigger deal and still loses.
-  // It loses on the rules now — an unanswered proposal outranks a missing
-  // next step — rather than on an arithmetic comparison of two estimates.
-  const ranks = RANKED_DEALS.map((d) => d.ruleRank);
-  assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b));
-  assert.equal(RANKED_DEALS[0].company, "Cloudmint");
-
-  const biggestDeal = [...DEMO_DEALS].sort((a, b) => b.dealValue - a.dealValue)[0];
-  assert.equal(biggestDeal.company, "Brightcart");
-  assert.notEqual(RANKED_DEALS[0].company, biggestDeal.company);
-});
 
 test("the outcome panel reports what happened and claims no revenue", () => {
   // It used to close by turning a Pricing -> Proposal stage move into
@@ -154,38 +109,6 @@ test("signal detection shows four distinct signals, not one", () => {
   assert.equal(labels.size, signals.length, "duplicate signal labels");
 });
 
-test("the priority panel ranks at least three real opportunities", () => {
-  const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
-  const ranks = priority.steps.filter((s) => s.action === "rank");
-  assert.ok(ranks.length > 0, "no ranked table on the priority panel");
-
-  const known = new Set(DEMO_DEALS.map((d) => d.company));
-  for (const step of ranks) {
-    if (step.action !== "rank") continue;
-    assert.ok(step.payload.order.length >= 3, "fewer than three ranked rows");
-    for (const company of step.payload.order) {
-      assert.ok(known.has(company), `ranked row "${company}" is not a real demo deal`);
-    }
-  }
-});
-
-test("the ranking really does reorder away from deal size", () => {
-  // The panel's whole argument. If both orders matched, it would be showing
-  // a sort that changes nothing.
-  const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
-  const rankSteps = priority.steps.filter((s) => s.action === "rank");
-  const first = rankSteps[0];
-  const last = rankSteps[rankSteps.length - 1];
-  assert.ok(first.action === "rank" && last.action === "rank");
-  assert.notDeepEqual(first.payload.order, last.payload.order);
-
-  // And the final order is genuinely the rule order the product sorts on.
-  const ruleRanks = last.payload.order.map(
-    (c) => DEMO_DEALS.find((d) => d.company === c)!.ruleRank
-  );
-  assert.deepEqual(ruleRanks, [...ruleRanks].sort((a, b) => a - b));
-});
-
 test("the recommendation panel keeps a human in the loop", () => {
   const action = HERO_SCENARIOS.find((s) => s.id === "action")!;
   const approvals = action.steps.filter((s) => s.action === "approve");
@@ -197,7 +120,11 @@ test("the recommendation panel keeps a human in the loop", () => {
 
 test("hero scenarios cover the full loop across the set", () => {
   const kinds = new Set(HERO_SCENARIOS.flatMap((s) => s.steps.map((x) => x.action)));
-  for (const required of ["signal", "analyze", "score", "rank", "recommend", "approve", "execute", "response", "outcome"]) {
+  // "rank" is no longer among them. The hero's ranking panel was a scripted
+  // version of what the interactive demo below now does with the product's
+  // own `rankFollowUps`, so the page was demonstrating its prioritisation
+  // twice — once for real and once as an animation. The script went.
+  for (const required of ["signal", "analyze", "score", "recommend", "approve", "execute", "response", "outcome"]) {
     assert.ok(kinds.has(required as never), `no step anywhere demonstrates "${required}"`);
   }
 });
@@ -269,19 +196,6 @@ test("the rail never restates the header it sits beside", () => {
       );
     }
   }
-});
-
-test("the priority rail's share figure is the arithmetic, not a round number", () => {
-  // A share of deals, not of money: of the open pipeline the panel says it
-  // reads, the part needing a follow-up today. Both counts are stated in the
-  // rail beside it, so the percentage has to follow from them.
-  const priority = HERO_SCENARIOS.find((s) => s.id === "priority")!;
-  const byKey = Object.fromEntries(priority.rail.fields.map((f) => [f.key, f.value]));
-  const open = parseInt(byKey.opportunities, 10);
-  const due = parseInt(byKey.needing_follow_up, 10);
-  assert.ok(open > 0 && due > 0, "the rail no longer states both counts");
-  assert.equal(priority.rail.meter.value, Math.round((due / open) * 100));
-  assert.match(priority.rail.meter.note, new RegExp(`${due} of ${open}`));
 });
 
 test("the outcome rail's meter measures something the product computes", () => {
