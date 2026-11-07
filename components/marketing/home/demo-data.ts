@@ -27,6 +27,9 @@
  * All figures are illustrative sample data for a fictional pipeline.
  */
 
+import { rankFollowUps } from "@/lib/followup/rules";
+import { DEMO_PIPELINE } from "@/components/marketing/home/product-demo-data";
+
 export const DEMO_DATA_NOTE = "Sample data shown for illustration";
 
 // ── Screen 2: workflow scenarios ───────────────────────────────────────────
@@ -439,10 +442,89 @@ export const HERO_STAGE_DURATION_MS = 7200;
 /** Minimum quiet time after the last step lands, before the tab advances. */
 export const HERO_STAGE_TAIL_MS = 900;
 
+/**
+ * WHO — which deal needs you first.
+ *
+ * The rows are the top of `rankFollowUps(DEMO_PIPELINE)`: the same five
+ * deals the interactive demo further down works with, in the order the
+ * product itself would put them. Derived rather than typed, so the hero
+ * preview and the hands-on version cannot drift apart, and so the ordering
+ * on this page is the real one rather than a designer's guess at it.
+ */
+const WHO_ROWS = rankFollowUps(DEMO_PIPELINE).slice(0, 3);
+
 export const HERO_SCENARIOS: HeroScenario[] = [
   {
-    id: "detection",
-    tabLabel: "What changed",
+    id: "who",
+    tabLabel: "Who needs me",
+    panelLabel: "Today · deals waiting on you",
+    subject: {
+      company: "All open deals",
+      dealValue: 0,
+      stage: "Triage",
+      owner: "Your pipeline",
+      amountLabel: `${DEMO_PIPELINE.length} open`,
+    },
+    steps: [
+      {
+        id: "w1",
+        delay: 600,
+        action: "analyze",
+        status: `Reading ${DEMO_PIPELINE.length} open deals`,
+        payload: { label: "Agreed dates, unanswered proposals, silence after a call" },
+      },
+      ...WHO_ROWS.map((deal, i) => ({
+        id: `w${i + 2}`,
+        delay: 700,
+        action: "signal" as const,
+        status: i === 0 ? "Most overdue" : "Also waiting",
+        payload: {
+          label: `${deal.accountName} — ${deal.headline.toLowerCase()}`,
+          detail: `${deal.contactName} · ${deal.contactRole}`,
+          at: deal.daysOverdue > 0 ? `${deal.daysOverdue}d` : "today",
+          tone: (i === 0 ? "risk" : "good") as "risk" | "good",
+        },
+      })),
+      {
+        id: "w5",
+        delay: 700,
+        action: "score",
+        status: "Ordered by what is overdue",
+        payload: {
+          metric: "Need you today",
+          from: 0,
+          to: WHO_ROWS.length,
+          verdict: "Biggest deal is not first",
+          tone: "good",
+        },
+      },
+    ],
+    rail: {
+      label: "Ranking run",
+      fields: [
+        { key: "open_deals", value: `${DEMO_PIPELINE.length}`, after: 0 },
+        { key: "method", value: "overdue first", after: 1 },
+        ...WHO_ROWS.map((deal, i) => ({
+          key: `rank_${i + 1}`,
+          value: deal.accountName,
+          after: i + 2,
+          tone: (i === 0 ? "good" : undefined) as "good" | undefined,
+        })),
+        { key: "tiebreak", value: "deal size, last", after: 5 },
+      ],
+      meter: {
+        label: "Needing a follow-up",
+        value: Math.round((WHO_ROWS.length / DEMO_PIPELINE.length) * 100),
+        note: `${WHO_ROWS.length} of ${DEMO_PIPELINE.length} open deals`,
+        after: 5,
+        tone: "good",
+      },
+    },
+    closing: "Ordered by what you owe them — not by which deal is biggest",
+  },
+  {
+    id: "why",
+    tabLabel: "Why now",
     panelLabel: "Signal monitor · Cloudmint",
     subject: {
       company: "Cloudmint",
@@ -577,7 +659,7 @@ export const HERO_SCENARIOS: HeroScenario[] = [
     closing: "6 records on this deal, read together rather than one by one",
   },
   {
-    id: "action",
+    id: "next",
     tabLabel: "What to send",
     panelLabel: "Recommended action · Cloudmint",
     subject: {
@@ -668,103 +750,8 @@ export const HERO_SCENARIOS: HeroScenario[] = [
         tone: "good",
       },
     },
-    closing: "One action, with the evidence behind it — never a list of five",
-  },
-  {
-    id: "outcome",
-    tabLabel: "What came back",
-    panelLabel: "Outcome · Cloudmint",
-    subject: {
-      company: "Cloudmint",
-      dealValue: 42_000,
-      stage: "Pricing",
-      owner: "Dana Whitfield",
-    },
-    steps: [
-      {
-        id: "o1",
-        delay: 550,
-        action: "execute",
-        status: "Sending",
-        payload: { label: "Follow-up sent", state: "sent" },
-      },
-      {
-        id: "o2",
-        delay: 800,
-        action: "response",
-        status: "Customer replied",
-        payload: {
-          label: "Reply received",
-          quote: "Can you walk us through the scope tomorrow?",
-          who: "Head of Growth",
-        },
-      },
-      {
-        id: "o3",
-        delay: 700,
-        action: "outcome",
-        status: "Meeting logged",
-        payload: { label: "Meeting booked for tomorrow" },
-      },
-      {
-        id: "o4",
-        delay: 700,
-        action: "outcome",
-        status: "CRM updated",
-        payload: {
-          label: "Deal stage moved",
-          stageFrom: "Pricing",
-          stageTo: "Proposal",
-        },
-      },
-      {
-        id: "o5",
-        delay: 750,
-        action: "score",
-        status: "Risk cleared",
-        payload: {
-          metric: "Days unanswered",
-          from: 4,
-          to: 0,
-          verdict: "They replied",
-          tone: "good",
-        },
-      },
-      {
-        id: "o6",
-        delay: 700,
-        action: "outcome",
-        status: "Recorded, not counted as revenue",
-        payload: {
-          label: "Advanced one stage. Not won, and nothing booked.",
-        },
-      },
-    ],
-    rail: {
-      label: "What was recorded",
-      fields: [
-        { key: "approved_by", value: "Dana W. · 09:12", after: 0, tone: "good" },
-        { key: "follow_up", value: "sent 09:14", after: 1, tone: "good" },
-        { key: "reply", value: "41 min later", after: 2, tone: "good" },
-        { key: "meeting", value: "tomorrow 14:00", after: 3, tone: "good" },
-        { key: "stage", value: "Proposal", after: 4, tone: "good" },
-        { key: "recommendation", value: "accepted, edited", after: 5, tone: "good" },
-        { key: "revenue_booked", value: "none — still open", after: 6 },
-      ],
-      meter: {
-        // A real Outcomes figure: of the recommendations this workspace was
-        // shown, the share somebody then acted on. It replaced a win
-        // probability, which measured nothing and moved three points because
-        // a stage field changed.
-        label: "Recommendations acted on",
-        value: 71,
-        note: "Of those shown in this workspace — accepted, edited or dismissed",
-        after: 5,
-        tone: "good",
-      },
-    },
-    closing: "Risk → Recommendation → Your approval → Their reply → Recorded",
-  },
+    closing: "One action, with its evidence. What comes back is recorded — not won, and never counted as revenue",
+  }
 ];
 
 /**
@@ -781,20 +768,20 @@ export function scenarioStatus(scenario: HeroScenario): {
   const signals = scenario.steps.filter((s) => s.action === "signal").length;
 
   switch (scenario.id) {
-    case "detection":
+    case "who":
       return {
-        label: "Signal detection · one open deal",
-        count: `${signals} of ${signals} signals`,
+        label: "Today · ordered by what is overdue",
+        count: `${scenario.steps.filter((x) => x.action === "signal").length} of ${DEMO_PIPELINE.length} deals`,
       };
-    case "action":
+    case "why":
       return {
-        label: "Recommended action · evidence attached",
-        count: "1 of 1 action",
+        label: "Opening Cloudmint · the records behind it",
+        count: `${signals} of ${signals} signals`,
       };
     default:
       return {
-        label: "Outcome · what was recorded",
-        count: `${scenario.steps.length} of ${scenario.steps.length} events`,
+        label: "Recommended action · evidence attached",
+        count: "1 of 1 action",
       };
   }
 }

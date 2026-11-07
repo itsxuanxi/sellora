@@ -19,12 +19,13 @@ import {
 // The demo is marketing copy that makes arithmetic claims on screen. These
 // guard the claims, not the styling.
 
-test("the outcome panel reports what happened and claims no revenue", () => {
-  // It used to close by turning a Pricing -> Proposal stage move into
-  // "Protected revenue $28,560 -> $29,820". A stage move is not money, and
-  // Selryn cannot measure how much of an outcome it caused, so the panel is
-  // not allowed to carry a money figure at all.
-  const outcome = HERO_SCENARIOS.find((s) => s.id === "outcome")!;
+test("no hero panel turns an outcome into revenue", () => {
+  // A stage move is not money, and Selryn cannot measure how much of an
+  // outcome it caused. The separate outcome panel is gone — the hero is
+  // three capsules now, Who / Why / Next — and its one irreplaceable
+  // sentence moved into the last capsule's closing, so the guard moved with
+  // it rather than being deleted along with the panel.
+  const outcome = HERO_SCENARIOS.find((s) => s.id === "next")!;
 
   for (const step of outcome.steps) {
     const payload = JSON.stringify(step.payload);
@@ -101,7 +102,7 @@ test("the demo's draft is addressed to the deal it belongs to", () => {
 test("signal detection shows four distinct signals, not one", () => {
   // A monitor with a single row reads as an illustration. The panel's job is
   // to look like a product with real evidence in it.
-  const detection = HERO_SCENARIOS.find((s) => s.id === "detection")!;
+  const detection = HERO_SCENARIOS.find((s) => s.id === "why")!;
   const signals = detection.steps.filter((s) => s.action === "signal");
   assert.ok(signals.length >= 4, `only ${signals.length} signals on the detection panel`);
 
@@ -110,7 +111,7 @@ test("signal detection shows four distinct signals, not one", () => {
 });
 
 test("the recommendation panel keeps a human in the loop", () => {
-  const action = HERO_SCENARIOS.find((s) => s.id === "action")!;
+  const action = HERO_SCENARIOS.find((s) => s.id === "next")!;
   const approvals = action.steps.filter((s) => s.action === "approve");
   assert.ok(approvals.length >= 2, "no awaiting-then-approved beat");
 
@@ -124,7 +125,11 @@ test("hero scenarios cover the full loop across the set", () => {
   // version of what the interactive demo below now does with the product's
   // own `rankFollowUps`, so the page was demonstrating its prioritisation
   // twice — once for real and once as an animation. The script went.
-  for (const required of ["signal", "analyze", "score", "recommend", "approve", "execute", "response", "outcome"]) {
+  // Three capsules now, so the set covers Who / Why / Next rather than the
+  // whole loop end to end. "execute", "response" and "outcome" belonged to
+  // the separate outcome panel; what replaced that promise is the closing
+  // line asserted above, not another animation of it.
+  for (const required of ["signal", "analyze", "score", "recommend", "approve"]) {
     assert.ok(kinds.has(required as never), `no step anywhere demonstrates "${required}"`);
   }
 });
@@ -198,12 +203,19 @@ test("the rail never restates the header it sits beside", () => {
   }
 });
 
-test("the outcome rail's meter measures something the product computes", () => {
-  // It used to be the win probability, which is why it moved three points
-  // because a stage field changed. Outcomes really does compute the share of
-  // shown recommendations that someone acted on, so that is what it shows.
-  const outcome = HERO_SCENARIOS.find((s) => s.id === "outcome")!;
-  assert.match(outcome.rail.meter.label, /recommendations acted on/i);
+test("no hero meter is a forecast dressed as a measurement", () => {
+  // Every meter on this page has to count something a reader can check
+  // against the rail printed beside it. A win probability could not be
+  // checked against anything, which is why none of them is one any more.
+  for (const scenario of HERO_SCENARIOS) {
+    assert.ok(
+      !/probability|expected revenue|protected|intent score/i.test(
+        `${scenario.rail.meter.label} ${scenario.rail.meter.note}`
+      ),
+      `${scenario.id}'s meter is forecasting: ${scenario.rail.meter.label}`
+    );
+  }
+  const outcome = HERO_SCENARIOS.find((s) => s.id === "next")!;
   assert.ok(
     !/probability|expected revenue|protected/i.test(
       `${outcome.rail.meter.label} ${outcome.rail.meter.note}`
