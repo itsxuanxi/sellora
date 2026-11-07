@@ -136,7 +136,94 @@ export const isStripeEnabled = Boolean(process.env.STRIPE_SECRET_KEY);
 
 export function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
+  // No apiVersion passed on purpose: stripe-node sends its own pinned version
+  // (`ApiVersion` in the package) rather than the account default, so the wire
+  // version moves only when the dependency is upgraded. Writing it here again
+  // would create a second place to keep in step with the first.
   return key ? new Stripe(key) : null;
+}
+
+/**
+ * A Stripe Price id for a plan and interval, when the account has one.
+ *
+ * Optional by design. Without one, checkout builds the line item inline from
+ * `lib/pricing.ts` and nothing needs configuring in the Stripe dashboard,
+ * which is what makes the product runnable from a clean account. The cost of
+ * that is one ad-hoc Product per Checkout Session: Stripe creates a new
+ * product whenever `price_data.product_data` is used, so a dashboard with a
+ * hundred subscribers has a hundred near-identical products and revenue
+ * cannot be grouped by plan.
+ *
+ * Setting the four variables below switches to real Prices and fixes that,
+ * without changing anything else:
+ *
+ *   STRIPE_PRICE_STARTER_MONTHLY   STRIPE_PRICE_STARTER_YEARLY
+ *   STRIPE_PRICE_GROWTH_MONTHLY    STRIPE_PRICE_GROWTH_YEARLY
+ *
+ * ("growth" is the stored id of the plan displayed as Pro — see PaidPlanId.)
+ */
+export function priceIdFor(
+  planId: PaidPlanId,
+  interval: BillingInterval,
+  // A plain record rather than NodeJS.ProcessEnv so a test can pass the four
+  // variables it cares about instead of a whole environment.
+  env: Record<string, string | undefined> = process.env
+): string | null {
+  const key = `STRIPE_PRICE_${planId.toUpperCase()}_${
+    interval === "year" ? "YEARLY" : "MONTHLY"
+  }`;
+  const value = env[key]?.trim();
+  return value ? value : null;
+}
+
+/**
+ * Whether a configured Stripe Price still agrees with the published one.
+ *
+ * The whole point of lib/pricing.ts is that the number on the marketing page
+ * and the number on the invoice have one definition. A Price id configured in
+ * Stripe is a second definition, editable by anyone with dashboard access and
+ * invisible from here — so it is checked before it is charged, and a
+ * disagreement refuses the checkout instead of billing a figure the customer
+ * was never shown.
+ */
+export function priceMatchesPublished(
+  price: { unit_amount: number | null; currency: string; recurring: { interval: string } | null },
+  expected: { cents: number; interval: BillingInterval }
+): { ok: true } | { ok: false; reason: string } {
+  if (price.unit_amount !== expected.cents) {
+    return {
+      ok: false,
+      reason: `Stripe has ${price.unit_amount ?? "no"} cents for this price and Selryn publishes ${expected.cents}`,
+    };
+  }
+  if (price.currency !== "usd") {
+    return { ok: false, reason: `Stripe has this price in ${price.currency}, not usd` };
+  }
+  if (price.recurring?.interval !== expected.interval) {
+    return {
+      ok: false,
+      reason: `Stripe bills this price every ${price.recurring?.interval ?? "once"}, not every ${expected.interval}`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * Whether a subscription event is about the subscription this org is on.
+ *
+ * Stripe delivers at least once and does not promise order. The case that
+ * actually bites: a customer cancels and re-subscribes, and the older
+ * `customer.subscription.deleted` lands after the newer checkout — which
+ * would set a paying workspace back to Free. An org with no subscription id
+ * recorded yet accepts the event, because that is the first one arriving.
+ */
+export function eventIsCurrentSubscription(
+  storedSubscriptionId: string | null,
+  eventSubscriptionId: string
+): boolean {
+  if (!storedSubscriptionId) return true;
+  if (storedSubscriptionId.startsWith("sim_")) return true;
+  return storedSubscriptionId === eventSubscriptionId;
 }
 
 /**

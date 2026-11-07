@@ -7,6 +7,8 @@ import {
   formatPrice,
   getStripe,
   PLANS,
+  priceIdFor,
+  priceMatchesPublished,
   type BillingInterval,
 } from "@/lib/billing";
 import type { PaidPlanId } from "@/lib/pricing";
@@ -98,6 +100,35 @@ export async function startCheckout(
     }
 
     const amount = interval === "year" ? plan.yearlyCents : plan.monthlyCents;
+
+    // A configured Stripe Price if the account has one, otherwise the line
+    // item is built inline from lib/pricing.ts. Both paths charge the same
+    // number, and the configured one is checked against the published figure
+    // before it is used rather than trusted — a Price is editable in the
+    // Stripe dashboard, which makes it a second definition of a number this
+    // codebase deliberately keeps in one place.
+    const priceId = priceIdFor(planId, interval);
+    if (priceId) {
+      const price = await stripe.prices.retrieve(priceId);
+      if (!price.active) {
+        return {
+          ok: false,
+          error: "That plan's price is archived in Stripe. Nothing was charged.",
+        };
+      }
+      const agrees = priceMatchesPublished(price, { cents: amount, interval });
+      if (!agrees.ok) {
+        console.error(
+          `[billing] ${planId}/${interval} price ${priceId} disagrees with lib/pricing.ts: ${agrees.reason}`
+        );
+        return {
+          ok: false,
+          error:
+            "This plan's price in Stripe does not match the price shown on the pricing page, so Selryn stopped before charging you. We have been notified.",
+        };
+      }
+    }
+
     const checkout = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
@@ -106,18 +137,20 @@ export async function startCheckout(
       // touching Selryn's servers.
       payment_method_types: ["card"],
       line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: amount,
-            recurring: { interval },
-            product_data: {
-              name: `Selryn ${plan.name}`,
-              description: `${plan.name} plan · ${formatPrice(amount)}/${interval}`,
+        priceId
+          ? { quantity: 1, price: priceId }
+          : {
+              quantity: 1,
+              price_data: {
+                currency: "usd",
+                unit_amount: amount,
+                recurring: { interval },
+                product_data: {
+                  name: `Selryn ${plan.name}`,
+                  description: `${plan.name} plan · ${formatPrice(amount)}/${interval}`,
+                },
+              },
             },
-          },
-        },
       ],
       payment_method_collection: "always",
       success_url: `${appUrl()}/settings?tab=billing&checkout=success`,

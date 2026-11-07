@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, resolvePlanId } from "@/lib/billing";
+import {
+  eventIsCurrentSubscription,
+  getStripe,
+  resolvePlanId,
+} from "@/lib/billing";
 import { db } from "@/lib/db";
 
 /**
@@ -10,6 +14,26 @@ import { db } from "@/lib/db";
  *   checkout.session.completed, customer.subscription.updated,
  *   customer.subscription.deleted, invoice.paid, invoice.payment_failed
  * and set STRIPE_WEBHOOK_SECRET.
+ *
+ * ── Delivery is at-least-once and unordered ──
+ *
+ * Both of those are Stripe's documented behaviour and both can downgrade a
+ * paying workspace if the handler assumes otherwise. The two guards here:
+ *
+ *  1. A subscription event is ignored unless it is about the subscription
+ *     this org is currently on. The case that bites is a customer who
+ *     cancels and re-subscribes: the older `deleted` can arrive after the
+ *     newer checkout, and without this it sets them back to Free while their
+ *     card is being charged.
+ *
+ *  2. `customer.subscription.updated` re-reads the subscription from Stripe
+ *     instead of trusting the payload it arrived with. A webhook body is a
+ *     snapshot of the moment the event was created; two of them delivered out
+ *     of order write the older state last. Re-reading makes order irrelevant,
+ *     at the cost of one API call on an uncommon event.
+ *
+ * The request body must be read as raw text for signature verification —
+ * `await req.text()` below, which in the App Router is the unparsed body.
  */
 export async function POST(req: Request) {
   const stripe = getStripe();
@@ -58,9 +82,24 @@ export async function POST(req: Request) {
         break;
       }
       case "customer.subscription.updated": {
-        const sub = event.data.object;
-        const orgId = sub.metadata?.orgId;
+        const stale = event.data.object;
+        const orgId = stale.metadata?.orgId;
         if (!orgId) break;
+
+        const org = await db.organization.findUnique({
+          where: { id: orgId },
+          select: { stripeSubscriptionId: true },
+        });
+        if (!org) break;
+        if (!eventIsCurrentSubscription(org.stripeSubscriptionId, stale.id)) {
+          console.info(
+            `[stripe] ignoring update for ${stale.id}; org ${orgId} is on ${org.stripeSubscriptionId}`
+          );
+          break;
+        }
+
+        // Current state, not the state at the moment the event was created.
+        const sub = await stripe.subscriptions.retrieve(stale.id);
         const renewsAt = sub.items.data[0]?.current_period_end;
         await db.organization.update({
           where: { id: orgId },
@@ -119,6 +158,21 @@ export async function POST(req: Request) {
         const sub = event.data.object;
         const orgId = sub.metadata?.orgId;
         if (!orgId) break;
+
+        // The dangerous one. A delayed deletion for a subscription the org has
+        // already replaced would cancel a live, paid plan.
+        const org = await db.organization.findUnique({
+          where: { id: orgId },
+          select: { stripeSubscriptionId: true },
+        });
+        if (!org) break;
+        if (!eventIsCurrentSubscription(org.stripeSubscriptionId, sub.id)) {
+          console.info(
+            `[stripe] ignoring deletion of ${sub.id}; org ${orgId} is on ${org.stripeSubscriptionId}`
+          );
+          break;
+        }
+
         await db.organization.update({
           where: { id: orgId },
           data: {
