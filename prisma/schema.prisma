@@ -75,6 +75,7 @@ model Organization {
   connections   IntegrationConnection[]
   syncJobs      SyncJob[]
   revenueEvents RevenueEvent[]
+  messages      Message[]
   identityLinks IdentityLink[]
   auditLogs     AuditLog[]
   integrations  Integration[]
@@ -166,6 +167,7 @@ model Account {
   campaignMemberships  IntentCampaignAccount[]
   buyingSignals        BuyingSignal[]
   revenueEvents        RevenueEvent[]
+  messages             Message[]
   intentScoreSnapshots IntentScoreSnapshot[]
   outreachDrafts       OutreachDraft[]
   userFeedback         UserFeedback[]
@@ -430,6 +432,7 @@ model Prospect {
   signals        BuyingSignal[]
   responses      Response[]
   revenueEvents  RevenueEvent[]
+  messages       Message[]
   actions        Action[]
 
   // ── Provenance ──
@@ -859,6 +862,7 @@ model Opportunity {
   actions         Action[]
   responses       Response[]
   revenueEvents   RevenueEvent[]
+  messages        Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1293,6 +1297,66 @@ model SyncJob {
 // `occurredAt` (when it happened) is kept distinct from `receivedAt` (when we
 // heard) because they differ by days on a backfill, and ordering by the wrong
 // one silently rewrites a deal's history.
+/// A message from a mailbox the customer connected — theirs or the buyer's.
+///
+/// Separate from `Email`, which is Selryn's own campaign mail. That table's
+/// status ladder (DRAFT → SENT → OPENED → REPLIED) describes something we
+/// sent and has no meaning for a message somebody else wrote; billing counts
+/// Email rows as AI actions, and lib/revenue/facts.ts reads Email.repliedAt
+/// as proof of a reply. Folding a synced inbox into it would make both wrong.
+///
+/// This is the table that makes reading a buyer's actual words possible at
+/// all. Before it, nothing in the schema could hold one: HubSpot's engagement
+/// sync carries subject, direction and timestamp, and there was nowhere to
+/// put a body even if a connector fetched one.
+model Message {
+  id    String       @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  /// gmail | outlook | hubspot
+  source String
+  /// The provider's own id. Unique per workspace and source, so a re-sync
+  /// updates rather than duplicating — the same contract the import and
+  /// event layers use.
+  externalId String
+  /// Provider thread id, so a reply can be sent into the existing
+  /// conversation instead of starting a new one the buyer does not recognise.
+  threadId String?
+
+  /// inbound | outbound — the field Email never had.
+  direction String
+  subject   String?
+  /// Plain-text body. Null when the provider returned only metadata, which
+  /// is a different thing from an empty message and is read as "unknown".
+  body    String?
+  snippet String?
+
+  fromEmail String
+  fromName  String?
+  /// Comma-separated. Recipients are for display and matching, not identity.
+  toEmails String?
+
+  /// When the message was sent, per the provider.
+  occurredAt DateTime
+  /// When Selryn received it, so freshness can be told from staleness.
+  receivedAt DateTime @default(now())
+
+  accountId     String?
+  account       Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  contactId     String?
+  contact       Prospect?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, source, externalId])
+  @@index([orgId, accountId, occurredAt])
+  @@index([orgId, opportunityId, occurredAt])
+  @@index([orgId, threadId])
+}
+
 model RevenueEvent {
   id    String       @id @default(cuid())
   orgId String

@@ -7,6 +7,7 @@ import {
 } from "@/components/marketing/home/demo-data";
 import { isHubspotConfigured } from "@/lib/integrations/hubspot/oauth";
 import { isSlackConfigured } from "@/lib/integrations/slack/oauth";
+import { isGmailConfigured } from "@/lib/integrations/gmail/oauth";
 import { isEncryptionConfigured } from "@/lib/security/crypto";
 import { isGoogleEnabled } from "@/lib/google-oauth";
 
@@ -53,6 +54,15 @@ function isUsableHere(key: IntegrationKey): boolean {
 
     case "slack":
       return isSlackConfigured();
+
+    // Same reasoning as HubSpot: a mailbox token is stored encrypted, so the
+    // connector cannot run without an encryption key however valid the
+    // Google credentials are. GMAIL_INTEGRATION_ENABLED is the extra gate —
+    // the restricted scopes need Google's verification before this can be
+    // offered to anyone outside the developer's own domain, and a deployment
+    // that has not passed it must not show a button that cannot work.
+    case "gmail":
+      return isGmailConfigured() && isEncryptionConfigured();
 
     default:
       return false;

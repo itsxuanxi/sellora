@@ -44,7 +44,9 @@ export type FactSource =
   /** Response — the outcome tracker, which is what the deal timeline renders. */
   | "response"
   /** BuyingSignal — observed behaviour, never a message. */
-  | "signal";
+  | "signal"
+  /** Message — a synced mailbox, the only source carrying what was written. */
+  | "message";
 
 /**
  * What we can say about the buyer's side of the conversation.
@@ -137,6 +139,18 @@ export interface SignalFactRow {
   title: string;
 }
 
+/** One row from the synced-mailbox table. */
+export interface MessageFactRow {
+  id: string;
+  direction: string;
+  subject: string | null;
+  occurredAt: Date;
+  contactId: string | null;
+  /** The provider's id, so a redelivered message merges rather than doubles. */
+  externalId: string;
+  source: string;
+}
+
 export interface FactInput {
   opportunityId: string;
   /** Every contact known at the account, so "which of them replied" is answerable. */
@@ -145,6 +159,14 @@ export interface FactInput {
   events: EventFactRow[];
   responses: ResponseFactRow[];
   signals: SignalFactRow[];
+  /**
+   * Messages from a connected mailbox.
+   *
+   * Optional so every existing caller and test keeps working unchanged: a
+   * workspace with no mailbox connected passes nothing and derives exactly
+   * what it derived before.
+   */
+  messages?: MessageFactRow[];
   /** Newest write from each connected source, for the freshness judgement. */
   lastSyncedAt?: Date | null;
 }
@@ -375,6 +397,25 @@ export function deriveOpportunityFacts(input: FactInput, now: Date): Opportunity
     }
   }
 
+  // ── A connected mailbox ──
+  //
+  // The only source that can prove a buyer wrote something, rather than that
+  // a tracker recorded they did. `identity` carries the provider's own id so
+  // a message that also arrived as a CRM engagement merges with it under the
+  // cross-source window rather than counting twice.
+  for (const m of input.messages ?? []) {
+    const base = {
+      id: m.id,
+      source: "message" as FactSource,
+      at: m.occurredAt,
+      summary: m.subject ?? "(no subject)",
+      contactId: m.contactId,
+      identity: `${m.source}:${m.externalId}`,
+    };
+    if (m.direction === "inbound") inbound.push({ ...base, kind: "reply" });
+    else outbound.push({ ...base, kind: "outbound" });
+  }
+
   // ── Ingestion log ──
   for (const ev of input.events) {
     const base = {
@@ -476,6 +517,7 @@ export function deriveOpportunityFacts(input: FactInput, now: Date): Opportunity
     event: input.events.length > 0,
     response: input.responses.length > 0,
     signal: input.signals.length > 0,
+    message: (input.messages?.length ?? 0) > 0,
   };
 
   const recordAgeDays = lastAnything ? wholeDays(lastAnything.at, now) : null;
@@ -483,7 +525,7 @@ export function deriveOpportunityFacts(input: FactInput, now: Date): Opportunity
   if (input.contactIds.length === 0) {
     caveats.push("No contacts are recorded on this account.");
   }
-  if (!sources.email && !sources.event) {
+  if (!sources.email && !sources.event && !sources.message) {
     caveats.push("No email or CRM activity has been synced for this account.");
   }
   if (outboundDeduped.length === 0) {

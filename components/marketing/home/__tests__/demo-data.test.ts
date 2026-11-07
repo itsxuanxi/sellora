@@ -333,10 +333,18 @@ test("the catalog records whether code exists, not whether it is switched on", (
   const built = new Set(
     INTEGRATION_CATALOG.filter((i) => i.built).map((i) => i.key)
   );
-  for (const shipped of ["csv", "google_signin", "outbound_email", "hubspot", "slack"]) {
+  for (const shipped of [
+    "csv",
+    "google_signin",
+    "outbound_email",
+    "hubspot",
+    "slack",
+    // OAuth, sync, parse and send all exist under lib/integrations/gmail.
+    "gmail",
+  ]) {
     assert.ok(built.has(shipped as never), `${shipped} has a connector and is not marked built`);
   }
-  for (const absent of ["salesforce", "pipedrive", "gmail", "calendar"]) {
+  for (const absent of ["salesforce", "pipedrive", "calendar"]) {
     assert.ok(!built.has(absent as never), `${absent} is marked built with no connector`);
   }
 });

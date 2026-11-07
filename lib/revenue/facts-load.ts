@@ -6,6 +6,7 @@ import {
   INBOUND_EVENT_TYPES,
   OUTBOUND_EVENT_TYPES,
   type FactInput,
+  type MessageFactRow,
   type OpportunityFacts,
 } from "@/lib/revenue/facts";
 
@@ -34,7 +35,7 @@ export async function loadFactsForOpportunities(
   const opportunityIds = opportunities.map((o) => o.id);
   const now = new Date();
 
-  const [contacts, emails, events, responses, signals] = await Promise.all([
+  const [contacts, emails, events, responses, signals, messages] = await Promise.all([
     db.prospect.findMany({
       where: { orgId, accountId: { in: accountIds } },
       select: { id: true, accountId: true },
@@ -91,6 +92,23 @@ export async function loadFactsForOpportunities(
       orderBy: { occurredAt: "desc" },
       select: { id: true, accountId: true, signalType: true, occurredAt: true, title: true },
     }),
+    // A connected mailbox, when there is one. Scoped to the account like
+    // every other source here, so engagement with anyone at the company is
+    // evidence about the deal with that company.
+    db.message.findMany({
+      where: { orgId, accountId: { in: accountIds } },
+      orderBy: { occurredAt: "desc" },
+      select: {
+        id: true,
+        accountId: true,
+        direction: true,
+        subject: true,
+        occurredAt: true,
+        contactId: true,
+        externalId: true,
+        source: true,
+      },
+    }),
   ]);
 
   const byAccount = <T>(rows: T[], key: (r: T) => string | null) => {
@@ -105,6 +123,7 @@ export async function loadFactsForOpportunities(
     return map;
   };
 
+  const messagesByAccount = byAccount(messages, (m) => m.accountId);
   const contactsByAccount = byAccount(contacts, (c) => c.accountId);
   const emailsByAccount = byAccount(emails, (e) => e.prospect.accountId);
   const eventsByAccount = byAccount(events, (e) => e.accountId);
@@ -119,6 +138,7 @@ export async function loadFactsForOpportunities(
       events: eventsByAccount.get(opp.accountId) ?? [],
       responses: responsesByOpportunity.get(opp.id) ?? [],
       signals: signalsByAccount.get(opp.accountId) ?? [],
+      messages: (messagesByAccount.get(opp.accountId) ?? []) as MessageFactRow[],
     };
     out.set(opp.id, deriveOpportunityFacts(input, now));
   }

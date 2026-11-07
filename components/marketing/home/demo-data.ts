@@ -283,7 +283,10 @@ export const INTEGRATION_CATALOG: {
   { key: "slack", name: "Slack", built: true },
   { key: "salesforce", name: "Salesforce", built: false },
   { key: "pipedrive", name: "Pipedrive", built: false },
-  { key: "gmail", name: "Gmail", built: false },
+  // Built: OAuth, sync and send all exist. Not usable until this deployment
+  // has credentials AND Google has verified the app for restricted scopes —
+  // see lib/integrations/gmail/oauth.ts. "needs setup" is the honest state.
+  { key: "gmail", name: "Gmail", built: true },
   { key: "calendar", name: "Google Calendar", built: false },
 ];
 
